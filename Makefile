@@ -18,7 +18,7 @@ prof_dir:
 build:
 	docker build -t stafe docker/.
 
-# Docker run stafe image shell
+# Docker run stafe image w. fish shell
 sail:
 	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax stafe fish
 
