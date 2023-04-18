@@ -69,7 +69,6 @@ class Linear(Modulax):
         super().__init__()
         # Init if parameters dict is empty
         if parameters is None:
-            exit(10)
             # https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
             k = 1 / in_features
             subkey_W, subkey_b = rng.create_subkeys(2)
