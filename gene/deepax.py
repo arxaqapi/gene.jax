@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+import numpy as np
 import jax.random as jrd
 import jax
 from functools import partial
@@ -74,9 +75,10 @@ class Sequential(Modulax):
             x = layer(x)
         return x
 
-    def init_param_from_genome(self, genome):
+    def init_param_from_genome(self, genome, d: int = 3):
         layer_dimensions = [self.layers[0].in_features] + [l.out_features for l in self.layers if l.type != 'activation']
-        parameters = _genome_to_model_parameters(genome, layer_dimensions)
+        # partial(_genome_to_model_parameters, layer_dimensions=)
+        parameters = _genome_to_model_parameters(genome, np.array(layer_dimensions), d=d)
         i = 0
         for layer in self.layers:
             if layer.type != 'activation':
@@ -112,81 +114,51 @@ class Linear(Modulax):
 
 class FlatNet(Modulax):
     """Simple static linear neural network"""
-    def __init__(self, genome: jnp.ndarray = None, layer_dimensions: list[int] = [128, 64, 64, 18], distance_f = None) -> None:
+    def __init__(self) -> None:
         """
         128 input nodes
         L1 64 nodes
         L2 64 nodes
         18 output nodes -> distribution over action space
         """
-        self.layer_dimensions = layer_dimensions
-        self.distance_f = distance_f
-        # Init each layer from the genome
         # https://jax.readthedocs.io/en/latest/faq.html#strategy-2-marking-self-as-static
-        parameters = _from_genome_to_model(genome, d=3)
         self.model = Sequential(
-            Linear(in_features=parameters[0]['in'], out_features=parameters[0]['out'], parameters= {
-                'w': jnp.reshape(parameters[0]['w'], newshape=(parameters[0]['in'], parameters[0]['out'])),
-                'b': parameters[0]['b']
-            }),
+            Linear(in_features=128, out_features=64),
             ReLU(),
-            Linear(in_features=parameters[1]['in'], out_features=parameters[1]['out'], parameters= {
-                'w': jnp.reshape(parameters[1]['w'], newshape=(parameters[1]['in'], parameters[1]['out'])),
-                'b': parameters[1]['b']
-            }),
+            Linear(in_features=64, out_features=64),
             ReLU(),
-            Linear(in_features=parameters[2]['in'], out_features=parameters[2]['out'], parameters= {
-                'w': jnp.reshape(parameters[2]['w'], newshape=(parameters[2]['in'], parameters[2]['out'])),
-                'b': parameters[2]['b']
-            }),
-        )
+            Linear(in_features=64, out_features=18),)
+
+    def init(self, genome: jnp.ndarray = None, d: int = 1):
+        self.model.init_param_from_genome(genome, d=d)
 
     def forward(self, x) -> jnp.ndarray:
         return self.model(x)
-    
 
 
-# @partial(jax.jit, static_argnames=['d'])
-def _from_genome_to_model(genome: jnp.ndarray, d: int = 3):
-    raise EOFError
-    # SECTION: Temporary
-    distance_f = tag_gene
-    layer_dimensions = [128, 64, 64, 18]
-    # !SECTION: Temporary
-    assert genome.shape[0] == sum(layer_dimensions) * (d + 1)
-    # value = 0
-    parameters = [{
-        'in': None,
-        'out': None,
-        'w': jnp.zeros((in_ * out, )),
-        'b': jnp.zeros((out, ))} for in_, out in zip(layer_dimensions[:-1], layer_dimensions[1:])]
-    # layers = []
-    # https://calmcode.io/tqdm/nested-loops.html
-    for i, (layer_in, layer_out) in enumerate(tqdm(zip(layer_dimensions[:-1], layer_dimensions[1:]), desc='genome split', position=1, leave=False)):
-        parameters[i]['in'] = layer_in
-        parameters[i]['out'] = layer_out
-        # ==========================================================================================
-        # ================ Weights =================================================================
-        w_index = 0
-        for start_n in range(sum(layer_dimensions[:i]) * (d + 1), sum(layer_dimensions[:i + 1]) * (d + 1), d + 1):
-            for end_n in range(sum(layer_dimensions[:i + 1]) * (d + 1), sum(layer_dimensions[:i + 2]) * (d + 1), d + 1):
-                # NOTE: we only use dimension d for the neurons positions, the leftover value is for the bias
-                neurons_positions = genome[start_n : start_n + d], genome[end_n : end_n + d]
-                weight = distance_f(*neurons_positions)
-                # NOTE: mutating values
-                parameters[i]['w'] = parameters[i]['w'].at[w_index].set(weight)
-                w_index += 1
-                # DEBUG
-                # value += 1
-        # ================= Biases =================================================================
-        for b_i, bias_position in enumerate(range(sum(layer_dimensions[:i + 1]) * (d + 1), sum(layer_dimensions[:i + 2]) * (d + 1), d + 1)):
-            parameters[i]['b'] = parameters[i]['b'].at[b_i].set(genome[bias_position + d])
-        # ==========================================================================================
-    return parameters
+class SmallFlatNet(Modulax):
+    """Simple static linear neural network"""
+    def __init__(self) -> None:
+        """
+        128 input nodes
+        18 output nodes -> distribution over action space
+        """
+        # https://jax.readthedocs.io/en/latest/faq.html#strategy-2-marking-self-as-static
+        self.model = Sequential(
+            Linear(in_features=128, out_features=18),
+            ReLU(),)
 
+    def init(self, genome: jnp.ndarray = None, d: int = 1):
+        self.model.init_param_from_genome(genome, d=d)
+
+    def forward(self, x) -> jnp.ndarray:
+        return self.model(x)
+
+    def neurons(self) -> int:
+        return 128 * 18
 
 @partial(jax.jit, static_argnames=['d'])
-def _genome_to_model_parameters(genome: jnp.ndarray, layer_dimensions: list[int], d: int = 3):
+def _genome_to_model_parameters(genome: jnp.ndarray, layer_dimensions: np.ndarray, d: int = 3):  # list[int]
     """Take a genome and automatically constructs the parameter dict {'w': [], 'b': []} list"""
 
     parameter_list = [{
@@ -199,7 +171,6 @@ def _genome_to_model_parameters(genome: jnp.ndarray, layer_dimensions: list[int]
         for start_n in range(sum(layer_dimensions[:i]) * (d + 1), sum(layer_dimensions[:i + 1]) * (d + 1), d + 1):
             for end_n in range(sum(layer_dimensions[:i + 1]) * (d + 1), sum(layer_dimensions[:i + 2]) * (d + 1), d + 1):
                 # NOTE: we only use dimension d for the neurons positions, the leftover value is for the bias
-                # neurons_positions = genome[start_n : start_n + d], genome[end_n : end_n + d]
                 weight = tag_gene(genome[start_n : start_n + d], genome[end_n : end_n + d])
                 # NOTE: mutating values
                 parameter_list[i]['w'] = parameter_list[i]['w'].at[w_index].set(weight)
