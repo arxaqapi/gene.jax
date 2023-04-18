@@ -55,6 +55,7 @@ def pL2_gene(n1: jnp.ndarray, n2: jnp.ndarray, d: int = 1) -> float:
     return a_v(jnp.prod(n1 - n2)) * L2_gene(n1, n2)
 
 
+@jax.jit
 def tag_gene(n1: jnp.ndarray, n2: jnp.ndarray) -> float:
     assert n1.shape == n2.shape
     n2_1 = n2[0]
