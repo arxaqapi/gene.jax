@@ -57,6 +57,7 @@ def pL2_gene(n1: jnp.ndarray, n2: jnp.ndarray, d: int = 1) -> float:
 
 @jax.jit
 def tag_gene(n1: jnp.ndarray, n2: jnp.ndarray) -> float:
+    print(f'{n1.shape=} == {n2.shape=}')
     assert n1.shape == n2.shape
     n2_1 = n2[0]
     diff = (n1[1:] - n2_1)

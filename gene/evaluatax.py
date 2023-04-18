@@ -3,8 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 import gymnasium as gym
 
-from gene.deepax import FlatNet, SmallFlatNet
-
+from gene.deepax import FlatNet, SmallFlatNet, MountainFlatNet
 
 # def evaluate_models(env, models):
 #     return jnp.array([evaluate_model(env, model=model) for model in models])
@@ -67,7 +66,44 @@ def _evaluate_small_model(genome):
     return np.sum(stats['rewards'])
 
 
-evaluate_model_vmap = jax.vmap(_evaluate_small_model, in_axes=0) 
+import gymnax
+
+def eval_mountain_car(genome):
+    print(genome)
+    model = MountainFlatNet()
+    model.init(genome)
+
+    rng = jax.random.PRNGKey(0)
+    rng, key_reset, key_step = jax.random.split(rng, 3)
+
+    # Instantiate the environment & its settings.
+    env, env_params = gymnax.make("MountainCar-v0")
+    # Reset the environment.
+    obs, state = env.reset(key_reset, env_params)
+    
+    assert 2 == env.observation_space.shape[0]
+    assert 3 == env.num_actions
+    # Stats
+    cum_ret = 0
+    done = False
+    while not done:
+        # Model guided action selection
+        action_distr = model(obs)
+        a = np.argmax(action_distr) 
+        # Perform the step transition.
+        n_obs, n_state, reward, done, _ = env.step(key_step, state, a, env_params)
+        # Reward
+        cum_ret += reward
+
+        obs = n_obs
+        state = n_state
+
+    return cum_ret
+
+
+
+# evaluate_model_vmap = jax.vmap(_evaluate_small_model, in_axes=0) 
+evaluate_model_vmap = jax.vmap(eval_mountain_car, in_axes=0) 
 
 
 # ===================================================

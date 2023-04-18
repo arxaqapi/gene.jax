@@ -76,14 +76,21 @@ class Sequential(Modulax):
         return x
 
     def init_param_from_genome(self, genome, d: int = 3):
-        layer_dimensions = [self.layers[0].in_features] + [l.out_features for l in self.layers if l.type != 'activation']
-        # partial(_genome_to_model_parameters, layer_dimensions=)
-        parameters = _genome_to_model_parameters(genome, np.array(layer_dimensions), d=d)
+        self.layer_dimensions = [self.layers[0].in_features] + [l.out_features for l in self.layers if l.type != 'activation']
+        # SECTION - Get parameters from genome
+        partial_genome_to_model_parameters = partial(_genome_to_model_parameters, layer_dimensions=self.layer_dimensions, d=d)
+        parameters = jax.jit(partial_genome_to_model_parameters)(genome=genome)
+        # !SECTION
+
         i = 0
         for layer in self.layers:
             if layer.type != 'activation':
-                layer.parameters = parameters[i]  # {'w': [...], 'b': [...]}
+                layer.parameters['w'] = jnp.reshape(parameters[i]['w'], (layer.in_features, layer.out_features))
+                layer.parameters['b'] = parameters[i]['b']
                 i += 1
+    def count_neurons(self):
+        # if self.layer_dimensions is not None:
+        return sum([self.layers[0].in_features] + [l.out_features for l in self.layers if l.type != 'activation'])
 
 
 
@@ -155,9 +162,36 @@ class SmallFlatNet(Modulax):
         return self.model(x)
 
     def neurons(self) -> int:
-        return 128 * 18
+        # assert 128 * 18 == self.model.count_neurons()
+        return self.model.count_neurons()
 
-@partial(jax.jit, static_argnames=['d'])
+
+class MountainFlatNet(Modulax):
+    """Simple static linear neural network"""
+    def __init__(self) -> None:
+        """
+        128 input nodes
+        18 output nodes -> distribution over action space
+        """
+        # https://jax.readthedocs.io/en/latest/faq.html#strategy-2-marking-self-as-static
+        self.model = Sequential(
+            Linear(in_features=2, out_features=10),
+            ReLU(),
+            Linear(in_features=10, out_features=3),
+            ReLU(),)
+
+    def init(self, genome: jnp.ndarray = None, d: int = 2):
+        self.model.init_param_from_genome(genome, d=d)
+
+    def forward(self, x) -> jnp.ndarray:
+        return self.model(x)
+
+    def neurons(self) -> int:
+        assert 2 + 10 + 3 == self.model.count_neurons()
+        return self.model.count_neurons()
+
+
+# @partial(jax.jit, static_argnames=['d'])
 def _genome_to_model_parameters(genome: jnp.ndarray, layer_dimensions: np.ndarray, d: int = 3):  # list[int]
     """Take a genome and automatically constructs the parameter dict {'w': [], 'b': []} list"""
 
@@ -166,7 +200,8 @@ def _genome_to_model_parameters(genome: jnp.ndarray, layer_dimensions: np.ndarra
         'b': jnp.zeros((out, ))} for in_, out in zip(layer_dimensions[:-1], layer_dimensions[1:])
     ]
 
-    for i, (layer_in, layer_out) in enumerate(tqdm(zip(layer_dimensions[:-1], layer_dimensions[1:]), desc='genome split', position=1, leave=False)):
+    # for i, (layer_in, layer_out) in enumerate(tqdm(zip(layer_dimensions[:-1], layer_dimensions[1:]), desc='genome split', position=1, leave=False)):
+    for i, (layer_in, layer_out) in enumerate(zip(layer_dimensions[:-1], layer_dimensions[1:])):
         w_index = 0
         for start_n in range(sum(layer_dimensions[:i]) * (d + 1), sum(layer_dimensions[:i + 1]) * (d + 1), d + 1):
             for end_n in range(sum(layer_dimensions[:i + 1]) * (d + 1), sum(layer_dimensions[:i + 2]) * (d + 1), d + 1):
