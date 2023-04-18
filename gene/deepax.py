@@ -2,6 +2,7 @@ import jax.numpy as jnp
 import jax.random as jrd
 import jax
 from functools import partial
+from tqdm import tqdm
 
 from gene.utilax import backend
 from gene.distances import tag_gene
@@ -139,7 +140,8 @@ def _from_genome_to_model(genome: jnp.ndarray, d: int = 3):
         'w': jnp.zeros((in_ * out, )),
         'b': jnp.zeros((out, ))} for in_, out in zip(layer_dimensions[:-1], layer_dimensions[1:])]
     # layers = []
-    for i, (layer_in, layer_out) in enumerate(zip(layer_dimensions[:-1], layer_dimensions[1:])):
+    # https://calmcode.io/tqdm/nested-loops.html
+    for i, (layer_in, layer_out) in enumerate(tqdm(zip(layer_dimensions[:-1], layer_dimensions[1:]), desc='genome split', position=1, leave=False)):
         parameters[i]['in'] = layer_in
         parameters[i]['out'] = layer_out
         # ==========================================================================================
@@ -158,14 +160,5 @@ def _from_genome_to_model(genome: jnp.ndarray, d: int = 3):
         # ================= Biases =================================================================
         for b_i, bias_position in enumerate(range(sum(layer_dimensions[:i + 1]) * (d + 1), sum(layer_dimensions[:i + 2]) * (d + 1), d + 1)):
             parameters[i]['b'] = parameters[i]['b'].at[b_i].set(genome[bias_position + d])
-        # f_best, x_best = jax.lax.fori_loop(0, lam, lambda i, fx_b: opl_eval(x, N[i, :], fx_b[0], fx_b[1]), (f_best, x_best))
-        # https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.fori_loop.html
-        # jax.lax.fori_loop(
-        #     sum(layer_dimensions[:i + 1]) * (d + 1),
-        #     sum(layer_dimensions[:i + 2]),  # * (d + 1) / (d + 1)  # NOTE A vérifier
-        #     lambda b_i, v: v.at[b_i].set(genome[b_i * (d + 1) + d]),  # bias_position = b_i * (d + 1)  # NOTE: a vérif
-        #     parameters[i]['b']
-        # )
         # ==========================================================================================
-    exit(14)
     return parameters

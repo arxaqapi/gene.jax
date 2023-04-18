@@ -1,4 +1,4 @@
-from gene.evaluatax import evaluate_models, evaluate_model, evaluate_flatnet
+from gene.evaluatax import evaluate_models, evaluate_model, evaluate_flatnet, evaluate_model_vmap
 from gene.deepax import FlatNet
 from gene.distances import tag_gene
 
@@ -16,7 +16,7 @@ from uuid import uuid1
 from pathlib import Path
 
 
-def run_expe(number_neurons: int = 1096, algorithm: str = 'SNES', pop_size: int = 1, max_gen: int = 1, logger: logging.Logger =None):
+def run_expe(number_neurons: int = 1096, algorithm: str = 'SNES', pop_size: int = 1, max_gen: int = 2, logger: logging.Logger =None):
     logger = logging.getLogger("logger")
     env = gym.make('ALE/SpaceInvaders-v5', obs_type='ram', full_action_space=True)
 
@@ -32,15 +32,17 @@ def run_expe(number_neurons: int = 1096, algorithm: str = 'SNES', pop_size: int 
 
     # vmap_evaluation_f = jax.vmap(partial(evaluate_flatnet, env))
 
-    for generation in tqdm(range(max_gen)):
+    for generation in tqdm(range(max_gen), desc='Generation loop', position=0):
         logger.info(f'[INFO - {algorithm}]: Generation {generation + 1} is starting')
 
         rng, rng_gen, rng_eval = jax.random.split(rng, 3)
         # Ask generation | x (popsize, num_dims)
         x, state = strategy.ask(rng_gen, state, es_params)
         # Evaluate generation[s] genome
-        temp_fitness = evaluate_models(models=[FlatNet(genome, distance_f=tag_gene) for genome in x], env=env)
+        # temp_fitness = evaluate_models(models=[FlatNet(genome, distance_f=tag_gene) for genome in x], env=env)
         # temp_fitness = vmap_evaluation_f(x) # vmap over the rows (each row in parrallel)
+        temp_fitness = evaluate_model_vmap(x)
+
         
         # NOTE: after fitness evaluation, apply fitness reshaper: https://github.com/RobertTLange/evosax/blob/main/examples/00_getting_started.ipynb
         fitness = fit_shaper.apply(x, temp_fitness)
