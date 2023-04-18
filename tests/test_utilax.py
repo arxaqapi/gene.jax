@@ -1,6 +1,6 @@
 import unittest
 
-from stafe.utilax import backend
+from gene.utilax import backend
 
 class TestJax(unittest.TestCase):
     def test_GPU_active(self):

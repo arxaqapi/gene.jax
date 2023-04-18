@@ -20,7 +20,7 @@ build:
 
 # Docker run stafe image shell
 sail:
-	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/stafe stafe fish
+	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax stafe fish
 
 
 

@@ -3,7 +3,7 @@ import unittest
 import jax
 import jax.numpy as jnp
 import numpy as np
-from stafe import deepax
+from gene import deepax
 
 
 class TestDense(unittest.TestCase):

@@ -3,8 +3,8 @@ import jax.random as jrd
 import jax
 from functools import partial
 
-from stafe.utilax import backend
-from stafe.distances import tag_gene
+from gene.utilax import backend
+from gene.distances import tag_gene
 
 assert backend() == "gpu"
 

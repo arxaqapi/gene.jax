@@ -1,7 +1,7 @@
 import unittest
 import jax
-from stafe.evaluatax import evaluate_model
-from stafe.deepax import FlatNet
+from gene.evaluatax import evaluate_model
+from gene.deepax import FlatNet
 import gymnasium as gym
 
 

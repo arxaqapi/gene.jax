@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from stafe.distances import L2_gene, a, tag_gene  #, pL2_gene, tag_gene
+from gene.distances import L2_gene, a, tag_gene  #, pL2_gene, tag_gene
 
 
 

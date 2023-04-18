@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 import gymnasium as gym
 
-from stafe.deepax import FlatNet
+from gene.deepax import FlatNet
 
 
 def evaluate_models(env, models):
