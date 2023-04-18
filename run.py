@@ -1,6 +1,6 @@
-from stafe.evaluatax import evaluate_models, evaluate_model, evaluate_flatnet
-from stafe.deepax import FlatNet
-from stafe.distances import tag_gene
+from gene.evaluatax import evaluate_models, evaluate_model, evaluate_flatnet
+from gene.deepax import FlatNet
+from gene.distances import tag_gene
 
 import jax
 import jax.numpy as jnp
