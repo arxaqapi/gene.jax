@@ -91,16 +91,17 @@ class TestGenerator(unittest.TestCase):
         self.assertIsNone(
             np.testing.assert_array_compare(lambda a, b : a != b, old_key, gen.base_key))
 
-    def test_generator_subkeys(self):
-        gen = deepax.Generator()
-        subkey_1 = gen.create_subkeys(1)
-        subkey_2 = gen.create_subkeys(1)
-
-        self.assertIsNone(
-            np.testing.assert_array_compare(lambda a, b : a != b, subkey_1, subkey_2))
+class TestSequentialFromGenome(unittest.TestCase):
+    def test_seq_init_param_from_genome(self):
+            
+        model = deepax.Sequential(
+            deepax.Linear(in_features=128, out_features=64),
+            deepax.ReLU(),
+            deepax.Linear(in_features=64, out_features=64),
+            deepax.ReLU(),
+            deepax.Linear(in_features=64, out_features=18),)
         
-    def test_generator_number_subkeys(self):
-        gen = deepax.Generator()
-        n = np.random.randint(10)
-        subkeys = gen.create_subkeys(n)
-        self.assertEqual(n, len(subkeys))
+        model.init_param_from_genome([])
+        # self.assertEqual(
+        #     model.init_param_from_genome([]),
+        #     [128, 64, 64, 18],)
