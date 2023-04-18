@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 def run_expe(number_neurons: int = 1096, algorithm: str = 'SNES', pop_size: int = 1, max_gen: int = 1, logger: logging.Logger =None):
-    logger = logging.getLogger("stafe_log")
+    logger = logging.getLogger("logger")
     env = gym.make('ALE/SpaceInvaders-v5', obs_type='ram', full_action_space=True)
 
     fit_shaper = FitnessShaper(maximize=True)
@@ -61,8 +61,8 @@ if __name__ == "__main__":
     if not logpath.exists():
         logpath.mkdir()
     # NOTE: add HPO to logging info (extend class and stuff)
-    logger = logging.getLogger("stafe_log")
-    fhandler = logging.FileHandler(filename=f'/home/stafe/log/run_log_{str(uuid1())}.log', mode='a')
+    logger = logging.getLogger("logger")
+    fhandler = logging.FileHandler(filename=f'/home/gene.jax/log/run_log_{str(uuid1())}.log', mode='a')
     formatter = logging.Formatter('[%(levelname)s - %(asctime)s]: %(name)s, %(message)s', '%Y/%m/%d_%H.%M.%S')
     fhandler.setFormatter(formatter)
     logger.addHandler(fhandler)
