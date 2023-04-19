@@ -42,7 +42,7 @@ jitted_L2_dist = jit(vvmap_L2_dist, static_argnames=['d'])
 
 
 # @partial(jit, static_argnames=['d', 'layer_dimensions'])
-@partial(jit, static_argnames=['d'])
+# @partial(jit, static_argnames=['d'])
 def genome_to_param(genome: jnp.ndarray, d: int):
     layer_dimensions = [784, 64, 128, 10]
     assert genome.shape[0] == sum(layer_dimensions)
@@ -62,7 +62,6 @@ def genome_to_param(genome: jnp.ndarray, d: int):
 
 
 # ======================================================
-
 def test_large_net():
     layer_dimensions = [784, 64, 128, 10]
     genome = jnp.zeros((sum(layer_dimensions), ))
@@ -81,4 +80,23 @@ def test_large_net():
     assert parameters[2]['w'][3, :].sum() == 190
 
 
-test_large_net()
+# test_large_net()
+
+def map_over_genomes():
+    layer_dimensions = [784, 64, 128, 10]
+    BATCH_SIZE_OR_POP_SIZE = 100
+    genomes = jnp.zeros((BATCH_SIZE_OR_POP_SIZE, sum(layer_dimensions), ))
+
+    v_genomes_to_param = jit(vmap(partial(genome_to_param, d=1)))
+
+    parameters = v_genomes_to_param(genomes)
+    parameters = v_genomes_to_param(genomes)
+    parameters = v_genomes_to_param(genomes)
+
+    # print(parameters)
+    print(parameters[0]['w'].shape)  # (10, 784, 64)
+    print(parameters[1]['w'].shape)  # (10, 64, 128)
+    print(parameters[2]['w'].shape)  # (10, 128, 10)
+    # print(len(parameters))
+
+map_over_genomes()
