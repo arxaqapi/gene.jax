@@ -26,38 +26,46 @@ def run_vvmap_test():
 
 # ============================================================================
 
-@jax.jit
-def L2_dist(x, base, target_offset):
-    """
-    target_offset (list[int]): the target index in the 
-    """
-    # x should not change, only base and target_offset are changing 
-    return jnp.sqrt(jnp.square(x[base] - x[target_offset]))
+def L2_dist(x, base, target_offset, d: int):
+    # x[2:6] == jax.lax.dynamic_slice(x, (2,), (4,))
+    diff = lax.dynamic_slice(x, (base,), (d,)) - lax.dynamic_slice(x, (target_offset, ), (d,))
+    return jnp.sqrt(diff.dot(diff))
+    return jnp.sqrt(jnp.square(x[base: base + d] - x[target_offset : target_offset + d]))
 
 
-vmap_L2_dist = jax.vmap(L2_dist, in_axes=(None, None, 0))
-vvmap_L2_dist = jax.vmap(vmap_L2_dist, in_axes=(None, 0, None))
+vmap_L2_dist = vmap(L2_dist, in_axes=(None, None, 0, None))
+vvmap_L2_dist = vmap(vmap_L2_dist, in_axes=(None, 0, None, None))
+jitted_L2_dist = jit(vvmap_L2_dist, static_argnames=['d'])
 
-
-def genome_to_param(genome: jnp.ndarray, d: int = 1, layer_dimensions: list = [10, 4]):
-    assert genome.shape[0] == (10 + 4)
+def genome_to_param(genome: jnp.ndarray, d: int = 1, layer_dimensions: list = [10, 4, 2]):
+    assert genome.shape[0] == sum(layer_dimensions)
     # NOTE: Testing without biases for the moment
     # pos = 0  # FIXME: to be used to fix position over multiples layers
+    parameters = []
     for i, (layer_in, layer_out) in enumerate(zip(layer_dimensions[:-1], layer_dimensions[1:])):
-        # 0, (10, 4)
         # FIXME: not complete, accumulate offset !!!
         src_idx = jnp.arange(start=0, stop=layer_in, step=d)  # indexes of the previous layer neurons
         target_idx = layer_in + jnp.arange(start=0, stop=layer_out, step=d)  # indexes of the current layer neurons
 
-        weight_matrix = vvmap_L2_dist(genome, src_idx, target_idx)
+        weight_matrix = jitted_L2_dist(genome, src_idx, target_idx, d)
+        parameters.append(
+            {'w': weight_matrix}
+        )
 
-        return weight_matrix
+    return parameters
 
 
 res = genome_to_param(
-    jnp.arange(10, 24),
+    jnp.arange(10, 26),
 )
-print(res)
-assert res.shape == (10, 4)
+for r in res:
+    print(r['w'])
+
+# [
+#     [jnp.sqrt((20 - 24) ** 2), jnp.sqrt((20 - 25) ** 2)],
+#     [jnp.sqrt((21 - 24) ** 2), jnp.sqrt((21 - 25) ** 2)],
+#     [jnp.sqrt((22 - 24) ** 2), jnp.sqrt((22 - 25) ** 2)],
+#     [jnp.sqrt((23 - 24) ** 2), jnp.sqrt((23 - 25) ** 2)],
+# ]
 
 # raise ValueError('Not tested!!')
