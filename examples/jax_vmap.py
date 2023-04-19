@@ -47,12 +47,11 @@ def genome_to_param(genome: jnp.ndarray, d: int):
     layer_dimensions = [784, 64, 128, 10]
     assert genome.shape[0] == sum(layer_dimensions)
     # NOTE: Testing without biases for the moment
-    # pos = 0  # FIXME: to be used to fix position over multiples layers
     parameters = []
     for i, (layer_in, layer_out) in enumerate(zip(layer_dimensions[:-1], layer_dimensions[1:])):
-        # FIXME: not complete, accumulate offset !!!
-        src_idx = jnp.arange(start=0, stop=layer_in, step=d)  # indexes of the previous layer neurons
-        target_idx = layer_in + jnp.arange(start=0, stop=layer_out, step=d)  # indexes of the current layer neurons
+        position_offset = sum(layer_dimensions[:i])
+        src_idx = position_offset + jnp.arange(start=0, stop=layer_in, step=d)  # indexes of the previous layer neurons
+        target_idx = position_offset + layer_in + jnp.arange(start=0, stop=layer_out, step=d)  # indexes of the current layer neurons
 
         weight_matrix = jitted_L2_dist(genome, src_idx, target_idx, d)
         parameters.append(
@@ -62,14 +61,24 @@ def genome_to_param(genome: jnp.ndarray, d: int):
     return parameters
 
 
-layer_dimensions = [784, 64, 128, 10]
-res = genome_to_param(
-    jnp.arange(0, sum(layer_dimensions)),
-    d=1,
-)
-for r in res:
-    print(r['w'].shape)
+# ======================================================
 
-assert res[0]['w'].shape == (784, 64)
-assert res[1]['w'].shape == (64, 128)
-assert res[2]['w'].shape == (128, 10)
+def test_large_net():
+    layer_dimensions = [784, 64, 128, 10]
+    genome = jnp.zeros((sum(layer_dimensions), ))
+    genome = genome.at[784 + 64 + 3].set(20)
+    genome = genome.at[784 + 64 + 128 + 5].set(10)
+
+    parameters = genome_to_param(genome, d=1)
+
+    assert parameters[0]['w'].shape == (784, 64)
+    assert parameters[1]['w'].shape == (64, 128)
+    assert parameters[2]['w'].shape == (128, 10)
+    
+    assert parameters[2]['w'][3, 5] == jnp.sqrt(jnp.sum(jnp.square(genome[784 + 64 + 3] - genome[784 + 64 + 128 + 5])))
+
+    assert parameters[2]['w'][3, 6] == jnp.sqrt(jnp.sum(jnp.square(genome[784 + 64 + 3] - genome[784 + 64 + 128 + 6])))
+    assert parameters[2]['w'][3, :].sum() == 190
+
+
+test_large_net()
