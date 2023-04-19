@@ -41,7 +41,10 @@ vvmap_L2_dist = vmap(vmap_L2_dist, in_axes=(None, 0, None, None))
 jitted_L2_dist = jit(vvmap_L2_dist, static_argnames=['d'])
 
 
-def genome_to_param(genome: jnp.ndarray, d: int = 1, layer_dimensions: list = [10, 4, 2]):
+# @partial(jit, static_argnames=['d', 'layer_dimensions'])
+@partial(jit, static_argnames=['d'])
+def genome_to_param(genome: jnp.ndarray, d: int):
+    layer_dimensions = [784, 64, 128, 10]
     assert genome.shape[0] == sum(layer_dimensions)
     # NOTE: Testing without biases for the moment
     # pos = 0  # FIXME: to be used to fix position over multiples layers
@@ -62,7 +65,11 @@ def genome_to_param(genome: jnp.ndarray, d: int = 1, layer_dimensions: list = [1
 layer_dimensions = [784, 64, 128, 10]
 res = genome_to_param(
     jnp.arange(0, sum(layer_dimensions)),
-    layer_dimensions=layer_dimensions
+    d=1,
 )
 for r in res:
     print(r['w'].shape)
+
+assert res[0]['w'].shape == (784, 64)
+assert res[1]['w'].shape == (64, 128)
+assert res[2]['w'].shape == (128, 10)
