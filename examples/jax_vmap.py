@@ -43,8 +43,8 @@ jitted_L2_dist = jit(vvmap_L2_dist, static_argnames=['d'])
 
 # @partial(jit, static_argnames=['d', 'layer_dimensions'])
 # @partial(jit, static_argnames=['d'])
-def genome_to_param(genome: jnp.ndarray, d: int):
-    layer_dimensions = [784, 64, 128, 10]
+def genome_to_param(genome: jnp.ndarray, d: int, layer_dimensions: list[int]):
+    # layer_dimensions = [784, 64, 128, 10]
     assert genome.shape[0] == sum(layer_dimensions)
     # NOTE: Testing without biases for the moment
     parameters = []
@@ -55,7 +55,7 @@ def genome_to_param(genome: jnp.ndarray, d: int):
 
         weight_matrix = jitted_L2_dist(genome, src_idx, target_idx, d)
         parameters.append(
-            {'w': weight_matrix}
+            {'w': weight_matrix},
         )
 
     return parameters
@@ -80,17 +80,14 @@ def test_large_net():
     assert parameters[2]['w'][3, :].sum() == 190
 
 
-# test_large_net()
 
 def map_over_genomes():
     layer_dimensions = [784, 64, 128, 10]
-    BATCH_SIZE_OR_POP_SIZE = 100
+    BATCH_SIZE_OR_POP_SIZE = 1000
     genomes = jnp.zeros((BATCH_SIZE_OR_POP_SIZE, sum(layer_dimensions), ))
 
-    v_genomes_to_param = jit(vmap(partial(genome_to_param, d=1)))
+    v_genomes_to_param = jit(vmap(partial(genome_to_param, d=1, layer_dimensions=layer_dimensions)))
 
-    parameters = v_genomes_to_param(genomes)
-    parameters = v_genomes_to_param(genomes)
     parameters = v_genomes_to_param(genomes)
 
     # print(parameters)
@@ -99,4 +96,6 @@ def map_over_genomes():
     print(parameters[2]['w'].shape)  # (10, 128, 10)
     # print(len(parameters))
 
-map_over_genomes()
+if __name__ == "__main__":
+    # test_large_net()
+    map_over_genomes()
