@@ -1,6 +1,8 @@
 import jax.numpy as jnp
 import jax.random as jrd
-import jax
+from jax import jit, vmap, lax
+
+from functools import partial
 
 
 # https://ericmjl.github.io/dl-workshop/02-jax-idioms/01-loopless-loops.html#exercise-chained-vmaps
@@ -8,13 +10,16 @@ import jax
 # https://github.com/google/jax/issues/673
 # https://jax.readthedocs.io/en/latest/_autosummary/jax.vmap.html#jax.vmap
 
-@jax.jit
+# https://github.com/google/jax/pull/13096
+
+
+@jit
 def mini_test(x, base, target_offset):
     return jnp.sqrt(jnp.square(x[base] - x[10 + target_offset]))
 
 def run_vvmap_test():
-    vmap_mini_test = jax.vmap(mini_test, in_axes=(None, None, 0))
-    vvmap_mini_test = jax.vmap(vmap_mini_test, in_axes=(None, 0, None))
+    vmap_mini_test = vmap(mini_test, in_axes=(None, None, 0))
+    vvmap_mini_test = vmap(vmap_mini_test, in_axes=(None, 0, None))
 
     x = jnp.arange(10, 24)
     offsets = jnp.arange(start=0, stop=4, step=1)
@@ -27,15 +32,14 @@ def run_vvmap_test():
 # ============================================================================
 
 def L2_dist(x, base, target_offset, d: int):
-    # x[2:6] == jax.lax.dynamic_slice(x, (2,), (4,))
     diff = lax.dynamic_slice(x, (base,), (d,)) - lax.dynamic_slice(x, (target_offset, ), (d,))
     return jnp.sqrt(diff.dot(diff))
-    return jnp.sqrt(jnp.square(x[base: base + d] - x[target_offset : target_offset + d]))
 
 
 vmap_L2_dist = vmap(L2_dist, in_axes=(None, None, 0, None))
 vvmap_L2_dist = vmap(vmap_L2_dist, in_axes=(None, 0, None, None))
 jitted_L2_dist = jit(vvmap_L2_dist, static_argnames=['d'])
+
 
 def genome_to_param(genome: jnp.ndarray, d: int = 1, layer_dimensions: list = [10, 4, 2]):
     assert genome.shape[0] == sum(layer_dimensions)
@@ -55,17 +59,10 @@ def genome_to_param(genome: jnp.ndarray, d: int = 1, layer_dimensions: list = [1
     return parameters
 
 
+layer_dimensions = [784, 64, 128, 10]
 res = genome_to_param(
-    jnp.arange(10, 26),
+    jnp.arange(0, sum(layer_dimensions)),
+    layer_dimensions=layer_dimensions
 )
 for r in res:
-    print(r['w'])
-
-# [
-#     [jnp.sqrt((20 - 24) ** 2), jnp.sqrt((20 - 25) ** 2)],
-#     [jnp.sqrt((21 - 24) ** 2), jnp.sqrt((21 - 25) ** 2)],
-#     [jnp.sqrt((22 - 24) ** 2), jnp.sqrt((22 - 25) ** 2)],
-#     [jnp.sqrt((23 - 24) ** 2), jnp.sqrt((23 - 25) ** 2)],
-# ]
-
-# raise ValueError('Not tested!!')
+    print(r['w'].shape)
