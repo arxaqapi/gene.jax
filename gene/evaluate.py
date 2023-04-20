@@ -1,7 +1,6 @@
 import jax.random as jrd
 import jax.numpy as jnp
 from jax import jit, vmap, lax
-import jax
 import gymnax
 import flax.linen as nn
 
@@ -65,22 +64,17 @@ def _rollout_problem(
     env, env_params = gymnax.make(settings["problem"]["environnment"])
     obs, state = env.reset(rng_reset, env_params)
 
-    cum_reward = 0
-    done = False
-    while not done:
-        # Update RNG
+    def rollout_loop(val):
+        obs, state, done, rng, cum_reward = val
+
         rng, rng_step = jrd.split(rng, 2)
-        # Sample a random action.
-        action_disrtibution = model.apply(model_parameters, obs)
-        action = jnp.argmax(action_disrtibution)
-
-        # Perform the step transition.
+        action = jnp.argmax(model.apply(model_parameters, obs))
         n_obs, n_state, reward, done, _ = env.step(rng_step, state, action, env_params)
-        # Update Stats
-        cum_reward += reward
 
-        obs = n_obs
-        state = n_state
+        new_val = n_obs, n_state, done, rng, cum_reward + reward
+        return new_val
+    val = lax.while_loop(lambda val: val[2], rollout_loop, (obs, state, False, rng, 0))
+    _, _, _, _, cum_reward = val
 
     return cum_reward
 
