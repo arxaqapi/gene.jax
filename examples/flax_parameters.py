@@ -1,3 +1,8 @@
+"""Simple Linear model to show how the parameters of a flax module are passed 
+as arguments (nothing is stored inside flax module instances) 
+- https://flax.readthedocs.io/en/latest/guides/flax_basics.html
+"""
+
 from typing import Sequence
 
 import jax.numpy as jnp
