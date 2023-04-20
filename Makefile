@@ -1,4 +1,8 @@
 
+
+f format:
+	ruff check run.py; black run.py
+
 r run:
 	python run.py
 
