@@ -31,3 +31,6 @@ c clean:
 backup:
 	git add -A
 	git commit -m '[bip bop]: backup ($(shell date +"%Y.%m.%d"))'
+
+chowner:
+	chown 1000 *
