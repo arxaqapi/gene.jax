@@ -3,7 +3,7 @@ import unittest
 import jax
 import jax.numpy as jnp
 import numpy as np
-from gene import deepax
+from gene import network
 
 
 # class TestDense(unittest.TestCase):
@@ -13,7 +13,7 @@ from gene import deepax
 #         out = model(input_data)
 #         # model.W[0][0] == 0.002713859
 #         self.assertEqual(out.shape, (128, 30))
-    
+
 #     def test_sequential_forward_dims(self):
 #         rng = deepax.Generator(0)
 #         input_data = jnp.ones((1000, 784))
@@ -40,10 +40,10 @@ from gene import deepax
 #                 'b': jnp.zeros((10, ))
 #             }))
 #         out = model(input_data)
-        
+
 #         self.assertEqual(model.layers[0].parameters['w'][38][8], 0.)
 #         self.assertEqual(out.shape, (1000, 10))
-    
+
 
 # class TestFlatNet(unittest.TestCase):
 #     def test_flatnet_forward(self):
@@ -54,7 +54,7 @@ from gene import deepax
 #                 minval=-10,
 #                 maxval=10),
 #             dimensions=[128, 64, 18])
-        
+
 #         synthetic_genomes = [
 #             jnp.full((128, ), fill_value=100),
 #             jnp.full((128, ), fill_value=-100),
@@ -71,7 +71,7 @@ from gene import deepax
 #                 ((128 + 64 + 64 + 18) * 4, ),
 #                 minval=-10,
 #                 maxval=10))
-        
+
 #         synthetic_genomes = [
 #             jnp.full((128, ), fill_value=100),
 #             jnp.full((128, ), fill_value=-100),
@@ -98,7 +98,7 @@ from gene import deepax
 
 #         self.assertIsNone(
 #             np.testing.assert_array_compare(lambda a, b : a != b, subkey_1, subkey_2))
-        
+
 #     def test_generator_number_subkeys(self):
 #         gen = deepax.Generator()
 #         n = np.random.randint(10)
@@ -108,14 +108,14 @@ from gene import deepax
 
 class TestSequentialFromGenome(unittest.TestCase):
     def test_seq_init_param_from_genome(self):
-            
-        model = deepax.Sequential(
-            deepax.Linear(in_features=128, out_features=64),
-            deepax.ReLU(),
-            deepax.Linear(in_features=64, out_features=64),
-            deepax.ReLU(),
-            deepax.Linear(in_features=64, out_features=18),)
-        
+        model = network.Sequential(
+            network.Linear(in_features=128, out_features=64),
+            network.ReLU(),
+            network.Linear(in_features=64, out_features=64),
+            network.ReLU(),
+            network.Linear(in_features=64, out_features=18),
+        )
+
         model.init_param_from_genome([])
         # self.assertEqual(
         #     model.init_param_from_genome([]),

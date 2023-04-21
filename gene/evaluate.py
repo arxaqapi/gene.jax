@@ -47,7 +47,6 @@ def _genome_to_model(genome: list[float], settings: dict):
         }
         # print(model_parameters[f"Dense_{i}"]['kernel'].shape)
 
-
     # To parameter FrozenDict
     model = LinearModel(layer_dimensions[1:])
     model_parameters = nn.FrozenDict({"params": model_parameters})
@@ -73,6 +72,7 @@ def _rollout_problem(
 
         new_val = n_obs, n_state, done, rng, cum_reward + reward
         return new_val
+
     val = lax.while_loop(lambda val: val[2], rollout_loop, (obs, state, False, rng, 0))
     _, _, _, _, cum_reward = val
 

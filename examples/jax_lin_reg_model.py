@@ -15,21 +15,25 @@ ys = xs * 3 - 1 + noise
 # plt.scatter(xs, ys)
 # plt.show()
 
+
 def model(theta, x):
     """Computes xw + b on a batch of input data x."""
     w, b = theta
     return w * x + b
 
+
 # Loss function is (y - y^)^2
 def loss_fn(theta, x, y):
-    return  jnp.mean(jnp.square(model(theta, x) - y))
+    return jnp.mean(jnp.square(model(theta, x) - y))
+
 
 # theta = theta - lr * Grad Loss(y, y^)
 def update(theta, x, y, lr: float = 0.1):
     return theta - lr * jax.grad(loss_fn)(theta, x, y)
 
+
 # Training loop
-theta = jnp.array([1., 1.])
+theta = jnp.array([1.0, 1.0])
 for _ in tqdm(range(1000)):
     theta = update(theta, xs, ys)
 
@@ -37,7 +41,5 @@ w, b = theta
 
 plt.scatter(xs, ys)
 plt.plot(xs, model(theta, xs), color="r")
-plt.title(f'Linear regression: {w=}, {b=}')
+plt.title(f"Linear regression: {w=}, {b=}")
 plt.show()
-
-
