@@ -1,7 +1,7 @@
 
 
 f format:
-	ruff check run.py; black run.py
+	ruff check .; black .
 
 r run:
 	python run.py
@@ -11,8 +11,6 @@ t test:
 
 prof profile: prof_dir
 	scalene --json --outfile profiles/profile.json python run.py 
-# scalene --html --outfile profile.html python run.py 
-
 # `data +'%Y%m%d_%H.%M.%S'`
 
 prof_dir:
@@ -25,7 +23,6 @@ build:
 # Docker run stafe image w. fish shell
 sail:
 	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax stafe fish
-
 
 
 c clean:
