@@ -4,7 +4,8 @@ import time
 from functools import partial
 
 import jax.random as jrd
-from jax import vmap, default_backend
+import jax.numpy as jnp
+from jax import jit, vmap, default_backend
 import evosax
 from tqdm import tqdm
 
@@ -15,6 +16,8 @@ def run(
     settings: dict,
     rng: jrd.KeyArray = jrd.PRNGKey(0),
 ):
+    logger = logging.getLogger("logger")
+
     rng, rng_init = jrd.split(rng, 2)
     # FIXME: no bias for the moment: add with n(d + 1): sum() * (settings['d'] + 1)
     strategy = evosax.Strategies[settings["evo"]["strategy_name"]](
@@ -26,7 +29,10 @@ def run(
     state = strategy.initialize(rng_init, es_params)
 
     # FIXME: uses the same key for each generation
-    vmap_evaluate_individual = vmap(partial(evaluate_individual, settings=settings))
+    jit_vmap_evaluate_individual = jit(
+        vmap(partial(evaluate_individual, settings=settings))
+    )
+
     for _generation in tqdm(
         range(settings["evo"]["n_generations"]), desc="Generation loop", position=0
     ):
@@ -36,8 +42,10 @@ def run(
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
-        temp_fitness = vmap_evaluate_individual(x, rng_eval_v)
+        temp_fitness = jit_vmap_evaluate_individual(x, rng_eval_v)
         fitness = fit_shaper.apply(x, temp_fitness)
+
+        logger.info(f"[[{_generation}]] - {temp_fitness=}")
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
 
@@ -52,13 +60,15 @@ if __name__ == "__main__":
     log_path = Path("log")
     if not log_path.exists():
         log_path.mkdir()
+
     logger = logging.getLogger("logger")
     f_handler = logging.FileHandler(
         filename=log_path.absolute() / f"{int(time.time())}_run.log", mode="a"
     )
     f_handler.setFormatter(
         logging.Formatter(
-            "[%(levelname)s - %(asctime)s]: %(name)s, %(message)s", "%Y/%m/%d_%H.%M.%S"
+            fmt="%(levelname)-8s %(asctime)s \t %(filename)s @f %(funcName)s @L%(lineno)s - %(message)s",
+            datefmt="%Y/%m/%d_%H.%M.%S",
         )
     )
     logger.addHandler(f_handler)
@@ -68,7 +78,7 @@ if __name__ == "__main__":
         "d": 1,
         "evo": {
             "strategy_name": "OpenES",
-            "n_generations": 20,
+            "n_generations": 10,
             "population_size": 20,
         },
         "net": {
