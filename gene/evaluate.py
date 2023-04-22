@@ -5,6 +5,7 @@ import gymnax
 import flax.linen as nn
 
 from gene.network import LinearModel
+from gene.utils import genome_size
 
 
 def _L2_dist(x, base, target_offset, d: int):
@@ -19,36 +20,47 @@ _vvmap_L2_dist = vmap(_vmap_L2_dist, in_axes=(None, 0, None, None))
 _jitted_L2_dist = jit(_vvmap_L2_dist, static_argnames=["d"])
 
 
-def _genome_to_model(genome: list[float], settings: dict):
+def _genome_to_model(_genome: list[float], settings: dict):
     layer_dimensions = settings["net"]["layer_dimensions"]
-    assert genome.shape[0] == sum(layer_dimensions)
+    # assert genome.shape[0] == genome_size(settings)  # sum(layer_dimensions) 
+    # FIXME: error here
+    genome, biases = jnp.split(_genome, [sum(layer_dimensions) * settings["d"]])  # Split au bon endroit
+    # print(genome.shape)
+    # print(biases.shape)
+    # print(biases)
 
     # FIXME: Testing without biases for the moment
     model_parameters = {}
     for i, (layer_in, layer_out) in enumerate(
         zip(layer_dimensions[:-1], layer_dimensions[1:])
     ):
-        position_offset = sum(layer_dimensions[:i])
+        position_offset = sum(layer_dimensions[:i]) * settings["d"]
         # indexes of the previous layer neurons
         src_idx = position_offset + jnp.arange(
-            start=0, stop=layer_in, step=settings["d"]
+            start=0, stop=layer_in * settings["d"], step=settings["d"]
         )
         # indexes of the current layer neurons
         target_idx = (
             position_offset
             + layer_in
-            + jnp.arange(start=0, stop=layer_out, step=settings["d"])
+            + jnp.arange(start=0, stop=layer_out * settings["d"], step=settings["d"])
         )
+
+        offset = sum(layer_dimensions[1 : 1 + i])
+        nD = sum(layer_dimensions) * settings["d"]
+        start_i = nD + offset  # _end_i = start_i + layer_out
 
         weight_matrix = _jitted_L2_dist(genome, src_idx, target_idx, settings["d"])
         model_parameters[f"Dense_{i}"] = {
             "kernel": weight_matrix,
-            "bias": jnp.zeros((layer_out,)),
+            # "bias": jnp.zeros((layer_out,)),
+            "bias": lax.dynamic_slice(genome, (start_i,), (layer_out,)),
         }
     # return {"params": model_parameters}
     # To parameter FrozenDict
     model = LinearModel(layer_dimensions[1:])
     model_parameters = nn.FrozenDict({"params": model_parameters})
+    # exit(111)
     return model, model_parameters
 
 

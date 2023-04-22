@@ -5,16 +5,17 @@ from functools import partial
 
 import jax.random as jrd
 import jax.numpy as jnp
-from jax import jit, vmap, default_backend
+from jax import jit, vmap, default_backend, disable_jit
 import evosax
 from tqdm import tqdm
 
 from gene.evaluate import evaluate_individual
+from gene.utils import genome_size
 
 
 def run(
     settings: dict,
-    rng: jrd.KeyArray = jrd.PRNGKey(0),
+    rng: jrd.KeyArray = jrd.PRNGKey(81263),
 ):
     logger = logging.getLogger("logger")
 
@@ -22,7 +23,11 @@ def run(
     # FIXME: no bias for the moment: add with n(d + 1): sum() * (settings['d'] + 1)
     strategy = evosax.Strategies[settings["evo"]["strategy_name"]](
         popsize=settings["evo"]["population_size"],
-        num_dims=sum(settings["net"]["layer_dimensions"]),
+
+
+        # num_dims=sum(settings["net"]["layer_dimensions"]) * settings['d'],
+        # FIXME: Error lies here somewere, works without biases
+        num_dims=genome_size(settings)  # This causes the whole learning process to meltdown
     )
     fit_shaper = evosax.FitnessShaper(maximize=settings["problem"]["maximize"])
     es_params = strategy.default_params.replace(init_min=-2, init_max=2)
@@ -42,6 +47,7 @@ def run(
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
+        # temp_fitness = evaluate_individual(x[0], rng_eval_v, settings=settings)
         temp_fitness = jit_vmap_evaluate_individual(x, rng_eval_v)
         fitness = fit_shaper.apply(x, temp_fitness)
 
@@ -78,7 +84,7 @@ if __name__ == "__main__":
         "d": 1,
         "evo": {
             "strategy_name": "OpenES",
-            "n_generations": 10,
+            "n_generations": 35,
             "population_size": 20,
         },
         "net": {
@@ -89,5 +95,5 @@ if __name__ == "__main__":
             "maximize": True,
         },
     }
-
-    run(settings)
+    with disable_jit(False):
+        run(settings)
