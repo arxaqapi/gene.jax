@@ -13,7 +13,11 @@ if __name__ == "__main__":
     n = 1000
     d = 3
     genome = jnp.arange(0, n * d)
-    result = test_split(genome)
+
+    # slow at first run
+    result = test_split(genome) 
+    # fast all the time (pre-compilation)
+    result = jit(test_split)(genome)
 
     print(len(result))
     print(result[0].shape)
