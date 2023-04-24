@@ -4,7 +4,6 @@ import time
 from functools import partial
 
 import jax.random as jrd
-import jax.numpy as jnp
 from jax import jit, vmap, default_backend
 import evosax
 
@@ -70,8 +69,9 @@ if __name__ == "__main__":
     logger.addHandler(f_handler)
     logger.setLevel(logging.INFO)
 
+    # TODO: load a config file passed as argument or default config
     settings = {
-        "d": 3,
+        "d": 1,
         "evo": {
             "strategy_name": "SNES",
             "n_generations": 25,
