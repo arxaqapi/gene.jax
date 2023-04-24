@@ -3,7 +3,7 @@
 ## Todo
 
 - [x] vmap all (evaluate model)
-- [ ] add biases
+- [x] add biases
 - [x] check flax (insert w&b into struct) (less integration problems) (cnn direct -> nn gene)
 - [ ] test suite for gene encoding
 - [ ] add direct encoding
