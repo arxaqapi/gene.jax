@@ -17,10 +17,16 @@ def run(
 ):
     logger = logging.getLogger("logger")
 
+    # TODO: make this cleaner
+    if settings["encoding"]["type"] == "direct":
+        num_dims = direct_enc_genome_size(settings)
+    elif settings["encoding"]["type"] == "gene":
+        num_dims = gene_enc_genome_size(settings)
+
     rng, rng_init = jrd.split(rng, 2)
     strategy = evosax.Strategies[settings["evo"]["strategy_name"]](
         popsize=settings["evo"]["population_size"],
-        num_dims=direct_enc_genome_size(settings),
+        num_dims=num_dims,
     )
 
     fit_shaper = evosax.FitnessShaper(maximize=settings["problem"]["maximize"])
@@ -53,13 +59,23 @@ def run(
 if __name__ == "__main__":
     assert default_backend() == "gpu"
 
+    # TODO: load a config file passed as argument
+    import json
+
+    config_file = Path("config/base_cartpole.json")
+    if config_file.exists():
+        with config_file.open() as f:
+            settings = json.load(f)
+
     log_path = Path("log")
     if not log_path.exists():
         log_path.mkdir()
 
     logger = logging.getLogger("logger")
     f_handler = logging.FileHandler(
-        filename=log_path.absolute() / f"{int(time.time())}_run.log", mode="a"
+        filename=log_path.absolute()
+        / f"{int(time.time())}_run{settings['encoding']['type']}.log",
+        mode="a",
     )
     f_handler.setFormatter(
         logging.Formatter(
@@ -70,12 +86,4 @@ if __name__ == "__main__":
     logger.addHandler(f_handler)
     logger.setLevel(logging.INFO)
 
-    # TODO: load a config file passed as argument
-    import json
-
-    config_file = Path("config/base_cartpole.json")
-    if config_file.exists():
-        with config_file.open() as f:
-            settings = json.load(f)
-
-        run(settings)
+    run(settings)

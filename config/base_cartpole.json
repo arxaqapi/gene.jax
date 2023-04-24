@@ -9,7 +9,8 @@
     },
     "encoding": {
         "d": 1,
-        "distance": "L2"
+        "distance": "L2",
+        "type": "direct"
     },
     "problem": {
         "environnment": "CartPole-v1",

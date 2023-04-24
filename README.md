@@ -14,4 +14,8 @@
 - [ ] compare direct and indirect encoding (Cartpole) ~ 10 gen
 - [ ] notebook to present differences and results
 - [ ] Test suite rework
-- [ ] Example folder rework and cleaning
+- [x] Example folder rework and cleaning
+
+
+## Profiles
+To utilize the json profile files, open them using the [scalene-gui app](https://plasma-umass.org/scalene-gui/).

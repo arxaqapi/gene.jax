@@ -94,7 +94,11 @@ def direct_decoding(genome: jnp.ndarray, settings: dict):
 
 
 def genome_to_model(genome: jnp.ndarray, settings: dict):
-    model_parameters = direct_decoding(genome, settings)
+    if settings["encoding"]["type"] == "direct":
+        model_parameters = direct_decoding(genome, settings)
+    elif settings["encoding"]["type"] == "gene":
+        model_parameters = gene_decoding(genome, settings)
+
     model = LinearModel(settings["net"]["layer_dimensions"][1:])
 
     return model, nn.FrozenDict({"params": model_parameters})
