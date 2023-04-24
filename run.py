@@ -7,36 +7,29 @@ import jax.random as jrd
 import jax.numpy as jnp
 from jax import jit, vmap, default_backend
 import evosax
-from tqdm import tqdm
 
 from gene.evaluate import evaluate_individual
-from gene.utils import genome_size, genome_size_naive
+from gene.utils import genome_size
 
 
 def run(
     settings: dict,
-    rng: jrd.KeyArray = jrd.PRNGKey(0),
+    rng: jrd.KeyArray = jrd.PRNGKey(5),
 ):
     logger = logging.getLogger("logger")
 
     rng, rng_init = jrd.split(rng, 2)
-    # FIXME: no bias for the moment: add with n(d + 1): sum() * (settings['d'] + 1)
     strategy = evosax.Strategies[settings["evo"]["strategy_name"]](
-        popsize=settings["evo"]["population_size"],
-        num_dims=genome_size(settings)  #  sum(settings["net"]["layer_dimensions"]),
+        popsize=settings["evo"]["population_size"], num_dims=genome_size(settings)
     )
 
-    print(genome_size(settings), genome_size_naive(settings))
-    exit(234)
     fit_shaper = evosax.FitnessShaper(maximize=settings["problem"]["maximize"])
-    es_params = strategy.default_params.replace(init_min=-10, init_max=10)
+    es_params = strategy.default_params.replace(init_min=-2, init_max=2)
     state = strategy.initialize(rng_init, es_params)
 
-    # FIXME: uses the same key for each generation
     vmap_evaluate_individual = vmap(partial(evaluate_individual, settings=settings))
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
-    # for _generation in tqdm(
     for _generation in range(settings["evo"]["n_generations"]):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
@@ -45,8 +38,6 @@ def run(
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
-        # temp_fitness = vmap_evaluate_individual(x, rng_eval_v)
-        # temp_fitness = jnp.array([evaluate_individual(genome, rng_eval_v[0], settings) for genome in x])
         temp_fitness = jit_vmap_evaluate_individual(x, rng_eval_v)
         fitness = fit_shaper.apply(x, temp_fitness)
 
@@ -80,14 +71,14 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
 
     settings = {
-        "d": 1,
+        "d": 3,
         "evo": {
-            "strategy_name": "OpenES",
+            "strategy_name": "SNES",
             "n_generations": 25,
             "population_size": 20,
         },
         "net": {
-            "layer_dimensions": [4, 32, 2],  # 72 = (4 + 32 + 2)+ 32 + 2
+            "layer_dimensions": [4, 32, 2],
         },
         "problem": {
             "environnment": "CartPole-v1",
