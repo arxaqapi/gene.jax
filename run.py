@@ -8,7 +8,7 @@ from jax import jit, vmap, default_backend
 import evosax
 
 from gene.evaluate import evaluate_individual
-from gene.utils import genome_size
+from gene.encoding import gene_enc_genome_size, direct_enc_genome_size
 
 
 def run(
@@ -19,7 +19,8 @@ def run(
 
     rng, rng_init = jrd.split(rng, 2)
     strategy = evosax.Strategies[settings["evo"]["strategy_name"]](
-        popsize=settings["evo"]["population_size"], num_dims=genome_size(settings)
+        popsize=settings["evo"]["population_size"],
+        num_dims=direct_enc_genome_size(settings),
     )
 
     fit_shaper = evosax.FitnessShaper(maximize=settings["problem"]["maximize"])
