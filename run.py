@@ -69,21 +69,12 @@ if __name__ == "__main__":
     logger.addHandler(f_handler)
     logger.setLevel(logging.INFO)
 
-    # TODO: load a config file passed as argument or default config
-    settings = {
-        "d": 1,
-        "evo": {
-            "strategy_name": "SNES",
-            "n_generations": 25,
-            "population_size": 20,
-        },
-        "net": {
-            "layer_dimensions": [4, 32, 2],
-        },
-        "problem": {
-            "environnment": "CartPole-v1",
-            "maximize": True,
-        },
-    }
+    # TODO: load a config file passed as argument
+    import json
 
-    run(settings)
+    config_file = Path("config/base_cartpole.json")
+    if config_file.exists():
+        with config_file.open() as f:
+            settings = json.load(f)
+
+        run(settings)

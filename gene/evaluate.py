@@ -20,7 +20,7 @@ _jit_vmap_tag_dist = jit_vmap_distance_f("tag")
 def _genome_to_model(_genome: list[float], settings: dict):
     assert _genome.shape[0] == genome_size(settings)
     layer_dims = settings["net"]["layer_dimensions"]
-    d = settings["d"]
+    d = settings["encoding"]["d"]
 
     split_i = sum(layer_dims) * d
 

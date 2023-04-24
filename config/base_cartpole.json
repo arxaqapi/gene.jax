@@ -1,0 +1,18 @@
+{
+    "evo": {
+        "strategy_name": "SNES",
+        "n_generations": 25,
+        "population_size": 20
+    },
+    "net": {
+        "layer_dimensions": [4, 32, 2]
+    },
+    "encoding": {
+        "d": 1,
+        "distance": "L2"
+    },
+    "problem": {
+        "environnment": "CartPole-v1",
+        "maximize": true
+    }
+}
