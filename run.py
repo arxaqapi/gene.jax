@@ -29,10 +29,18 @@ def run(
     es_params = strategy.default_params.replace(init_min=-2, init_max=2)
     state = strategy.initialize(rng_init, es_params)
 
+    # Enable logging data during training process
+    es_logging = evosax.ESLog(
+        num_dims=num_dims,
+        num_generations=config["evo"]["n_generations"],
+        top_k=5,
+        maximize=True)
+    log = es_logging.initialize()
+
     vmap_evaluate_individual = vmap(partial(evaluate_individual, config=config))
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
-    for _generation in range(config["evo"]["n_generations"]):
+    for generation in range(config["evo"]["n_generations"]):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # Here, each individual has an unique random key used for evaluation purposes
@@ -43,13 +51,14 @@ def run(
         temp_fitness = jit_vmap_evaluate_individual(x, rng_eval_v)
         fitness = fit_shaper.apply(x, temp_fitness)
 
-        logger.info(f"[[{_generation}]] - {temp_fitness=}")
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
 
-        # Log / stats step
-        # ...
-    return state.best_fitness, state.best_member
+        # Log / stats step: Add the fitness to log object
+        log = es_logging.update(log, x, temp_fitness)
+        logger.info("Generation: ", generation, "Performance: ", log["log_top_1"][generation])
+
+    return state, es_logging, log
 
 
 if __name__ == "__main__":
