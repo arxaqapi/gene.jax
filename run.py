@@ -12,31 +12,31 @@ from gene.encoding import Encoding_size_function
 
 
 def run(
-    settings: dict,
+    config: dict,
     rng: jrd.KeyArray = jrd.PRNGKey(5),
 ):
     logger = logging.getLogger("logger")
 
-    num_dims = Encoding_size_function[settings["encoding"]["type"]](settings)
+    num_dims = Encoding_size_function[config["encoding"]["type"]](config)
 
     rng, rng_init = jrd.split(rng, 2)
-    strategy = evosax.Strategies[settings["evo"]["strategy_name"]](
-        popsize=settings["evo"]["population_size"],
+    strategy = evosax.Strategies[config["evo"]["strategy_name"]](
+        popsize=config["evo"]["population_size"],
         num_dims=num_dims,
     )
 
-    fit_shaper = evosax.FitnessShaper(maximize=settings["problem"]["maximize"])
+    fit_shaper = evosax.FitnessShaper(maximize=config["problem"]["maximize"])
     es_params = strategy.default_params.replace(init_min=-2, init_max=2)
     state = strategy.initialize(rng_init, es_params)
 
-    vmap_evaluate_individual = vmap(partial(evaluate_individual, settings=settings))
+    vmap_evaluate_individual = vmap(partial(evaluate_individual, config=config))
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
-    for _generation in range(settings["evo"]["n_generations"]):
+    for _generation in range(config["evo"]["n_generations"]):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # Here, each individual has an unique random key used for evaluation purposes
-        rng_eval_v = jrd.split(rng_eval, settings["evo"]["population_size"])
+        rng_eval_v = jrd.split(rng_eval, config["evo"]["population_size"])
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
@@ -80,9 +80,9 @@ if __name__ == "__main__":
     config_file = Path(args.config)
     if config_file.exists():
         with config_file.open() as f:
-            settings = json.load(f)
+            config = json.load(f)
     else:
-        raise ValueError('No config file found')
+        raise ValueError("No config file found")
 
     log_path = Path("log")
     if not log_path.exists():
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     logger = logging.getLogger("logger")
     f_handler = logging.FileHandler(
         filename=log_path.absolute()
-        / f"{int(time.time())}_run_{settings['encoding']['type']}.log",
+        / f"{int(time.time())}_run_{config['encoding']['type']}.log",
         mode="a",
     )
     f_handler.setFormatter(
@@ -105,4 +105,4 @@ if __name__ == "__main__":
     if args.verbose == False:
         logger.disabled = not args.verbose
 
-    run(settings)
+    run(config)

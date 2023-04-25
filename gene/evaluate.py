@@ -12,12 +12,12 @@ def _rollout_problem_lax(
     model: Module,
     model_parameters: dict,
     rng: jrd.KeyArray,
-    settings: dict,
+    config: dict,
 ):
-    """Perform a complete rollout of the current env, declared in 'settings', for a specific individual and returns the cumulated reward as the fitness"""
+    """Perform a complete rollout of the current env, declared in 'config', for a specific individual and returns the cumulated reward as the fitness"""
     rng, rng_reset = jrd.split(rng, 2)
 
-    env, env_params = gymnax.make(settings["problem"]["environnment"])
+    env, env_params = gymnax.make(config["problem"]["environnment"])
     obs, state = env.reset(rng_reset, env_params)
 
     def rollout_loop(val):
@@ -41,16 +41,16 @@ def _rollout_problem_lax(
 def evaluate_individual(
     genome: jnp.array,
     rng: jrd.KeyArray,
-    settings: dict,
+    config: dict,
 ):
     # Decodes the genome into the model parameters
-    model, model_parameters = genome_to_model(genome, settings=settings)
+    model, model_parameters = genome_to_model(genome, config=config)
     # Perform the evaluation step
     fitness = _rollout_problem_lax(
         model=model,
         model_parameters=model_parameters,
         rng=rng,
-        settings=settings,
+        config=config,
     )
 
     return fitness

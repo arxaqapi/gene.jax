@@ -6,27 +6,27 @@ from gene.network import LinearModel
 from gene.distances import Vectorized_distances
 
 
-def gene_enc_genome_size(settings: dict):
+def gene_enc_genome_size(config: dict):
     """Computes the effective size of the genome based on the layers dimensionnalities."""
     # The first value in layer_dimension does is only used for the dimensionnality
     # of the input features. So biases are attributed to it
-    d = settings["encoding"]["d"]
-    l_dims = settings["net"]["layer_dimensions"]
+    d = config["encoding"]["d"]
+    l_dims = config["net"]["layer_dimensions"]
     return l_dims[0] * d + sum(l_dims[1:]) * (d + 1)
 
 
-def direct_enc_genome_size(settings: dict):
-    layer_dims = settings["net"]["layer_dimensions"]
+def direct_enc_genome_size(config: dict):
+    layer_dims = config["net"]["layer_dimensions"]
 
     return sum(
         in_f * out_f + out_f for in_f, out_f in zip(layer_dims[:-1], layer_dims[1:])
     )
 
 
-def gene_decoding(genome: jnp.ndarray, settings: dict):
-    assert genome.shape[0] == gene_enc_genome_size(settings)
-    layer_dims = settings["net"]["layer_dimensions"]
-    d = settings["encoding"]["d"]
+def gene_decoding(genome: jnp.ndarray, config: dict):
+    assert genome.shape[0] == gene_enc_genome_size(config)
+    layer_dims = config["net"]["layer_dimensions"]
+    d = config["encoding"]["d"]
 
     # To facilitate acces to the encoding of the weights and the biases (and reduce confusion and possible error in computing indexes), we split the genome in 2 parts
     genome_w, genome_b = jnp.split(genome, [sum(layer_dims) * d])
@@ -42,7 +42,7 @@ def gene_decoding(genome: jnp.ndarray, settings: dict):
         # indexes of the current layer neurons
         target_idx = layer_offset + layer_in + jnp.arange(start=0, stop=layer_out)
 
-        weight_matrix = Vectorized_distances[settings["encoding"]["distance"]](
+        weight_matrix = Vectorized_distances[config["encoding"]["distance"]](
             genome_w_positions, src_idx, target_idx
         )
         # Biases are directly encoded into the genome, they are stored at the end of the genome, in genome_b
@@ -58,9 +58,9 @@ def gene_decoding(genome: jnp.ndarray, settings: dict):
     return model_parameters
 
 
-def direct_decoding(genome: jnp.ndarray, settings: dict):
+def direct_decoding(genome: jnp.ndarray, config: dict):
     """Each weight and bias of the neural network is encoded as a single gene in the genome"""
-    layer_dims = settings["net"]["layer_dimensions"]
+    layer_dims = config["net"]["layer_dimensions"]
 
     genome_w, genome_b = jnp.split(
         genome,
@@ -88,10 +88,10 @@ def direct_decoding(genome: jnp.ndarray, settings: dict):
     return model_parameters
 
 
-def genome_to_model(genome: jnp.ndarray, settings: dict):
-    model_parameters = Encoding_function[settings["encoding"]["type"]](genome, settings)
+def genome_to_model(genome: jnp.ndarray, config: dict):
+    model_parameters = Encoding_function[config["encoding"]["type"]](genome, config)
 
-    model = LinearModel(settings["net"]["layer_dimensions"][1:])
+    model = LinearModel(config["net"]["layer_dimensions"][1:])
 
     return model, nn.FrozenDict({"params": model_parameters})
 

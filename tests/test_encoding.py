@@ -16,7 +16,7 @@ class TestDirectEncoding(unittest.TestCase):
 
         model_param = direct_decoding(
             genome,
-            settings={"net": {"layer_dimensions": layer_dims}, "encoding": {"d": 1}},
+            config={"net": {"layer_dimensions": layer_dims}, "encoding": {"d": 1}},
         )
 
         self.assertEqual(model_param["Dense_0"]["kernel"][10][15], (10 * 64 + 15))
