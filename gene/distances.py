@@ -32,6 +32,9 @@ def tag_dist(x, n1_i, n2_i):
 
 
 def pL2_dist(x, n1_i, n2_i):
+    """The product L2 distance, is simply the L2 distance multiplied by the bounded prouduct
+    of all components of the vector. This is not a mathematically strict "distance"
+    function, since it allows for negative values."""
     diff = x[n1_i] - x[n2_i]
     return _a(jnp.prod(diff)) * _L2_dist(x[n1_i], x[n2_i])
 
