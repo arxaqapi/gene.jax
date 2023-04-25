@@ -9,8 +9,8 @@
     },
     "encoding": {
         "d": 1,
-        "distance": "L2",
-        "type": "direct"
+        "distance": "pL2",
+        "type": "gene"
     },
     "problem": {
         "environnment": "CartPole-v1",

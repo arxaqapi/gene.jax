@@ -23,11 +23,12 @@ def L2_dist(x, n1_i, n2_i):
 
 
 def tag_dist(x, n1_i, n2_i):
-    raise ValueError("Does not work as expected")
+    """Introduced in [A comparison of genetic regulatory network dynamics and encoding](https://doi.org/10.1145/3071178.3071322) ''"""
+    # raise ValueError("Does not work as expected")
     n1 = x[n1_i]
     n2 = x[n2_i]
-    n2_1 = n2[0]
-    diff = n1[1:] - n2_1
+
+    diff = n1[1:] - n2[0]
     return jnp.sum(_a(diff) * jnp.exp(-jnp.abs(diff)))
 
 
@@ -53,3 +54,5 @@ def jit_vmap_distance_f(distance_f: str):
 
 
 Distances = {"L2": L2_dist, "tag": tag_dist, "pL2": pL2_dist}
+
+Vectorized_distances = {k: jit_vmap_distance_f(k) for k, _v in Distances.items()}

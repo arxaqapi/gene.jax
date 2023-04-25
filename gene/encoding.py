@@ -3,7 +3,7 @@ from jax import lax
 import flax.linen as nn
 
 from gene.network import LinearModel
-from gene.distances import jit_vmap_distance_f
+from gene.distances import Vectorized_distances
 
 
 def gene_enc_genome_size(settings: dict):
@@ -21,13 +21,6 @@ def direct_enc_genome_size(settings: dict):
     return sum(
         in_f * out_f + out_f for in_f, out_f in zip(layer_dims[:-1], layer_dims[1:])
     )
-
-
-# TODO: remove below and wrap into _genome_to_model_func and partially apply evaluate_individual
-# L2 dist vmap over 2 axis (returns matrix) and jit
-_jit_vmap_L2_dist = jit_vmap_distance_f("L2")
-# tag dist vmap over 2 axis (returns matrix) and jit
-_jit_vmap_tag_dist = jit_vmap_distance_f("tag")
 
 
 def gene_decoding(genome: jnp.ndarray, settings: dict):
@@ -49,7 +42,9 @@ def gene_decoding(genome: jnp.ndarray, settings: dict):
         # indexes of the current layer neurons
         target_idx = layer_offset + layer_in + jnp.arange(start=0, stop=layer_out)
 
-        weight_matrix = _jit_vmap_L2_dist(genome_w_positions, src_idx, target_idx)
+        weight_matrix = Vectorized_distances[settings["encoding"]["distance"]](
+            genome_w_positions, src_idx, target_idx
+        )
         # Biases are directly encoded into the genome, they are stored at the end of the genome, in genome_b
         biases = lax.dynamic_slice(
             genome_b, (sum(layer_dims[1 : i + 1]),), (layer_out,)
