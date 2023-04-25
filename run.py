@@ -8,7 +8,7 @@ from jax import jit, vmap, default_backend
 import evosax
 
 from gene.evaluate import evaluate_individual
-from gene.encoding import gene_enc_genome_size, direct_enc_genome_size
+from gene.encoding import Encoding_size_function
 
 
 def run(
@@ -17,11 +17,7 @@ def run(
 ):
     logger = logging.getLogger("logger")
 
-    # TODO: make this cleaner
-    if settings["encoding"]["type"] == "direct":
-        num_dims = direct_enc_genome_size(settings)
-    elif settings["encoding"]["type"] == "gene":
-        num_dims = gene_enc_genome_size(settings)
+    num_dims = Encoding_size_function[settings["encoding"]["type"]](settings)
 
     rng, rng_init = jrd.split(rng, 2)
     strategy = evosax.Strategies[settings["evo"]["strategy_name"]](
