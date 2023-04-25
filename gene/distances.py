@@ -2,8 +2,9 @@ import jax.numpy as jnp
 from jax import jit, vmap
 
 
-def L2_dist(x, n1_i, n2_i):
-    diff = x[n1_i] - x[n2_i]
+@jit
+def _L2_dist(v1, v2):
+    diff = v1 - v2
     return jnp.sqrt(diff.dot(diff))
 
 
@@ -14,7 +15,15 @@ def _a(x):
     return x
 
 
+# Distance functions
+
+
+def L2_dist(x, n1_i, n2_i):
+    return _L2_dist(x[n1_i], x[n2_i])
+
+
 def tag_dist(x, n1_i, n2_i):
+    raise ValueError("Does not work as expected")
     n1 = x[n1_i]
     n2 = x[n2_i]
     n2_1 = n2[0]
@@ -22,9 +31,15 @@ def tag_dist(x, n1_i, n2_i):
     return jnp.sum(_a(diff) * jnp.exp(-jnp.abs(diff)))
 
 
+def pL2_dist(x, n1_i, n2_i):
+    diff = x[n1_i] - x[n2_i]
+    return _a(jnp.prod(diff)) * _L2_dist(x[n1_i], x[n2_i])
+
+
 def jit_vmap_distance_f(distance_f: str):
-    """Takes the name of a the distance function and optimizes it (vmap over 2 axis) to run in parallel
-    over the complete genome and to return a matrix of the correct shape: (in_features, out_features).
+    """Takes the name of a the distance function and optimizes it (vmap over 2 axis)
+    to run in parallel over the complete genome and to return a matrix of the correct
+    shape: (in_features, out_features).
     """
     return jit(
         vmap(
@@ -34,4 +49,4 @@ def jit_vmap_distance_f(distance_f: str):
     )
 
 
-Distances = {"L2": L2_dist, "tag": tag_dist}
+Distances = {"L2": L2_dist, "tag": tag_dist, "pL2": pL2_dist}
