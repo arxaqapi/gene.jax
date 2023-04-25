@@ -55,13 +55,34 @@ def run(
 if __name__ == "__main__":
     assert default_backend() == "gpu"
 
-    # TODO: load a config file passed as argument
+    import argparse
     import json
 
-    config_file = Path("config/base_cartpole.json")
+    parser = argparse.ArgumentParser(
+        description="Start the experimen described in the config file"
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        required=False,
+        default="config/base_cartpole.json",
+        help="Config file to use",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Activate or deactivate the logging capabilities",
+    )
+    # , required=False, default=True
+    args = parser.parse_args()
+
+    config_file = Path(args.config)
     if config_file.exists():
         with config_file.open() as f:
             settings = json.load(f)
+    else:
+        raise ValueError('No config file found')
 
     log_path = Path("log")
     if not log_path.exists():
@@ -70,7 +91,7 @@ if __name__ == "__main__":
     logger = logging.getLogger("logger")
     f_handler = logging.FileHandler(
         filename=log_path.absolute()
-        / f"{int(time.time())}_run{settings['encoding']['type']}.log",
+        / f"{int(time.time())}_run_{settings['encoding']['type']}.log",
         mode="a",
     )
     f_handler.setFormatter(
@@ -81,5 +102,7 @@ if __name__ == "__main__":
     )
     logger.addHandler(f_handler)
     logger.setLevel(logging.INFO)
+    if args.verbose == False:
+        logger.disabled = not args.verbose
 
     run(settings)
