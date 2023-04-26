@@ -58,7 +58,7 @@ def run(
         log = es_logging.update(log, x, temp_fitness)
         logger.info("Generation: ", generation, "Performance: ", log["log_top_1"][generation])
 
-    return state, es_logging, log
+    return state, log
 
 
 if __name__ == "__main__":
