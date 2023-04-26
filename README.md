@@ -11,9 +11,9 @@
 - [x] add direct encoding
 - [x] implemment (working) evosax loop
 - [x] test loop with direct enc
-- [ ] compare direct and indirect encoding (Cartpole) ~ 10 gen
-- [ ] notebook to present differences and results
-- [ ] Test suite rework
+- [x] compare direct and indirect encoding (Cartpole) ~ 10 gen
+- [x] notebook to present differences and results
+- [x] Test suite rework
 - [x] Example folder rework and cleaning
 
 
