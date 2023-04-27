@@ -34,7 +34,8 @@ def run(
         num_dims=num_dims,
         num_generations=config["evo"]["n_generations"],
         top_k=5,
-        maximize=True)
+        maximize=True,
+    )
     log = es_logging.initialize()
 
     vmap_evaluate_individual = vmap(partial(evaluate_individual, config=config))
@@ -56,7 +57,9 @@ def run(
 
         # Log / stats step: Add the fitness to log object
         log = es_logging.update(log, x, temp_fitness)
-        logger.info("Generation: ", generation, "Performance: ", log["log_top_1"][generation])
+        logger.info(
+            "Generation: ", generation, "Performance: ", log["log_top_1"][generation]
+        )
 
     return state, log
 
