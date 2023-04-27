@@ -25,9 +25,10 @@ sail:
 
 
 c clean:
-	rm -rf gene/__pycache__
-	rm -rf tests/__pycache__
+	rm -rf __pycache__
+	rm -rf */__pycache__
 	rm -rf .ruff_cache
+	rm -rf .ipynb_checkpoints
 
 backup:
 	git add -A
