@@ -21,7 +21,7 @@ build:
 
 # Docker run stafe image w. fish shell
 sail:
-	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax stafe:0.0.2 
+	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax -p 8888:8888 stafe:0.0.2 
 
 
 c clean:
@@ -35,3 +35,8 @@ backup:
 
 chowner:
 	chown 1000 *
+
+
+# https://stackoverflow.com/questions/38830610/access-jupyter-notebook-running-on-docker-container
+notebook:
+	xvfb-run -s "-screen 0 1400x900x24" jupyter notebook --ip 0.0.0.0 --allow-root
