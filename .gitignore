@@ -1,6 +1,6 @@
 .vscode
 .ruff_cache
-
+*.prof
 
 ### Python
 ### https://github.com/github/gitignore/blob/main/Python.gitignore
