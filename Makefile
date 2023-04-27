@@ -17,16 +17,17 @@ prof_dir:
 
 # Docker build image
 build:
-	docker build -t stafe docker/.
+	docker build -t stafe:0.0.2 -f docker/0.0.2.Dockerfile .
 
 # Docker run stafe image w. fish shell
 sail:
-	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax stafe fish
+	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax stafe:0.0.2 
 
 
 c clean:
 	rm -rf gene/__pycache__
 	rm -rf tests/__pycache__
+	rm -rf .ruff_cache
 
 backup:
 	git add -A
