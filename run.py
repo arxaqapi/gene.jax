@@ -27,7 +27,7 @@ def run(
         num_dims=num_dims,
     )
 
-    fit_shaper = evosax.FitnessShaper(maximize=config["problem"]["maximize"])
+    # NOTE: Check if uniform or normal distr 
     es_params = strategy.default_params.replace(init_min=-2, init_max=2)
     state = strategy.initialize(rng_init, es_params)
 
@@ -40,19 +40,17 @@ def run(
     )
     log = es_logging.initialize()
 
-    vmap_evaluate_individual = vmap(partial(evaluate_individual, config=config))
+    vmap_evaluate_individual = vmap(partial(evaluate_individual, config=config), in_axes=(0, None))
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
     for generation in range(config["evo"]["n_generations"]):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
-        # Here, each individual has an unique random key used for evaluation purposes
-        rng_eval_v = jrd.split(rng_eval, config["evo"]["population_size"])
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
-        temp_fitness = jit_vmap_evaluate_individual(x, rng_eval_v)
-        fitness = fit_shaper.apply(x, temp_fitness)
+        temp_fitness = jit_vmap_evaluate_individual(x, rng_eval)
+        fitness = -1. * temp_fitness
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)

@@ -90,7 +90,6 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
         num_dims=num_dims,
     )
 
-    fit_shaper = evosax.FitnessShaper(maximize=config["problem"]["maximize"])
     es_params = strategy.default_params.replace(init_min=-2, init_max=2)
     state = strategy.initialize(rng_init, es_params)
 
@@ -120,7 +119,7 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
         # NOTE - Evaluate
         temp_fitness = jit_vmap_evaluate_individual(x, rng_eval_v)
         # temp_fitness = jnp.array([evaluate_individual(genome, config, env) for genome in x])
-        fitness = fit_shaper.apply(x, temp_fitness)
+        fitness = -1 * temp_fitness
 
         print(temp_fitness)
 
