@@ -9,6 +9,7 @@ import evosax
 
 from gene.evaluate import evaluate_individual
 from gene.encoding import Encoding_size_function
+from gene.tracker import PopulationTracker
 
 
 def run(
@@ -16,6 +17,7 @@ def run(
     rng: jrd.KeyArray = jrd.PRNGKey(5),
 ):
     logger = logging.getLogger("logger")
+    tracker = PopulationTracker(config)
 
     num_dims = Encoding_size_function[config["encoding"]["type"]](config)
 
@@ -56,12 +58,12 @@ def run(
         state = strategy.tell(x, fitness, state, es_params)
 
         # Log / stats step: Add the fitness to log object
+        tracker.update(x)
         log = es_logging.update(log, x, temp_fitness)
         logger.info(
             "Generation: ", generation, "Performance: ", log["log_top_1"][generation]
         )
-
-    return state, log
+    return state, log, tracker.center_fitness_per_step(rng)
 
 
 if __name__ == "__main__":
