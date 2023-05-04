@@ -46,11 +46,11 @@ def rollout(
         length=config["problem"]["episode_length"],
     )
 
-    jax.debug.print(
-        "[Debug]: {carry} | rewards={rewards}", carry=carry[-1], rewards=returns[:5]
-    )
+    # jax.debug.print(
+    #     "[Debug]: {carry} | rewards={rewards}", carry=carry[-1], rewards=returns[:5]
+    # )
 
-    chex.assert_trees_all_close(carry[-1], jnp.cumsum(returns)[-1])
+    # chex.assert_trees_all_close(carry[-1], jnp.cumsum(returns)[-1])
 
     """
     [Debug]: return = -218051395977216.0 | rewards = [-6.4879230e+04 -2.1647006e+10 -9.7899263e+11 -1.2201745e+12 -1.7165093e+10]
@@ -60,7 +60,7 @@ def rollout(
     [Debug]: return = -226016949698560.0 | rewards = [-5.4868881e+05 -8.9942740e+11 -6.9246773e+11 -3.7358830e+11 -4.5857024e+11]
     """
 
-    return carry[1]
+    return carry[-1]
 
 
 def evaluate_individual(
@@ -109,7 +109,7 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
     # env = VmapWrapper(env, batch_size=config["evo"]["population_size"])
 
     vmap_evaluate_individual = vmap(
-        partial(evaluate_individual, config=config, env=env)
+        partial(evaluate_individual, config=config, env=env), in_axes=(0, None)
     )
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
@@ -119,13 +119,11 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
-        # temp_fitness = jit_vmap_evaluate_individual(x, rng_eval)
-        temp_fitness = jnp.array(
-            [evaluate_individual(genome, rng_eval, config, env) for genome in x]
-        )
+        temp_fitness = jit_vmap_evaluate_individual(x, rng_eval)
+        # temp_fitness = jnp.array([evaluate_individual(genome, rng_eval, config, env) for genome in x])
         fitness = -1 * temp_fitness
 
-        print(temp_fitness[:4], fitness[:4])
+        print(temp_fitness[:4])
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
