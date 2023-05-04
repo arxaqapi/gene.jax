@@ -24,7 +24,7 @@ RUN pip install jaxlib==0.3.15+cuda11.cudnn82 -f https://storage.googleapis.com/
 RUN pip install -r /home/qdax.txt
 RUN pip install --upgrade pip 
 RUN pip install scalene
-RUN pip install evosax gymnax evojax "gymnasium[atari, accept-rom-license]" black ruff
+RUN pip install evosax gymnax evojax "gymnasium[atari, accept-rom-license]" black ruff jax-smi
 
 RUN chsh -s /usr/bin/fish
 ENV SHELL=/usr/bin/fish
