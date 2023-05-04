@@ -24,7 +24,6 @@ def plot(*args, info: str = ""):
     plt.show()
 
 
-
 def evaluate_mean_population(x, config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0)):
     """x: (batch, d)"""
     # Retrieve the theoretical individual at the center of the population
@@ -34,7 +33,9 @@ def evaluate_mean_population(x, config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0)
     return fitness
 
 
-def evaluate_bench(run_f, config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0), n: int = 10):
+def evaluate_bench(
+    run_f, config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0), n: int = 10
+):
     rng_run = jrd.split(rng, n)
     vmap_run = vmap(partial(run_f, config=config))
     _, logs, center_fitness = vmap_run(rng=rng_run)

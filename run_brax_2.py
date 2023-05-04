@@ -1,4 +1,3 @@
-
 from jax import jit, vmap, lax, default_backend
 import jax.numpy as jnp
 import jax.random as jrd
@@ -39,7 +38,9 @@ from gene.encoding import genome_to_model, gene_enc_genome_size
 #     return jnp.cumsum(rewards)[-1]
 
 
-def _rollout_problem_lax(config: dict, model=None, model_parameters=None, env=None, rng_reset=None) -> float:
+def _rollout_problem_lax(
+    config: dict, model=None, model_parameters=None, env=None, rng_reset=None
+) -> float:
     state = env.reset(rng_reset)
     # state = jit(env.reset)(rng_reset)
 
@@ -61,7 +62,6 @@ def _rollout_problem_lax(config: dict, model=None, model_parameters=None, env=No
     return cum_reward
 
 
-
 def evaluate_individual(
     genome: jnp.array,
     rng: jrd.KeyArray,
@@ -76,7 +76,7 @@ def evaluate_individual(
         model_parameters=model_parameters,
         config=config,
         env=env,
-        rng_reset=rng
+        rng_reset=rng,
     )
     return fitness
 
@@ -103,10 +103,14 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
     log = es_logging.initialize()
 
     env = envs.get_environment(env_name=config["problem"]["environnment"])
-    env = EpisodeWrapper(env, episode_length=config["problem"]["episode_length"],action_repeat=1)
+    env = EpisodeWrapper(
+        env, episode_length=config["problem"]["episode_length"], action_repeat=1
+    )
     # env = VmapWrapper(env, batch_size=config["evo"]["population_size"])
 
-    vmap_evaluate_individual = vmap(partial(evaluate_individual, config=config, env=env))
+    vmap_evaluate_individual = vmap(
+        partial(evaluate_individual, config=config, env=env)
+    )
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
     for generation in tqdm(range(config["evo"]["n_generations"])):
@@ -130,6 +134,7 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
         log = es_logging.update(log, x, temp_fitness)
 
     return state, es_logging, log
+
 
 config = {
     "evo": {"strategy_name": "xNES", "n_generations": 30, "population_size": 100},

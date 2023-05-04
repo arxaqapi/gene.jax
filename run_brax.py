@@ -22,7 +22,9 @@ config = {
 }
 
 
-def _rollout_problem_lax(config: dict, model=None, model_parameters=None, rng=None) -> float:
+def _rollout_problem_lax(
+    config: dict, model=None, model_parameters=None, rng=None
+) -> float:
     env = envs.get_environment(config["problem"]["environnment"])
     env = EpisodeWrapper(env, episode_length=500, action_repeat=1)
     state = jit(env.reset)(rng)
@@ -44,14 +46,16 @@ def _rollout_problem_lax(config: dict, model=None, model_parameters=None, rng=No
     return cum_reward
 
 
-def _rollout_problem_scan(config: dict, model=None, model_parameters=None, rng=None, episode_length=500) -> float:
+def _rollout_problem_scan(
+    config: dict, model=None, model_parameters=None, rng=None, episode_length=500
+) -> float:
     # https://github.com/google/brax/blob/c2cd14cf762242d63aeec106d955390c8e14d582/brax/training/agents/es/train.py#L144
     env = envs.get_environment(config["problem"]["environnment"])
     env = EpisodeWrapper(env, episode_length=episode_length, action_repeat=1)
     state = jit(env.reset)(rng)
 
     def rollout_loop(carry, x):
-        env_state  = carry
+        env_state = carry
 
         actions = model.apply(model_parameters, env_state.obs)
         new_state = jit(env.step)(env_state, actions)
@@ -61,13 +65,10 @@ def _rollout_problem_scan(config: dict, model=None, model_parameters=None, rng=N
         return new_carry, new_state.reward * (1 - new_state.done)
 
     carry, rewards = lax.scan(
-        f=rollout_loop,
-        init=state,
-        xs=None,
-        length=episode_length)
+        f=rollout_loop, init=state, xs=None, length=episode_length
+    )
 
     return jnp.cumsum(rewards)[-1]
-
 
 
 def evaluate_individual(
@@ -78,10 +79,7 @@ def evaluate_individual(
     model, model_parameters = genome_to_model(genome, config=config)
 
     fitness = _rollout_problem_lax(
-        model=model,
-        model_parameters=model_parameters,
-        config=config,
-        rng=rng
+        model=model, model_parameters=model_parameters, config=config, rng=rng
     )
     return fitness
 
