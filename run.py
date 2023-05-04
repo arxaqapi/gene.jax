@@ -27,9 +27,8 @@ def run(
         num_dims=num_dims,
     )
 
-    # NOTE: Check if uniform or normal distr
-    es_params = strategy.default_params.replace(init_min=-2, init_max=2)
-    state = strategy.initialize(rng_init, es_params)
+    # NOTE: Sampled from uniform distribution
+    state = strategy.initialize(rng_init)
 
     # Enable logging data during training process
     es_logging = evosax.ESLog(
@@ -49,13 +48,12 @@ def run(
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # NOTE - Ask
-        x, state = strategy.ask(rng_gen, state, es_params)
+        x, state = strategy.ask(rng_gen, state)
         # NOTE - Evaluate
         temp_fitness = jit_vmap_evaluate_individual(x, rng_eval)
         fitness = -1.0 * temp_fitness
-
         # NOTE - Tell: overwrites current strategy state with the new updated one
-        state = strategy.tell(x, fitness, state, es_params)
+        state = strategy.tell(x, fitness, state)
 
         # Log / stats step: Add the fitness to log object
         tracker.update(state.mean)
