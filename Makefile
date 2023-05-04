@@ -1,5 +1,5 @@
 DIMAGE:=dockax
-VERSION:=0.1.1
+VERSION:=0.1.0
 
 f format:
 	ruff check .; black .
@@ -18,12 +18,14 @@ prof_dir:
 
 # Docker build image
 build:
-	docker build -t $(DIMAGE):$(VERSION) -f docker/0.1.0.Dockerfile .
+	docker build -t $(DIMAGE):$(VERSION) -f docker/dockax.Dockerfile .
 
 # Docker run stafe image w. fish shell
 sail:
-	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/flipidi/gene.jax -p 8888:8888 $(DIMAGE):$(VERSION)
+	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax -p 8888:8888 $(DIMAGE):$(VERSION)
 
+sail-stafe:
+	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax -p 8888:8888 stafe:0.0.2
 
 c clean:
 	rm -rf __pycache__
