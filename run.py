@@ -27,7 +27,7 @@ def run(
         num_dims=num_dims,
     )
 
-    # NOTE: Check if uniform or normal distr 
+    # NOTE: Check if uniform or normal distr
     es_params = strategy.default_params.replace(init_min=-2, init_max=2)
     state = strategy.initialize(rng_init, es_params)
 
@@ -40,7 +40,9 @@ def run(
     )
     log = es_logging.initialize()
 
-    vmap_evaluate_individual = vmap(partial(evaluate_individual, config=config), in_axes=(0, None))
+    vmap_evaluate_individual = vmap(
+        partial(evaluate_individual, config=config), in_axes=(0, None)
+    )
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
     for generation in range(config["evo"]["n_generations"]):
@@ -50,13 +52,13 @@ def run(
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
         temp_fitness = jit_vmap_evaluate_individual(x, rng_eval)
-        fitness = -1. * temp_fitness
+        fitness = -1.0 * temp_fitness
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
 
         # Log / stats step: Add the fitness to log object
-        tracker.update(x)
+        tracker.update(state.mean)
         log = es_logging.update(log, x, temp_fitness)
         logger.info(
             "Generation: ", generation, "Performance: ", log["log_top_1"][generation]
