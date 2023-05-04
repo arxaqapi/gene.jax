@@ -2,6 +2,7 @@ from jax import jit, vmap, lax, default_backend
 import jax.numpy as jnp
 import jax.random as jrd
 import jax
+import chex
 from brax import envs
 from brax.envs.wrappers import EpisodeWrapper, VmapWrapper
 from tqdm import tqdm
@@ -14,52 +15,42 @@ from time import time
 from gene.encoding import genome_to_model, gene_enc_genome_size
 
 
-# def rollout(config: dict, model=None, model_parameters=None, env=None, rng_reset=None) -> float:
-#     state = jit(env.reset)(rng_reset)
-
-#     def rollout_loop(carry, x):
-#         env_state  = carry
-
-#         actions = model.apply(model_parameters, env_state.obs)
-#         new_state = jit(env.step)(env_state, actions)
-
-#         new_carry = new_state
-#         # New_state or env_state?
-#         return new_carry, new_state.reward * (1 - new_state.done)
-
-#     carry, rewards = lax.scan(
-#         f=rollout_loop,
-#         init=state,
-#         xs=None,
-#         length=config["problem"]["episode_length"])
-
-#     jax.debug.print(carry)
-
-#     return jnp.cumsum(rewards)[-1]
-
-
-def _rollout_problem_lax(
+def rollout(
     config: dict, model=None, model_parameters=None, env=None, rng_reset=None
 ) -> float:
-    state = env.reset(rng_reset)
-    # state = jit(env.reset)(rng_reset)
+    state = jit(env.reset)(rng_reset)
 
-    def rollout_loop(val):
-        state, cum_reward = val
+    def rollout_loop(carry, x):
+        env_state, cum_reward = carry
+        # FIXME: problem seems to be here
+        actions = model.apply(model_parameters, env_state.obs)
+        new_state = jit(env.step)(env_state, actions)
 
-        actions = model.apply(model_parameters, state.obs)
-        new_state = env.step(state, actions)
-        # state = jit(env.step)(state, actions)
+        corrected_reward = new_state.reward * (1 - new_state.done)
+        new_carry = new_state, cum_reward + corrected_reward
+        # NOTE: New_state or env_state?
+        return new_carry, corrected_reward
 
-        new_val = new_state, cum_reward + new_state.reward
-        return new_val
-
-    val = lax.while_loop(
-        lambda val: jnp.logical_not(val[0].done), rollout_loop, (state, state.reward)
+    carry, returns = lax.scan(
+        f=rollout_loop,
+        init=(state, state.reward),
+        xs=None,
+        length=config["problem"]["episode_length"],
     )
-    _, cum_reward = val
 
-    return cum_reward
+    jax.debug.print("[Debug]: {carry} | rewards={rewards}", carry=carry[1], rewards=returns[:5])
+
+    chex.assert_trees_all_close(carry[1], jnp.cumsum(returns)[-1])
+
+    """
+    [Debug]: return = -218051395977216.0 | rewards = [-6.4879230e+04 -2.1647006e+10 -9.7899263e+11 -1.2201745e+12 -1.7165093e+10]
+    [Debug]: return = -266524799533056.0 | rewards = [-4.0530293e+04 -9.2708517e+11 -2.9265510e+12 -4.8063349e+10 -2.6935624e+11]
+    [Debug]: return = -167855559540736.0 | rewards = [-5.5108206e+05 -7.3815307e+11 -4.4827515e+11 -4.6923661e+11 -1.7507236e+11]
+    [Debug]: return = -168385350467584.0 | rewards = [-2.1220669e+05 -1.5440354e+11 -1.7505509e+11 -4.0159056e+10 -4.2847306e+10]
+    [Debug]: return = -226016949698560.0 | rewards = [-5.4868881e+05 -8.9942740e+11 -6.9246773e+11 -3.7358830e+11 -4.5857024e+11]
+    """
+
+    return carry[1]
 
 
 def evaluate_individual(
@@ -70,8 +61,7 @@ def evaluate_individual(
 ) -> float:
     model, model_parameters = genome_to_model(genome, config=config)
 
-    # fitness = rollout(
-    fitness = _rollout_problem_lax(
+    fitness = rollout(
         model=model,
         model_parameters=model_parameters,
         config=config,
@@ -113,19 +103,17 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
     )
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
-    for generation in tqdm(range(config["evo"]["n_generations"])):
+    for _generation in tqdm(range(config["evo"]["n_generations"])):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
-        rng_eval_v = jrd.split(rng_eval, config["evo"]["population_size"])
-        # Here, each individual has an unique random key used for evaluation purposes
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
-        temp_fitness = jit_vmap_evaluate_individual(x, rng_eval_v)
-        # temp_fitness = jnp.array([evaluate_individual(genome, config, env) for genome in x])
+        # temp_fitness = jit_vmap_evaluate_individual(x, rng_eval)
+        temp_fitness = jnp.array([evaluate_individual(genome, rng_eval, config, env) for genome in x])
         fitness = -1 * temp_fitness
 
-        print(temp_fitness)
+        print(temp_fitness[:4], fitness[:4])
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
@@ -137,7 +125,7 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
 
 
 config = {
-    "evo": {"strategy_name": "xNES", "n_generations": 30, "population_size": 100},
+    "evo": {"strategy_name": "xNES", "n_generations": 200, "population_size": 100},
     "net": {"layer_dimensions": [18, 256, 6]},
     "encoding": {"d": 3, "distance": "pL2", "type": "gene"},
     "problem": {"environnment": "halfcheetah", "maximize": True, "episode_length": 400},
