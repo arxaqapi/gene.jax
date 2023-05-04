@@ -19,23 +19,30 @@ RUN go install github.com/google/pprof@latest
 RUN chsh -s /usr/bin/fish
 ENV SHELL=/usr/bin/fish
 RUN curl https://raw.githubusercontent.com/arxaqapi/Dotfiles/main/.bash_aliases > /home/.bash_aliases
-RUN echo "source /home/$USER/.bash_aliases" >> /etc/fish/config.fish
+RUN echo "source /home/.bash_aliases" >> /etc/fish/config.fish
 RUN echo "set -g -x fish_greeting 'JAX-it-up'" >> /etc/fish/config.fish
 RUN echo "export PATH=$PATH:$HOME/go/bin/" >> /etc/fish/config.fish
 
 # Python 3.9 setup
-RUN curl https://bootstrap.pypa.io/get-pip.py -o /home/$USER/get-pip.py
-RUN python3.9 /home/$USER/get-pip.py
+RUN curl https://bootstrap.pypa.io/get-pip.py -o /home/get-pip.py
+RUN python3.9 /home/get-pip.py
 RUN pip install --upgrade pip
 RUN ln -sf /usr/bin/python3.9 /usr/bin/python3
 RUN ln -sf /usr/bin/python3.9 /usr/bin/python
 
-# Python packages
+# RUN pip install brax
+WORKDIR /home
+RUN git clone https://github.com/google/brax.git
+WORKDIR /home/brax
+RUN pip install --ignore-installed -e .
+
+# Python packages  --force-reinstall 
 RUN pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip install flax chex
-RUN pip install --ignore-installed brax
 RUN pip install scalene
 RUN pip install matplotlib evosax gymnax "gymnasium[atari, accept-rom-license]" black ruff jax-smi
+
+WORKDIR /home
 
 # Create user
 ARG USER_ID=1000
@@ -45,7 +52,6 @@ ARG USER=flipidi
 RUN groupadd --gid $GROUP_ID $USER
 RUN useradd --create-home --uid $USER_ID --gid=$GROUP_ID --shell /bin/fish $USER
 USER $USER
-WORKDIR /home/$USER
 
 # Use fish shell at start
 CMD fish
