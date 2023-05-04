@@ -4,7 +4,7 @@ import jax.random as jrd
 import jax
 import chex
 from brax import envs
-from brax.envs.wrappers import EpisodeWrapper, VmapWrapper
+from brax.envs.wrapper import EpisodeWrapper, VmapWrapper
 from tqdm import tqdm
 import evosax
 import matplotlib.pyplot as plt
@@ -13,34 +13,44 @@ from functools import partial
 from time import time
 
 from gene.encoding import genome_to_model, gene_enc_genome_size
+from gene.network import LinearModel
+
+
+# FIXME: create network factory, rollout_loop out of the rollout, wolfwgnag banzhaf
+def model_factory():
+    # TODO: return / create a model with the right sizes, parially apply later on with config file
+    return LinearModel([256, 6]).apply
 
 
 def rollout(
-    config: dict, model=None, model_parameters=None, env=None, rng_reset=None
+    config: dict, model=None, _model_parameters=None, env=None, rng_reset=None
 ) -> float:
     state = jit(env.reset)(rng_reset)
 
     def rollout_loop(carry, x):
-        env_state, cum_reward = carry
+        env_state, model_parameters, cum_reward = carry
         # FIXME: problem seems to be here
-        actions = model.apply(model_parameters, env_state.obs)
+        # actions = model.apply(model_parameters, env_state.obs)
+        actions = model_factory()(model_parameters, env_state.obs)
         new_state = jit(env.step)(env_state, actions)
 
         corrected_reward = new_state.reward * (1 - new_state.done)
-        new_carry = new_state, cum_reward + corrected_reward
+        new_carry = new_state, model_parameters, cum_reward + corrected_reward
         # NOTE: New_state or env_state?
         return new_carry, corrected_reward
 
     carry, returns = lax.scan(
         f=rollout_loop,
-        init=(state, state.reward),
+        init=(state, _model_parameters, state.reward),
         xs=None,
         length=config["problem"]["episode_length"],
     )
 
-    jax.debug.print("[Debug]: {carry} | rewards={rewards}", carry=carry[1], rewards=returns[:5])
+    jax.debug.print(
+        "[Debug]: {carry} | rewards={rewards}", carry=carry[-1], rewards=returns[:5]
+    )
 
-    chex.assert_trees_all_close(carry[1], jnp.cumsum(returns)[-1])
+    chex.assert_trees_all_close(carry[-1], jnp.cumsum(returns)[-1])
 
     """
     [Debug]: return = -218051395977216.0 | rewards = [-6.4879230e+04 -2.1647006e+10 -9.7899263e+11 -1.2201745e+12 -1.7165093e+10]
@@ -63,7 +73,7 @@ def evaluate_individual(
 
     fitness = rollout(
         model=model,
-        model_parameters=model_parameters,
+        _model_parameters=model_parameters,
         config=config,
         env=env,
         rng_reset=rng,
@@ -110,7 +120,9 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
         # temp_fitness = jit_vmap_evaluate_individual(x, rng_eval)
-        temp_fitness = jnp.array([evaluate_individual(genome, rng_eval, config, env) for genome in x])
+        temp_fitness = jnp.array(
+            [evaluate_individual(genome, rng_eval, config, env) for genome in x]
+        )
         fitness = -1 * temp_fitness
 
         print(temp_fitness[:4], fitness[:4])
@@ -126,7 +138,7 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
 
 config = {
     "evo": {"strategy_name": "xNES", "n_generations": 200, "population_size": 100},
-    "net": {"layer_dimensions": [18, 256, 6]},
+    "net": {"layer_dimensions": [17, 256, 6]},
     "encoding": {"d": 3, "distance": "pL2", "type": "gene"},
     "problem": {"environnment": "halfcheetah", "maximize": True, "episode_length": 400},
 }
