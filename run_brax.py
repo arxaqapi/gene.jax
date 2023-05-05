@@ -3,7 +3,6 @@ import jax.numpy as jnp
 import jax.random as jrd
 from brax import envs
 from brax.envs.wrapper import EpisodeWrapper
-from tqdm import tqdm
 import evosax
 
 from functools import partial
@@ -79,7 +78,7 @@ def run(config: dict, wdb_run, rng: jrd.KeyArray = jrd.PRNGKey(5)):
     )
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
-    for _generation in tqdm(range(config["evo"]["n_generations"])):
+    for _generation in range(config["evo"]["n_generations"]):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # NOTE - Ask
