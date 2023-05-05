@@ -17,6 +17,14 @@ class PopulationTracker:
         return jnp.mean(x, axis=0)
 
     def center_fitness_per_step(self, rng_eval):
+        """Evaluate each center of the population gathered during the evolution process
+
+        Args:
+            rng_eval (jax.random.KeyArray): random key used to evaluate the individuals
+
+        Returns:
+            jax.numpy.ndarray: array containing the fitness obtained through evaluation
+        """
         jit_vmap_evaluate_individual = jit(
             vmap(partial(evaluate_individual, config=self.config))
         )
