@@ -44,3 +44,9 @@ chowner:
 # https://stackoverflow.com/questions/38830610/access-jupyter-notebook-running-on-docker-container
 notebook:
 	xvfb-run -s "-screen 0 1400x900x24" jupyter notebook --ip 0.0.0.0 --allow-root
+
+zipall:
+	zip -r gene.zip .
+
+unzipall:
+	unzip gene.zip -d gene.jax
