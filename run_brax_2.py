@@ -13,7 +13,7 @@ from functools import partial
 from time import time
 
 from gene.encoding import genome_to_model, gene_enc_genome_size
-from gene.network import LinearModel
+from gene.tracker import PopulationTracker
 
 
 def rollout(
@@ -81,6 +81,7 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
         maximize=True,
     )
     log = es_logging.initialize()
+    tracker = PopulationTracker(config)
 
     env = envs.get_environment(env_name=config["problem"]["environnment"])
     env = EpisodeWrapper(
@@ -104,26 +105,34 @@ def run(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(5)):
         fitness = -1 * temp_fitness
 
         print(temp_fitness[:4])
+        print(f'max: {temp_fitness.max()}')
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
 
         # Log / stats step: Add the fitness to log object
+        tracker.update(state.mean)
         log = es_logging.update(log, x, temp_fitness)
 
-    return state, es_logging, log
+    return state, es_logging, log, tracker.center_fitness_per_step(rng)
 
 
 config = {
-    "evo": {"strategy_name": "xNES", "n_generations": 200, "population_size": 100},
+    "evo": {"strategy_name": "xNES", "n_generations": 500, "population_size": 100},
     "net": {"layer_dimensions": [17, 256, 6]},
     "encoding": {"d": 3, "distance": "pL2", "type": "gene"},
-    "problem": {"environnment": "halfcheetah", "maximize": True, "episode_length": 400},
+    "problem": {"environnment": "halfcheetah", "maximize": True, "episode_length": 1000},
 }
 
 if __name__ == "__main__":
+    import sys
+    jnp.set_printoptions(threshold=sys.maxsize)
+
     assert default_backend() == "gpu"
 
-    state, es_logging, log = run(config)
+    state, es_logging, log, mean_fitness_values = run(config)
+
+    print(mean_fitness_values)
+
     es_logging.plot(log, "Brax half cheetah learning 2")
     plt.savefig(f"{str(time())}_brax_v2.png")
