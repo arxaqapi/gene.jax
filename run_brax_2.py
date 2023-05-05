@@ -23,16 +23,14 @@ def rollout(
 
     def rollout_loop(carry, x):
         env_state, cum_reward = carry
-        # FIXME: problem seems to be here
         actions = model.apply(model_parameters, env_state.obs)
         new_state = jit(env.step)(env_state, actions)
 
         corrected_reward = new_state.reward * (1 - new_state.done)
         new_carry = new_state, cum_reward + corrected_reward
-        # NOTE: New_state or env_state?
         return new_carry, corrected_reward
 
-    carry, returns = lax.scan(
+    carry, _ = lax.scan(
         f=rollout_loop,
         init=(state, state.reward),
         xs=None,

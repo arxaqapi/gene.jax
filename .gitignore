@@ -1,6 +1,7 @@
 .vscode
 .ruff_cache
 *.prof
+wandb
 
 ### Python
 ### https://github.com/github/gitignore/blob/main/Python.gitignore
