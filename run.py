@@ -1,5 +1,4 @@
 from pathlib import Path
-import logging
 import time
 from functools import partial
 
@@ -9,15 +8,16 @@ import evosax
 
 from gene.evaluate import evaluate_individual
 from gene.encoding import Encoding_size_function
-from gene.tracker import PopulationTracker
+from gene.tracker import Tracker
 
 
 def run(
     config: dict,
+    wdb_run,
     rng: jrd.KeyArray = jrd.PRNGKey(5),
 ):
-    logger = logging.getLogger("logger")
-    tracker = PopulationTracker(config)
+    tracker = Tracker(config)
+    tracker_state = tracker.init()
 
     num_dims = Encoding_size_function[config["encoding"]["type"]](config)
 
@@ -29,15 +29,6 @@ def run(
 
     # NOTE: Sampled from uniform distribution
     state = strategy.initialize(rng_init)
-
-    # Enable logging data during training process
-    es_logging = evosax.ESLog(
-        num_dims=num_dims,
-        num_generations=config["evo"]["n_generations"],
-        top_k=5,
-        maximize=True,
-    )
-    log = es_logging.initialize()
 
     vmap_evaluate_individual = vmap(
         partial(evaluate_individual, config=config), in_axes=(0, None)
@@ -55,13 +46,10 @@ def run(
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state)
 
-        # Log / stats step: Add the fitness to log object
-        tracker.update(state.mean)
-        log = es_logging.update(log, x, temp_fitness)
-        logger.info(
-            "Generation: ", generation, "Performance: ", log["log_top_1"][generation]
-        )
-    return state, log, tracker.center_fitness_per_step(rng)
+        # # NOTE - Track metrics
+        tracker_state = tracker.update(tracker_state, None, temp_fitness)
+        tracker.wandb_log(tracker_state, wdb_run)
+    return state
 
 
 if __name__ == "__main__":
@@ -80,13 +68,7 @@ if __name__ == "__main__":
         default="config/base_cartpole.json",
         help="Config file to use",
     )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Activate or deactivate the logging capabilities",
-    )
-    # , required=False, default=True
+
     args = parser.parse_args()
 
     config_file = Path(args.config)
@@ -96,25 +78,8 @@ if __name__ == "__main__":
     else:
         raise ValueError("No config file found")
 
-    log_path = Path("log")
-    if not log_path.exists():
-        log_path.mkdir()
+    import wandb
 
-    logger = logging.getLogger("logger")
-    f_handler = logging.FileHandler(
-        filename=log_path.absolute()
-        / f"{int(time.time())}_run_{config['encoding']['type']}.log",
-        mode="a",
-    )
-    f_handler.setFormatter(
-        logging.Formatter(
-            fmt="%(levelname)-8s %(asctime)s \t %(filename)s @f %(funcName)s @L%(lineno)s - %(message)s",
-            datefmt="%Y/%m/%d_%H.%M.%S",
-        )
-    )
-    logger.addHandler(f_handler)
-    logger.setLevel(logging.INFO)
-    if args.verbose == False:
-        logger.disabled = not args.verbose
+    wdb_run = wandb.init(project="Cartpole")
 
-    run(config)
+    run(config, wdb_run)
