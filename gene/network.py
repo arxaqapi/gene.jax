@@ -3,6 +3,7 @@ from typing import Sequence
 import flax.linen as nn
 
 
+# TODO: generalize
 class _LinearModel(nn.Module):
     features: Sequence[int]
 
