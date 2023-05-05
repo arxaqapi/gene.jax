@@ -40,7 +40,7 @@ RUN pip install --ignore-installed brax
 RUN pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip install flax chex
 RUN pip install scalene
-RUN pip install matplotlib evosax gymnax "gymnasium[atari, accept-rom-license]" black ruff jax-smi
+RUN pip install matplotlib evosax gymnax "gymnasium[atari, accept-rom-license]" black ruff jax-smi wandb
 
 WORKDIR /home
 
