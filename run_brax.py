@@ -99,7 +99,11 @@ def run(config: dict, wdb_run, rng: jrd.KeyArray = jrd.PRNGKey(5)):
 
 config = {
     # "evo": {"strategy_name": "xNES", "n_generations": 1000, "population_size": 200},
-    "evo": {"strategy_name": "Sep_CMA_ES", "n_generations": 1000, "population_size": 200},
+    "evo": {
+        "strategy_name": "Sep_CMA_ES",
+        "n_generations": 1000,
+        "population_size": 200,
+    },
     "net": {"layer_dimensions": [17, 256, 256, 6]},
     "encoding": {"d": 3, "distance": "pL2", "type": "gene"},
     "problem": {
@@ -111,10 +115,8 @@ config = {
 
 if __name__ == "__main__":
     assert default_backend() == "gpu"
-    
-    import sys
+
     import wandb
-    jnp.set_printoptions(threshold=sys.maxsize)
 
     wdb_run = wandb.init(project="Brax v2 v2", config=config)
 
