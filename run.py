@@ -80,6 +80,6 @@ if __name__ == "__main__":
 
     import wandb
 
-    wdb_run = wandb.init(project="Cartpole")
+    wdb_run = wandb.init(project="Cartpole", config=config)
 
     run(config, wdb_run)

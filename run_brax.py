@@ -116,6 +116,6 @@ if __name__ == "__main__":
     import wandb
     jnp.set_printoptions(threshold=sys.maxsize)
 
-    wdb_run = wandb.init(project="Brax v2 v2")
+    wdb_run = wandb.init(project="Brax v2 v2", config=config)
 
     run(config, wdb_run)
