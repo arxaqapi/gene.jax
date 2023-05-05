@@ -16,49 +16,29 @@ from gene.encoding import genome_to_model, gene_enc_genome_size
 from gene.network import LinearModel
 
 
-# FIXME: create network factory, rollout_loop out of the rollout, wolfwgnag banzhaf
-def model_factory():
-    # TODO: return / create a model with the right sizes, parially apply later on with config file
-    return LinearModel([256, 6]).apply
-
-
 def rollout(
-    config: dict, model=None, _model_parameters=None, env=None, rng_reset=None
+    config: dict, model=None, model_parameters=None, env=None, rng_reset=None
 ) -> float:
     state = jit(env.reset)(rng_reset)
 
     def rollout_loop(carry, x):
-        env_state, model_parameters, cum_reward = carry
+        env_state, cum_reward = carry
         # FIXME: problem seems to be here
-        # actions = model.apply(model_parameters, env_state.obs)
-        actions = model_factory()(model_parameters, env_state.obs)
+        actions = model.apply(model_parameters, env_state.obs)
         new_state = jit(env.step)(env_state, actions)
 
         corrected_reward = new_state.reward * (1 - new_state.done)
-        new_carry = new_state, model_parameters, cum_reward + corrected_reward
+        new_carry = new_state, cum_reward + corrected_reward
         # NOTE: New_state or env_state?
         return new_carry, corrected_reward
 
     carry, returns = lax.scan(
         f=rollout_loop,
-        init=(state, _model_parameters, state.reward),
+        init=(state, state.reward),
         xs=None,
         length=config["problem"]["episode_length"],
     )
-
-    # jax.debug.print(
-    #     "[Debug]: {carry} | rewards={rewards}", carry=carry[-1], rewards=returns[:5]
-    # )
-
     # chex.assert_trees_all_close(carry[-1], jnp.cumsum(returns)[-1])
-
-    """
-    [Debug]: return = -218051395977216.0 | rewards = [-6.4879230e+04 -2.1647006e+10 -9.7899263e+11 -1.2201745e+12 -1.7165093e+10]
-    [Debug]: return = -266524799533056.0 | rewards = [-4.0530293e+04 -9.2708517e+11 -2.9265510e+12 -4.8063349e+10 -2.6935624e+11]
-    [Debug]: return = -167855559540736.0 | rewards = [-5.5108206e+05 -7.3815307e+11 -4.4827515e+11 -4.6923661e+11 -1.7507236e+11]
-    [Debug]: return = -168385350467584.0 | rewards = [-2.1220669e+05 -1.5440354e+11 -1.7505509e+11 -4.0159056e+10 -4.2847306e+10]
-    [Debug]: return = -226016949698560.0 | rewards = [-5.4868881e+05 -8.9942740e+11 -6.9246773e+11 -3.7358830e+11 -4.5857024e+11]
-    """
 
     return carry[-1]
 
@@ -73,7 +53,7 @@ def evaluate_individual(
 
     fitness = rollout(
         model=model,
-        _model_parameters=model_parameters,
+        model_parameters=model_parameters,
         config=config,
         env=env,
         rng_reset=rng,
