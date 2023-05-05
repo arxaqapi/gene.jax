@@ -1,15 +1,15 @@
 {
     "evo": {
-        "strategy_name": "SNES",
-        "n_generations": 25,
-        "population_size": 20
+        "strategy_name": "CMA_ES",
+        "n_generations": 100,
+        "population_size": 30
     },
     "net": {
         "layer_dimensions": [4, 32, 2]
     },
     "encoding": {
-        "d": 1,
-        "distance": "pL2",
+        "d": 3,
+        "distance":"pL2",
         "type": "gene"
     },
     "problem": {
