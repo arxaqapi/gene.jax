@@ -46,7 +46,7 @@ def run(
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state)
 
-        # # NOTE - Track metrics
+        # NOTE - Track metrics
         tracker_state = tracker.update(tracker_state, None, temp_fitness)
         tracker.wandb_log(tracker_state, wdb_run)
     return state
