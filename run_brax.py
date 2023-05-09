@@ -9,7 +9,7 @@ from functools import partial
 import json
 import wandb
 
-from gene.encoding import genome_to_model, gene_enc_genome_size
+from gene.encoding import genome_to_model, Encoding_size_function
 from gene.tracker import Tracker
 
 
@@ -58,7 +58,7 @@ def evaluate_individual(
 
 def run(config: dict, wdb_run):
     rng = jrd.PRNGKey(config["seed"])
-    num_dims = gene_enc_genome_size(config)
+    num_dims = Encoding_size_function[config["encoding"]["type"]](config)
 
     rng, rng_init = jrd.split(rng, 2)
     strategy = evosax.Strategies[config["evo"]["strategy_name"]](
