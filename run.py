@@ -35,6 +35,7 @@ def run(
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
     for _generation in range(config["evo"]["n_generations"]):
+        print(f'[Gen {_generation}]')
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # NOTE - Ask
