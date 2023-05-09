@@ -33,16 +33,31 @@ class Tracker:
             "eval": {
                 # Fitness of the individual at the center of the population (used to draw offspring pop lambda)
                 "mean_fit": jnp.zeros((self.config["evo"]["n_generations"],)),
-                # Fitness of the top k individuals after training (last generation)
-                # "top_k_fit": jnp.zeros((k,)),
             },
             "gen": 0,
         }
 
-    @partial(jit, static_argnums=(0,))
+    @partial(jit, static_argnums=(0, 4))
     def update(
-        self, tracker_state: chex.ArrayTree, x: chex.Array, fitness: chex.Array
+        self,
+        tracker_state: chex.ArrayTree,
+        fitness: chex.Array,
+        mean_ind: chex.Array,
+        eval_f,
+        rng_eval,
     ) -> chex.ArrayTree:
+        """Update the tracker object with the metrics of the current generation
+
+        Args:
+            tracker_state (chex.ArrayTree): _description_
+            fitness (chex.Array): _description_
+            mean_ind (chex.Array): _description_
+            eval_f (_type_): _description_
+            rng_eval (_type_): _description_
+
+        Returns:
+            chex.ArrayTree: _description_
+        """
         i = tracker_state["gen"]
         # [Training] - update top_k_fitness using old state (carry best over)
         last_fit = (
@@ -65,10 +80,12 @@ class Tracker:
             tracker_state["training"]["empirical_mean_std"].at[i].set(fitness.std())
         )
 
-        # TODO - Update center of population fitness
+        # NOTE - Update center of population fitness
+        fitness = eval_f(mean_ind, rng_eval)
         tracker_state["eval"]["mean_fit"] = (
-            tracker_state["eval"]["mean_fit"].at[i].set(0.0)
+            tracker_state["eval"]["mean_fit"].at[i].set(fitness)
         )
+
         # NOTE - Update current generation counter
         tracker_state["gen"] += 1
         return tracker_state
@@ -92,5 +109,6 @@ class Tracker:
                         tracker_state["training"]["empirical_mean_std"][gen]
                     ),
                 },
+                "eval": {"mean_fit": tracker_state["eval"]["mean_fit"][gen]},
             }
         )

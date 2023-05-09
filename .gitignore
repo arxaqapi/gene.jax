@@ -1,7 +1,7 @@
 .vscode
 .ruff_cache
 *.prof
-wandb
+wandb*
 .netrc
 
 ### Python

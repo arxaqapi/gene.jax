@@ -76,9 +76,8 @@ def run(config: dict, wdb_run):
     env = EpisodeWrapper(
         env, episode_length=config["problem"]["episode_length"], action_repeat=1
     )
-    vmap_evaluate_individual = vmap(
-        partial(evaluate_individual, config=config, env=env), in_axes=(0, None)
-    )
+    partial_evaluate_individual = partial(evaluate_individual, config=config, env=env)
+    vmap_evaluate_individual = vmap(partial_evaluate_individual, in_axes=(0, None))
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
     for _generation in range(config["evo"]["n_generations"]):
@@ -94,7 +93,13 @@ def run(config: dict, wdb_run):
         state = strategy.tell(x, fitness, state, es_params)
 
         # NOTE - Track metric
-        tracker_state = tracker.update(tracker_state, None, temp_fitness)
+        tracker_state = tracker.update(
+            tracker_state=tracker_state,
+            fitness=temp_fitness,
+            mean_ind=state.mean,
+            eval_f=partial_evaluate_individual,
+            rng_eval=rng_eval,
+        )
         tracker.wandb_log(tracker_state, wdb_run)
 
     return state
