@@ -32,6 +32,7 @@ c clean:
 	rm -rf */__pycache__
 	rm -rf .ruff_cache
 	rm -rf .ipynb_checkpoints
+	rm -rf gene.zip
 
 backup:
 	git add -A
@@ -46,7 +47,7 @@ notebook:
 	xvfb-run -s "-screen 0 1400x900x24" jupyter notebook --ip 0.0.0.0 --allow-root
 
 zipall:
-	zip -r gene.zip .
+	zip -r gene.zip . -x "wandb/*"
 
 unzipall:
 	unzip gene.zip -d gene.jax
