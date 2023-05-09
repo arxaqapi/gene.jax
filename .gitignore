@@ -2,6 +2,7 @@
 .ruff_cache
 *.prof
 wandb
+.netrc
 
 ### Python
 ### https://github.com/github/gitignore/blob/main/Python.gitignore

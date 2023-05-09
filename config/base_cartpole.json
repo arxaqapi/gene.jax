@@ -1,4 +1,5 @@
 {
+    "seed": 0,
     "evo": {
         "strategy_name": "CMA_ES",
         "n_generations": 100,

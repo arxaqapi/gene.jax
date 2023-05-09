@@ -6,6 +6,8 @@ from brax.envs.wrapper import EpisodeWrapper
 import evosax
 
 from functools import partial
+import json
+import wandb
 
 from gene.encoding import genome_to_model, gene_enc_genome_size
 from gene.tracker import Tracker
@@ -54,7 +56,8 @@ def evaluate_individual(
     return fitness
 
 
-def run(config: dict, wdb_run, rng: jrd.KeyArray = jrd.PRNGKey(5)):
+def run(config: dict, wdb_run):
+    rng = jrd.PRNGKey(config["seed"])
     num_dims = gene_enc_genome_size(config)
 
     rng, rng_init = jrd.split(rng, 2)
@@ -97,26 +100,11 @@ def run(config: dict, wdb_run, rng: jrd.KeyArray = jrd.PRNGKey(5)):
     return state
 
 
-config = {
-    # "evo": {"strategy_name": "xNES", "n_generations": 1000, "population_size": 200},
-    "evo": {
-        "strategy_name": "Sep_CMA_ES",
-        "n_generations": 1000,
-        "population_size": 200,
-    },
-    "net": {"layer_dimensions": [17, 256, 256, 6]},
-    "encoding": {"d": 3, "distance": "pL2", "type": "gene"},
-    "problem": {
-        "environnment": "halfcheetah",
-        "maximize": True,
-        "episode_length": 1000,
-    },
-}
-
 if __name__ == "__main__":
     assert default_backend() == "gpu"
 
-    import wandb
+    with open("config/brax_sep_cmaes.json") as f:
+        config = json.load(f)
 
     wdb_run = wandb.init(project="Brax v2 v2", config=config)
 

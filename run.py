@@ -14,8 +14,8 @@ from gene.tracker import Tracker
 def run(
     config: dict,
     wdb_run,
-    rng: jrd.KeyArray = jrd.PRNGKey(5),
 ):
+    rng = jrd.PRNGKey(config["seed"])
     tracker = Tracker(config)
     tracker_state = tracker.init()
 
