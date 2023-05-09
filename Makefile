@@ -1,6 +1,8 @@
 DIMAGE:=dockax
 VERSION:=0.1.0
 
+.PHONY:f format r run t test prof profile build sail sail-stafe c clean backup chowner notebook zipall unzipall
+
 f format:
 	ruff check .; black .
 
@@ -46,7 +48,7 @@ chowner:
 notebook:
 	xvfb-run -s "-screen 0 1400x900x24" jupyter notebook --ip 0.0.0.0 --allow-root
 
-zipall:
+zipall: c
 	zip -r gene.zip . -x "wandb/*"
 
 unzipall:
