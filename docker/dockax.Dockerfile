@@ -30,13 +30,9 @@ RUN pip install --upgrade pip
 RUN ln -sf /usr/bin/python3.9 /usr/bin/python3
 RUN ln -sf /usr/bin/python3.9 /usr/bin/python
 
-# RUN pip install brax
-# WORKDIR /home
-# RUN git clone https://github.com/google/brax.git
-# WORKDIR /home/brax
 RUN pip install --ignore-installed brax
 
-# Python packages  --force-reinstall 
+# Python packages
 RUN pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip install flax chex
 RUN pip install scalene
