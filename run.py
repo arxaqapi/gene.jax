@@ -35,7 +35,7 @@ def run(
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
     for _generation in range(config["evo"]["n_generations"]):
-        print(f'[Gen {_generation}]')
+        print(f"[Gen {_generation}]")
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # NOTE - Ask
@@ -55,6 +55,8 @@ def run(
             rng_eval=rng_eval,
         )
         tracker.wandb_log(tracker_state, wdb_run)
+
+    tracker.wandb_save_genome(state.mean, wdb_run)
     return state
 
 
@@ -65,7 +67,7 @@ if __name__ == "__main__":
     import json
 
     parser = argparse.ArgumentParser(
-        description="Start the experimen described in the config file"
+        description="Start the experiment described in the config file"
     )
     parser.add_argument(
         "-c",

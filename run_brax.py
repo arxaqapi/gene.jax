@@ -81,7 +81,7 @@ def run(config: dict, wdb_run):
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
     for _generation in range(config["evo"]["n_generations"]):
-        print(f'[Gen {_generation}]')
+        print(f"[Gen {_generation}]")
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # NOTE - Ask
@@ -103,6 +103,7 @@ def run(config: dict, wdb_run):
         )
         tracker.wandb_log(tracker_state, wdb_run)
 
+    tracker.wandb_save_genome(state.mean, wdb_run)
     return state
 
 

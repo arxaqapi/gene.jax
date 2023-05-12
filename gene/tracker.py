@@ -3,6 +3,8 @@ from jax import jit
 import chex
 
 from functools import partial
+from time import time
+from pathlib import Path
 
 
 # NOTE: once initialized, the object should not be modified in compiled functions
@@ -112,3 +114,9 @@ class Tracker:
                 "eval": {"mean_fit": tracker_state["eval"]["mean_fit"][gen]},
             }
         )
+
+    def wandb_save_genome(self, genome, wdb_run) -> None:
+        save_path = Path(wdb_run.dir) / "genomes" / f"{str(int(time()))}_mean_indiv.npy"
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(save_path, "wb") as temp_f:
+            jnp.save(temp_f, genome)
