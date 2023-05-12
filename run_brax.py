@@ -113,6 +113,6 @@ if __name__ == "__main__":
     with open("config/brax_sep_cmaes.json") as f:
         config = json.load(f)
 
-    wdb_run = wandb.init(project="Brax v2 v2", config=config)
+    wdb_run = wandb.init(project="Brax halfcheetah", config=config)
 
     run(config, wdb_run)
