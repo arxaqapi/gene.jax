@@ -2,6 +2,8 @@ import jax.numpy as jnp
 from jax import jit
 import chex
 
+from gene.encoding import Encoding_size_function
+
 from functools import partial
 from time import time
 from pathlib import Path
@@ -35,6 +37,17 @@ class Tracker:
             "eval": {
                 # Fitness of the individual at the center of the population (used to draw offspring pop lambda)
                 "mean_fit": jnp.zeros((self.config["evo"]["n_generations"],)),
+            },
+            "backup": {
+                # All the mean individuals, (n_gen, indiv_size)
+                "sample_mean_ind": jnp.zeros(
+                    (
+                        self.config["evo"]["n_generations"],
+                        Encoding_size_function[self.config["encoding"]["type"]](
+                            self.config
+                        ),
+                    )
+                ),
             },
             "gen": 0,
         }
@@ -86,6 +99,11 @@ class Tracker:
         fitness = eval_f(mean_ind, rng_eval)
         tracker_state["eval"]["mean_fit"] = (
             tracker_state["eval"]["mean_fit"].at[i].set(fitness)
+        )
+
+        # NOTE: Update backup individuals
+        tracker_state["backup"]["sample_mean_ind"] = (
+            tracker_state["backup"]["sample_mean_ind"].at[i].set(mean_ind)
         )
 
         # NOTE - Update current generation counter
