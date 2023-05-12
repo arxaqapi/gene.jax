@@ -113,6 +113,11 @@ if __name__ == "__main__":
     with open("config/brax_sep_cmaes.json") as f:
         config = json.load(f)
 
-    wdb_run = wandb.init(project="Brax halfcheetah", config=config)
 
-    run(config, wdb_run)
+    for seed in [15684, 253694, 78851363, 148, 9562]:
+        config["seed"] = seed
+        wdb_run = wandb.init(project="Brax halfcheetah", config=config)
+
+        run(config, wdb_run)
+
+        wdb_run.finish()

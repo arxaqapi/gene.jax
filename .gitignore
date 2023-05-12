@@ -3,6 +3,7 @@
 *.prof
 wandb*
 .netrc
+profiles
 
 ### Python
 ### https://github.com/github/gitignore/blob/main/Python.gitignore

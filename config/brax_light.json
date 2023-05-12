@@ -2,7 +2,7 @@
     "seed": 0,
     "evo": {
         "strategy_name": "Sep_CMA_ES",
-        "n_generations": 1000,
+        "n_generations": 500,
         "population_size": 200
     },
     "net": {
@@ -16,6 +16,6 @@
     "problem": {
         "environnment": "halfcheetah",
         "maximize": true,
-        "episode_length": 1000
+        "episode_length": 500
     }
 }
