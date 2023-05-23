@@ -8,17 +8,56 @@ import jax
 import jax.numpy as jnp
 import jax.random as jrd
 
+from pathlib import Path
 
-def load_genomes() -> tuple[jax.Array, jax.Array]:
-    pass
+from evaluate import evaluate_individual
+
+
+def load_genomes(path_initial: Path, path_final: Path) -> tuple[jax.Array, jax.Array]:
+    with path_initial.open("rb") as f:
+        initial_genome = jnp.load(f)
+    with path_final.open("rb") as f:
+        final_genome = jnp.load(f)
+    return initial_genome, final_genome
+
+
+def evaluate_all(
+    genomes: list[jax.Array], rng: jrd.KeyArray, config: dict
+) -> list[float]:
+    """Evaluate all individual in the list of genomes
+
+    Args:
+        genomes (list[jax.Array]): list of the genomes of all individuals to evaluate
+        rng (jrd.KeyArray): rng key used to run the simulation
+        config (dict): config of the current run
+
+    Returns:
+        list[float]: List of floats corresponding to the fitness value per individual
+    """
+    return [evaluate_individual(genome, rng, config) for genome in genomes]
 
 
 def interpolate_2D(
     initial_genome: jax.Array,
     final_genome: jax.Array,
-    n: int = 100,
-    key: jrd.KeyArray = jrd.PRNGKey(0),
-):
+    n: int,
+    key: jrd.KeyArray,
+) -> tuple[jax.Array, jax.Array, jax.Array]:
+    """Performs 2D interpolation between the initial and final network.
+
+    - .. _An empirical analysis of the optimization of deep network loss surfaces: http://arxiv.org/abs/1612.04010.
+    - .. _Visualizing the Loss Landscape of Neural Nets: http://arxiv.org/abs/1712.09913.
+
+
+    Args:
+        initial_genome (jax.Array): The genome of the initial individual's neural network.
+        final_genome (jax.Array): The genome of the final individual's neural network.
+        n (int): number of points to interpolate per axis.
+        key (jrd.KeyArray): key used to generate the random vector.
+
+    Returns:
+        tuple[jax.Array, jax.Array, jax.Array]: genomes, x, y
+    """
     # taken from https://github.com/TemplierPaul/QDax/blob/main/analysis/landscape_analysis_2d.py
     v1 = final_genome - initial_genome
 
@@ -35,16 +74,42 @@ def interpolate_2D(
     return genomes, x, y
 
 
-def plot(values, X, Y, initial_genome, final_genome, export_name: str = "test"):
+def plot_ll(
+    values: jax.Array,
+    X: jax.Array,
+    Y: jax.Array,
+    initial_genome: jax.Array,
+    final_genome: jax.Array,
+    export_name: str = "test",
+) -> None:
+    """Loss Landscape plotting function. Exports the final plot as a png and an interactive html file using plotly.
+
+    Args:
+        values (jax.Array): Computed fitness values for each interpolated genomes
+        X (jax.Array): X values of the interpolated genomes
+        Y (jax.Array): Y values of the interpolated genomes
+        initial_genome (jax.Array): genomes of the initial individual. Starting point of the search.
+        final_genome (jax.Array): genomes of the final individual. End point of the search.
+        export_name (str, optional): Name of the output visualization files. Defaults to "test".
+    """
     import plotly.graph_objects as go
 
     # https://plotly.com/python-api-reference/generated/plotly.graph_objects.Figure.html
-    fig = go.Figure(data=[go.Surface(x=X, y=Y, z=(X / 2 + Y / 2) ** 2)])
+    fig = go.Figure(data=[go.Surface(x=X, y=Y, z=values)])
 
+    # FIXME: add the correct values for initial_genome and final_genome / extract from `values`
+    x_initial, y_initial, z_initial = *initial_genome, 1
+    x_final, y_final, z_final = *final_genome, 10
     fig.add_scatter3d(
-        name="Initial genome", text="hein?", x=(0,), y=(0,), z=(0,), legendrank=1
+        name="Initial genome",
+        x=(x_initial,),
+        y=(y_initial,),
+        z=(z_initial,),
+        legendrank=1,
     )
-    fig.add_scatter3d(name="Final genome", x=(1,), y=(1,), z=(3,), legendrank=1)
+    fig.add_scatter3d(
+        name="Final genome", x=(x_final,), y=(y_final,), z=(z_final,), legendrank=1
+    )
 
     fig.update_layout(
         title="3D plot test",
@@ -60,54 +125,35 @@ def plot(values, X, Y, initial_genome, final_genome, export_name: str = "test"):
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
     )
 
-    # fig.show()
     fig.write_html(f"{export_name}.html")
     fig.write_image(f"{export_name}.png")
 
+# TODO: finish me
+def lla(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0)):
+    rng, interpolation_rng, eval_rng = jrd.split(rng, 3)
 
-def _plot(values: jax.Array, x, y, initial_genome, final_genome):
-    import matplotlib.pyplot as plt
-    from matplotlib import cm
+    # SECTION - downlad files from run
+    # https://docs.wandb.ai/guides/track/public-api-guide#download-a-file-from-a-run
+    import wandb 
+    api = wandb.Api()
+    run = api.run("<entity>/<project>/<run_id>")
+    path_initial = run.file("...").download()
+    path_final = run.file("...").download()
+    # !SECTION
 
-    fig = plt.figure(figsize=(12, 9))
-    ax = fig.add_subplot(projection="3d")
-
-    # ax.set_zlim(-2, 5)
-
-    # Data
-    X = x
-    Y = y
-    Z = X + Y
-
-    # Plot the surface.  | cm.RdYlGn, cm.viridis, cm.coolwarm
-    surf = ax.plot_surface(
-        X, Y, Z, cmap=cm.viridis, linewidth=1, antialiased=False, alpha=0.6
+    # 1. load files
+    initial_genome, final_genome = load_genomes(
+        path_initial,
+        path_final)
+    # 2. interpolate
+    genomes, xs, ys = interpolate_2D(
+        initial_genome, final_genome, n=10, key=interpolation_rng
     )
-    fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
-
-    # Plot the points of interests
-    # ax.scatter(initial_genome[0], initial_genome[1], 0, c="black", s=100, alpha=1)
-    # ax.scatter(final_genome[0], final_genome[1], 1 * 2+0.5, c="green", s=100, alpha=1)
-
-    ax.stem(
-        [initial_genome[0], final_genome[0]],
-        [initial_genome[1], final_genome[1]],
-        [1, 3],
-        bottom=-2,
-    )
-    # ax.stem(
-    #     [initial_genome[0], final_genome[0]],
-    #     [initial_genome[1], final_genome[1]],
-    #     [0, 1])
-
-    # Add a color bar which maps values to colors.
-    fig.savefig("test.png")
+    # 3. evaluate at each interpolation step
+    evaluate_all(genomes, rng=eval_rng, config=config)
+    # 4. plot landscape
+    plot_ll(genomes, xs, ys, initial_genome, final_genome)
 
 
 if __name__ == "__main__":
-    initial_genome = jnp.array([0, 0])
-    final_genome = jnp.array([1, 1])
-
-    genomes, x, y = interpolate_2D(initial_genome, final_genome, n=20)
-
-    plot(genomes, x, y, initial_genome, final_genome)
+    lla(None, None)
