@@ -6,7 +6,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Install packages
 RUN apt update && apt install --yes --no-install-recommends software-properties-common && add-apt-repository ppa:deadsnakes/ppa && add-apt-repository ppa:fish-shell/release-3
-RUN apt update && apt install --yes --no-install-recommends build-essential ca-certificates \
+RUN apt update && apt install --yes --no-install-recommends build-essential ca-certificates sudo \
     python3.9 python3.9-distutils python3.9-venv python3.9-dev \
     fish neovim git curl wget tmux \
     ffmpeg xvfb libglu1-mesa-dev freeglut3-dev mesa-common-dev \
@@ -36,7 +36,9 @@ RUN pip install --ignore-installed brax
 RUN pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip install flax chex
 RUN pip install scalene
-RUN pip install matplotlib evosax gymnax "gymnasium[atari, accept-rom-license]" black ruff jax-smi wandb
+RUN pip install matplotlib evosax gymnax "gymnasium[atari, accept-rom-license]" \
+    black ruff jax-smi wandb \
+    plotly nbformat kaleido
 
 WORKDIR /home
 
@@ -47,7 +49,13 @@ ARG USER=flipidi
 
 RUN groupadd --gid $GROUP_ID $USER
 RUN useradd --create-home --uid $USER_ID --gid=$GROUP_ID --shell /bin/fish $USER
+RUN adduser $USER sudo
+# ammending sudoers file
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER $USER
+
+# Wandb key
+COPY .netrc /home/$USER/
 
 # Use fish shell at start
 CMD fish
