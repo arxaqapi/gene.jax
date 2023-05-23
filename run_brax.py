@@ -80,6 +80,8 @@ def run(config: dict, wdb_run):
     vmap_evaluate_individual = vmap(partial_evaluate_individual, in_axes=(0, None))
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
+    generation_means = [state.mean]
+
     for _generation in range(config["evo"]["n_generations"]):
         print(f"[Gen {_generation}]")
         # RNG key creation for downstream usage
@@ -102,8 +104,11 @@ def run(config: dict, wdb_run):
             rng_eval=rng_eval,
         )
         tracker.wandb_log(tracker_state, wdb_run)
+        generation_means.append(state.mean)
 
-    tracker.wandb_save_genome(state.mean, wdb_run)
+    # NOTE: Save all generations
+    for i, genome in enumerate(generation_means):
+        tracker.wandb_save_genome(genome, wdb_run, generation=i)
     return state
 
 
@@ -112,7 +117,6 @@ if __name__ == "__main__":
 
     with open("config/brax_sep_cmaes.json") as f:
         config = json.load(f)
-
 
     for seed in [15684, 253694, 78851363, 148, 9562]:
         config["seed"] = seed
