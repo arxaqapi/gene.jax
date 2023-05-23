@@ -1,5 +1,5 @@
 DIMAGE:=dockax
-VERSION:=0.1.0
+VERSION:=0.1.1
 
 .PHONY:f format r run t test prof profile build sail sail-stafe c clean backup chowner notebook zipall unzipall
 
@@ -13,7 +13,7 @@ t test:
 	python -m unittest discover -s tests -v
 
 prof profile: prof_dir
-	scalene --json --outfile $(shell date +"profiles/%y%m%d_%H%M%S_profile.json") python run_brax.py 
+	scalene --json --outfile $(shell date +"profiles/%y%m%d_%H%M%S_profile.json") run.py 
 
 prof_dir:
 	mkdir -p profiles
