@@ -55,7 +55,7 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER $USER
 
 # Wandb key
-COPY .netrc /home/$USER/
+COPY docker/.netrc /home/$USER/
 
 # Use fish shell at start
 CMD fish
