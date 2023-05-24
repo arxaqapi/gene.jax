@@ -4,10 +4,11 @@ import jax.random as jrd
 from brax import envs
 from brax.envs.wrapper import EpisodeWrapper
 import evosax
+import wandb
 
 from functools import partial
 import json
-import wandb
+from time import time
 
 from gene.encoding import genome_to_model, Encoding_size_function
 from gene.tracker import Tracker
@@ -83,7 +84,7 @@ def run(config: dict, wdb_run):
     generation_means = [state.mean]
 
     for _generation in range(config["evo"]["n_generations"]):
-        print(f"[Gen {_generation}]")
+        print(f"[Log] - gen {_generation} @ {time()}")
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # NOTE - Ask
@@ -106,22 +107,23 @@ def run(config: dict, wdb_run):
         tracker.wandb_log(tracker_state, wdb_run)
         generation_means.append(state.mean)
 
+    print(f"[Log] - saving all generations @ {time()}")
     # NOTE: Save all generations
     for i, genome in enumerate(generation_means):
         tracker.wandb_save_genome(genome, wdb_run, generation=i)
+    print(f"[Log] - end @ {time()}")
+
     return state
 
 
 if __name__ == "__main__":
     assert default_backend() == "gpu"
 
-    with open("config/brax_sep_cmaes.json") as f:
+    with open("config/brax_light.json") as f:
         config = json.load(f)
 
-    for seed in [15684, 253694, 78851363, 148, 9562]:
-        config["seed"] = seed
-        wdb_run = wandb.init(project="Brax halfcheetah", config=config)
+    # seeds = [15684, 253694, 78851363, 148, 9562]
 
-        run(config, wdb_run)
-
-        wdb_run.finish()
+    wdb_run = wandb.init(project="Brax halfcheetah", config=config)
+    run(config, wdb_run)
+    wdb_run.finish()
