@@ -128,13 +128,15 @@ def plot_ll(
     fig.write_html(f"{export_name}.html")
     fig.write_image(f"{export_name}.png")
 
+
 # TODO: finish me
 def lla(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0)):
     rng, interpolation_rng, eval_rng = jrd.split(rng, 3)
 
     # SECTION - downlad files from run
     # https://docs.wandb.ai/guides/track/public-api-guide#download-a-file-from-a-run
-    import wandb 
+    import wandb
+
     api = wandb.Api()
     run = api.run("<entity>/<project>/<run_id>")
     path_initial = run.file("...").download()
@@ -142,9 +144,7 @@ def lla(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0)):
     # !SECTION
 
     # 1. load files
-    initial_genome, final_genome = load_genomes(
-        path_initial,
-        path_final)
+    initial_genome, final_genome = load_genomes(path_initial, path_final)
     # 2. interpolate
     genomes, xs, ys = interpolate_2D(
         initial_genome, final_genome, n=10, key=interpolation_rng
