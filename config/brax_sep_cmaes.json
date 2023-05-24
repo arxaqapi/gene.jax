@@ -6,7 +6,7 @@
         "population_size": 200
     },
     "net": {
-        "layer_dimensions": [17, 256, 6]
+        "layer_dimensions": [17, 128, 128, 6]
     },
     "encoding": {
         "d": 3,
