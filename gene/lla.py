@@ -7,22 +7,85 @@ Loss Landscape Analysis code.
 import jax
 import jax.numpy as jnp
 import jax.random as jrd
+from jax import jit, vmap, lax
+from brax import envs
+from brax.envs.wrapper import EpisodeWrapper
 
 from pathlib import Path
+from functools import partial
 
-from evaluate import evaluate_individual
+from evaluate import genome_to_model
+
+
+# =============================================================
+# =============================================================
+
+def rollout_brax(
+    config: dict, model, model_parameters, env, rng_reset
+) -> float:
+    state = jit(env.reset)(rng_reset)
+
+    def rollout_loop(carry, x):
+        env_state, cum_reward = carry
+        actions = model.apply(model_parameters, env_state.obs)
+        new_state = jit(env.step)(env_state, actions)
+
+        corrected_reward = new_state.reward * (1 - new_state.done)
+        new_carry = new_state, cum_reward + corrected_reward
+        return new_carry, corrected_reward
+
+    carry, _ = lax.scan(
+        f=rollout_loop,
+        init=(state, state.reward),
+        xs=None,
+        length=config["problem"]["episode_length"],
+    )
+    # chex.assert_trees_all_close(carry[-1], jnp.cumsum(returns)[-1])
+
+    return carry[-1]
+
+
+@partial(jit, static_argnums=(1, 2, 3))
+def evaluate_individual_brax(
+    genome: jnp.array,
+    rng: jrd.KeyArray,
+    config: dict,
+    env,
+) -> float:
+    model, model_parameters = genome_to_model(genome, config=config)
+
+    fitness = rollout_brax(
+        model=model,
+        model_parameters=model_parameters,
+        config=config,
+        env=env,
+        rng_reset=rng,
+    )
+    return fitness
+# =============================================================
+# =============================================================
+# =============================================================
+
+
+def get_env(config: dict):
+    env = envs.get_environment(env_name=config["problem"]["environnment"])
+    return  EpisodeWrapper(
+        env, episode_length=config["problem"]["episode_length"], action_repeat=1
+    )
+
 
 
 def load_genomes(path_initial: Path, path_final: Path) -> tuple[jax.Array, jax.Array]:
-    with path_initial.open("rb") as f:
+    with open(path_initial, "rb") as f:
         initial_genome = jnp.load(f)
-    with path_final.open("rb") as f:
+    with open(path_final, "rb") as f:
         final_genome = jnp.load(f)
     return initial_genome, final_genome
 
 
+# FIXME - correct eval func (haflcheetah one)
 def evaluate_all(
-    genomes: list[jax.Array], rng: jrd.KeyArray, config: dict
+    genomes: list[jax.Array], rng: jrd.KeyArray, config: dict, env
 ) -> list[float]:
     """Evaluate all individual in the list of genomes
 
@@ -34,7 +97,7 @@ def evaluate_all(
     Returns:
         list[float]: List of floats corresponding to the fitness value per individual
     """
-    return [evaluate_individual(genome, rng, config) for genome in genomes]
+    return [evaluate_individual_brax(genome, rng, config, env) for genome in genomes]
 
 
 def interpolate_2D(
@@ -61,6 +124,8 @@ def interpolate_2D(
     # taken from https://github.com/TemplierPaul/QDax/blob/main/analysis/landscape_analysis_2d.py
     v1 = final_genome - initial_genome
 
+    # NOTE - Gram-Schmidt Process ??
+    # https://www.ucl.ac.uk/~ucahmdl/LessonPlans/Lesson10.pdf
     v2 = jax.random.normal(key, shape=v1.shape)
     v2 = v2 - jnp.dot(v2, v1) * v1 / jnp.dot(v1, v1)
     v2 = v2 / jnp.linalg.norm(v2) * jnp.linalg.norm(v1)
@@ -79,7 +144,9 @@ def plot_ll(
     X: jax.Array,
     Y: jax.Array,
     initial_genome: jax.Array,
+    initial_genome_fitness: float,
     final_genome: jax.Array,
+    final_genome_fitness: float,
     export_name: str = "test",
 ) -> None:
     """Loss Landscape plotting function. Exports the final plot as a png and an interactive html file using plotly.
@@ -97,9 +164,8 @@ def plot_ll(
     # https://plotly.com/python-api-reference/generated/plotly.graph_objects.Figure.html
     fig = go.Figure(data=[go.Surface(x=X, y=Y, z=values)])
 
-    # FIXME: add the correct values for initial_genome and final_genome / extract from `values`
-    x_initial, y_initial, z_initial = *initial_genome, 1
-    x_final, y_final, z_final = *final_genome, 10
+    x_initial, y_initial, z_initial = *initial_genome, initial_genome_fitness
+    x_final, y_final, z_final = *final_genome, final_genome_fitness
     fig.add_scatter3d(
         name="Initial genome",
         x=(x_initial,),
@@ -130,30 +196,47 @@ def plot_ll(
 
 
 # TODO: finish me
-def lla(config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0)):
+def lla(rng: jrd.KeyArray = jrd.PRNGKey(0)):
     rng, interpolation_rng, eval_rng = jrd.split(rng, 3)
 
-    # SECTION - downlad files from run
+    # NOTE - 1. downlad files from run
     # https://docs.wandb.ai/guides/track/public-api-guide#download-a-file-from-a-run
     import wandb
 
     api = wandb.Api()
-    run = api.run("<entity>/<project>/<run_id>")
-    path_initial = run.file("...").download()
-    path_final = run.file("...").download()
-    # !SECTION
+    run = api.run("arxaqapi/Brax halfcheetah/7r08z3mz")
+    config = run.config
 
-    # 1. load files
+    env = get_env(config)
+
+    # run = api.run("<entity>/Brax halfcheetah/floral-water-42")
+    path_initial = (
+        run.file("genomes/1684939081_g0_mean_indiv.npy").download(replace=True).name
+    )
+    path_final = (
+        run.file("genomes/1684939081_g121_mean_indiv.npy").download(replace=True).name
+    )
+
+    # NOTE - 2. load files
     initial_genome, final_genome = load_genomes(path_initial, path_final)
-    # 2. interpolate
+    # NOTE - 3. interpolate
     genomes, xs, ys = interpolate_2D(
         initial_genome, final_genome, n=10, key=interpolation_rng
     )
-    # 3. evaluate at each interpolation step
-    evaluate_all(genomes, rng=eval_rng, config=config)
-    # 4. plot landscape
-    plot_ll(genomes, xs, ys, initial_genome, final_genome)
+    # NOTE - 4. evaluate at each interpolation step
+    # FIXME - correct eval func (haflcheetah one)
+    values = evaluate_all(genomes, rng=eval_rng, config=config, env=env)
+    # NOTE - 5. plot landscape
+    plot_ll(
+        values,
+        xs,
+        ys,
+        initial_genome,
+        evaluate_individual_brax(initial_genome, eval_rng, config, env),
+        final_genome,
+        evaluate_individual_brax(final_genome, eval_rng, config, env),
+    )
 
 
 if __name__ == "__main__":
-    lla(None, None)
+    lla()
