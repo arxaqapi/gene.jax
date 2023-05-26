@@ -10,51 +10,9 @@ from functools import partial
 import json
 from time import time
 
-from gene.encoding import genome_to_model, Encoding_size_function
+from gene.encoding import Encoding_size_function
+from gene.evaluate import evaluate_individual_brax
 from gene.tracker import Tracker
-
-
-def rollout(
-    config: dict, model=None, model_parameters=None, env=None, rng_reset=None
-) -> float:
-    state = jit(env.reset)(rng_reset)
-
-    def rollout_loop(carry, x):
-        env_state, cum_reward = carry
-        actions = model.apply(model_parameters, env_state.obs)
-        new_state = jit(env.step)(env_state, actions)
-
-        corrected_reward = new_state.reward * (1 - new_state.done)
-        new_carry = new_state, cum_reward + corrected_reward
-        return new_carry, corrected_reward
-
-    carry, _ = lax.scan(
-        f=rollout_loop,
-        init=(state, state.reward),
-        xs=None,
-        length=config["problem"]["episode_length"],
-    )
-    # chex.assert_trees_all_close(carry[-1], jnp.cumsum(returns)[-1])
-
-    return carry[-1]
-
-
-def evaluate_individual(
-    genome: jnp.array,
-    rng: jrd.KeyArray,
-    config: dict,
-    env,
-) -> float:
-    model, model_parameters = genome_to_model(genome, config=config)
-
-    fitness = rollout(
-        model=model,
-        model_parameters=model_parameters,
-        config=config,
-        env=env,
-        rng_reset=rng,
-    )
-    return fitness
 
 
 def run(config: dict, wdb_run):
@@ -77,7 +35,9 @@ def run(config: dict, wdb_run):
     env = EpisodeWrapper(
         env, episode_length=config["problem"]["episode_length"], action_repeat=1
     )
-    partial_evaluate_individual = partial(evaluate_individual, config=config, env=env)
+    partial_evaluate_individual = partial(
+        evaluate_individual_brax, config=config, env=env
+    )
     vmap_evaluate_individual = vmap(partial_evaluate_individual, in_axes=(0, None))
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 

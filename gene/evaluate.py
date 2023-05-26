@@ -1,9 +1,10 @@
 import jax.random as jrd
 import jax.numpy as jnp
-from jax import lax
+from jax import lax, jit
 from flax.linen import Module
 import gymnax
 
+from functools import partial
 
 from gene.encoding import genome_to_model
 
@@ -53,4 +54,49 @@ def evaluate_individual(
         config=config,
     )
 
+    return fitness
+
+
+def _rollout_brax(
+    config: dict, model, model_parameters, env, rng_reset: jrd.KeyArray
+) -> float:
+    state = jit(env.reset)(rng_reset)
+
+    def rollout_loop(carry, x):
+        # FIXME: carry could be reduced
+        env_state, cum_reward = carry
+        actions = model.apply(model_parameters, env_state.obs)
+        new_state = jit(env.step)(env_state, actions)
+
+        corrected_reward = new_state.reward * (1 - new_state.done)
+        new_carry = new_state, cum_reward + corrected_reward
+        return new_carry, corrected_reward
+
+    carry, _rewards = lax.scan(
+        f=rollout_loop,
+        init=(state, state.reward),
+        xs=None,
+        length=config["problem"]["episode_length"],
+    )
+    # chex.assert_trees_all_close(carry[-1], jnp.cumsum(_rewards)[-1])
+
+    return carry[-1]  # Access cumuluative reward aka. return
+
+
+@partial(jit, static_argnums=(1, 2, 3))
+def evaluate_individual_brax(
+    genome: jnp.array,
+    rng: jrd.KeyArray,
+    config: dict,
+    env,
+) -> float:
+    model, model_parameters = genome_to_model(genome, config=config)
+
+    fitness = _rollout_brax(
+        model=model,
+        model_parameters=model_parameters,
+        config=config,
+        env=env,
+        rng_reset=rng,
+    )
     return fitness
