@@ -14,65 +14,12 @@ from brax.envs.wrapper import EpisodeWrapper
 from pathlib import Path
 from functools import partial
 
-from evaluate import genome_to_model
-
-
-# =============================================================
-# =============================================================
-
-def rollout_brax(
-    config: dict, model, model_parameters, env, rng_reset
-) -> float:
-    state = jit(env.reset)(rng_reset)
-
-    def rollout_loop(carry, x):
-        env_state, cum_reward = carry
-        actions = model.apply(model_parameters, env_state.obs)
-        new_state = jit(env.step)(env_state, actions)
-
-        corrected_reward = new_state.reward * (1 - new_state.done)
-        new_carry = new_state, cum_reward + corrected_reward
-        return new_carry, corrected_reward
-
-    carry, _ = lax.scan(
-        f=rollout_loop,
-        init=(state, state.reward),
-        xs=None,
-        length=config["problem"]["episode_length"],
-    )
-    # chex.assert_trees_all_close(carry[-1], jnp.cumsum(returns)[-1])
-
-    return carry[-1]
-
-
-@partial(jit, static_argnums=(1, 2, 3))
-def evaluate_individual_brax(
-    genome: jnp.array,
-    rng: jrd.KeyArray,
-    config: dict,
-    env,
-) -> float:
-    model, model_parameters = genome_to_model(genome, config=config)
-
-    fitness = rollout_brax(
-        model=model,
-        model_parameters=model_parameters,
-        config=config,
-        env=env,
-        rng_reset=rng,
-    )
-    return fitness
-# =============================================================
-# =============================================================
-# =============================================================
-
 
 def get_env(config: dict):
     env = envs.get_environment(env_name=config["problem"]["environnment"])
-    return  EpisodeWrapper(
+    return EpisodeWrapper(
         env, episode_length=config["problem"]["episode_length"], action_repeat=1
     )
-
 
 
 def load_genomes(path_initial: Path, path_final: Path) -> tuple[jax.Array, jax.Array]:
@@ -236,7 +183,3 @@ def lla(rng: jrd.KeyArray = jrd.PRNGKey(0)):
         final_genome,
         evaluate_individual_brax(final_genome, eval_rng, config, env),
     )
-
-
-if __name__ == "__main__":
-    lla()
