@@ -30,23 +30,6 @@ def load_genomes(path_initial: Path, path_final: Path) -> tuple[jax.Array, jax.A
     return initial_genome, final_genome
 
 
-# FIXME - correct eval func (haflcheetah one)
-def evaluate_all(
-    genomes: list[jax.Array], rng: jrd.KeyArray, config: dict, env
-) -> list[float]:
-    """Evaluate all individual in the list of genomes
-
-    Args:
-        genomes (list[jax.Array]): list of the genomes of all individuals to evaluate
-        rng (jrd.KeyArray): rng key used to run the simulation
-        config (dict): config of the current run
-
-    Returns:
-        list[float]: List of floats corresponding to the fitness value per individual
-    """
-    return [evaluate_individual_brax(genome, rng, config, env) for genome in genomes]
-
-
 def interpolate_2D(
     initial_genome: jax.Array,
     final_genome: jax.Array,
@@ -90,11 +73,9 @@ def plot_ll(
     values: jax.Array,
     X: jax.Array,
     Y: jax.Array,
-    initial_genome: jax.Array,
     initial_genome_fitness: float,
-    final_genome: jax.Array,
     final_genome_fitness: float,
-    export_name: str = "test",
+    title: str,
 ) -> None:
     """Loss Landscape plotting function. Exports the final plot as a png and an interactive html file using plotly.
 
@@ -108,24 +89,21 @@ def plot_ll(
     """
     import plotly.graph_objects as go
 
+    assert X.shape == Y.shape
+    values = jnp.array(values).reshape(*X.shape)
+
     # https://plotly.com/python-api-reference/generated/plotly.graph_objects.Figure.html
     fig = go.Figure(data=[go.Surface(x=X, y=Y, z=values)])
-
-    x_initial, y_initial, z_initial = *initial_genome, initial_genome_fitness
-    x_final, y_final, z_final = *final_genome, final_genome_fitness
     fig.add_scatter3d(
-        name="Initial genome",
-        x=(x_initial,),
-        y=(y_initial,),
-        z=(z_initial,),
-        legendrank=1,
+        name="Initial genome", x=(0,), y=(0,), z=(initial_genome_fitness,), legendrank=1
     )
+    # TODO - check y
     fig.add_scatter3d(
-        name="Final genome", x=(x_final,), y=(y_final,), z=(z_final,), legendrank=1
+        name="Final genome", x=(1,), y=(0,), z=(final_genome_fitness,), legendrank=1
     )
 
     fig.update_layout(
-        title="3D plot test",
+        title=title,
         # https://plotly.com/python/3d-camera-controls/
         scene_camera={
             "up": dict(x=0, y=0, z=1),
@@ -138,48 +116,5 @@ def plot_ll(
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
     )
 
-    fig.write_html(f"{export_name}.html")
-    fig.write_image(f"{export_name}.png")
-
-
-# TODO: finish me
-def lla(rng: jrd.KeyArray = jrd.PRNGKey(0)):
-    rng, interpolation_rng, eval_rng = jrd.split(rng, 3)
-
-    # NOTE - 1. downlad files from run
-    # https://docs.wandb.ai/guides/track/public-api-guide#download-a-file-from-a-run
-    import wandb
-
-    api = wandb.Api()
-    run = api.run("arxaqapi/Brax halfcheetah/7r08z3mz")
-    config = run.config
-
-    env = get_env(config)
-
-    # run = api.run("<entity>/Brax halfcheetah/floral-water-42")
-    path_initial = (
-        run.file("genomes/1684939081_g0_mean_indiv.npy").download(replace=True).name
-    )
-    path_final = (
-        run.file("genomes/1684939081_g121_mean_indiv.npy").download(replace=True).name
-    )
-
-    # NOTE - 2. load files
-    initial_genome, final_genome = load_genomes(path_initial, path_final)
-    # NOTE - 3. interpolate
-    genomes, xs, ys = interpolate_2D(
-        initial_genome, final_genome, n=10, key=interpolation_rng
-    )
-    # NOTE - 4. evaluate at each interpolation step
-    # FIXME - correct eval func (haflcheetah one)
-    values = evaluate_all(genomes, rng=eval_rng, config=config, env=env)
-    # NOTE - 5. plot landscape
-    plot_ll(
-        values,
-        xs,
-        ys,
-        initial_genome,
-        evaluate_individual_brax(initial_genome, eval_rng, config, env),
-        final_genome,
-        evaluate_individual_brax(final_genome, eval_rng, config, env),
-    )
+    fig.write_html(f"{title.replace(' ', '_')}.html")
+    fig.write_image(f"{title.replace(' ', '_')}.png")
