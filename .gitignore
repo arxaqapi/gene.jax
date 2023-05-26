@@ -4,6 +4,7 @@
 wandb*
 .netrc
 profiles
+*.npy
 
 ### Python
 ### https://github.com/github/gitignore/blob/main/Python.gitignore
