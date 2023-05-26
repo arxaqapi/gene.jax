@@ -33,8 +33,8 @@ def load_genomes(path_initial: Path, path_final: Path) -> tuple[jax.Array, jax.A
 def interpolate_2D(
     initial_genome: jax.Array,
     final_genome: jax.Array,
-    n: int,
     key: jrd.KeyArray,
+    n: int = 200,
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
     """Performs 2D interpolation between the initial and final network.
 
@@ -60,7 +60,8 @@ def interpolate_2D(
     v2 = v2 - jnp.dot(v2, v1) * v1 / jnp.dot(v1, v1)
     v2 = v2 / jnp.linalg.norm(v2) * jnp.linalg.norm(v1)
 
-    x, y = jnp.meshgrid(jnp.linspace(-1, 2, n), jnp.linspace(-1, 2, n))
+    x, y = jnp.meshgrid(jnp.linspace(-4, 5, n), jnp.linspace(-4, 5, n))
+    # x, y = jnp.meshgrid(jnp.linspace(-1, 2, n), jnp.linspace(-1, 2, n))
     _x = x.reshape((-1, 1))
     _y = y.reshape((-1, 1))
 

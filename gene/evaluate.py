@@ -9,6 +9,11 @@ from functools import partial
 from gene.encoding import genome_to_model
 
 
+# ================================================
+# ===============   Gymnax   =====================
+# ================================================
+
+
 def _rollout_problem_lax(
     model: Module,
     model_parameters: dict,
@@ -57,7 +62,9 @@ def evaluate_individual(
     return fitness
 
 
-# Brax loops
+# ================================================
+# ================   Brax   ======================
+# ================================================
 def _rollout_brax(
     config: dict, model, model_parameters, env, rng_reset: jrd.KeyArray
 ) -> float:

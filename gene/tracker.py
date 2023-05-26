@@ -134,11 +134,13 @@ class Tracker:
         )
 
     def wandb_save_genome(self, genome, wdb_run, generation: int = None) -> None:
-        gen_string = f"_g{generation}_" if generation is not None else "_"
+        # gen_string = f"_g{generation}_" if generation is not None else "_"
+        gen_string = f"g{generation}_"
         save_path = (
             Path(wdb_run.dir)
             / "genomes"
-            / f"{str(int(time()))}{gen_string}mean_indiv.npy"
+            / f"{gen_string}mean_indiv.npy"
+            # / f"{str(int(time()))}{gen_string}mean_indiv.npy"
         )
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "wb") as temp_f:

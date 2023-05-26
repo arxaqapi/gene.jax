@@ -16,6 +16,7 @@ def run_lla_gymnax(
     initial_genome_name: str = "genomes/1685094639_g0_mean_indiv.npy",
     final_genome_name: str = "genomes/1685094639_g100_mean_indiv.npy",
     title: str = "",
+    n: int = 100
 ):
     rng, interpolation_rng, eval_rng = jrd.split(rng, 3)
 
@@ -32,7 +33,7 @@ def run_lla_gymnax(
 
     # NOTE - 3. interpolate
     genomes, xs, ys = interpolate_2D(
-        initial_genome, final_genome, n=100, key=interpolation_rng
+        initial_genome, final_genome, n=n, key=interpolation_rng
     )
 
     # NOTE - 4. evaluate at each interpolation step
