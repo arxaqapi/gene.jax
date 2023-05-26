@@ -57,6 +57,7 @@ def evaluate_individual(
     return fitness
 
 
+# Brax loops
 def _rollout_brax(
     config: dict, model, model_parameters, env, rng_reset: jrd.KeyArray
 ) -> float:
