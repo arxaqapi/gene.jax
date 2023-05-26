@@ -1,10 +1,11 @@
-from pathlib import Path
-import time
 from functools import partial
+import argparse
+import json
 
 import jax.random as jrd
 from jax import jit, vmap, default_backend
 import evosax
+import wandb
 
 from gene.evaluate import evaluate_individual
 from gene.encoding import Encoding_size_function
@@ -68,9 +69,6 @@ def run(
 if __name__ == "__main__":
     assert default_backend() == "gpu"
 
-    import argparse
-    import json
-
     parser = argparse.ArgumentParser(
         description="Start the experiment described in the config file"
     )
@@ -84,15 +82,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    config_file = Path(args.config)
-    if config_file.exists():
-        with config_file.open() as f:
-            config = json.load(f)
-    else:
-        raise ValueError("No config file found")
+    with open(args.config) as f:
+        config = json.load(f)
 
-    import wandb
+    for seed in range(10):
+        config["seed"] = seed
+        config["encoding"]["type"] = "direct"
 
-    wdb_run = wandb.init(project="Cartpole", config=config)
-
-    run(config, wdb_run)
+        wdb_run = wandb.init(project="Cartpole", config=config)
+        run(config, wdb_run)
+        wdb_run.finish()
