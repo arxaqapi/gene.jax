@@ -3,8 +3,9 @@ import jax.numpy as jnp
 from jax import lax, jit
 from flax.linen import Module
 import gymnax
+from brax import envs
+from brax.envs.wrapper import EpisodeWrapper
 
-from functools import partial
 
 from gene.encoding import genome_to_model
 
@@ -65,6 +66,15 @@ def evaluate_individual(
 # ================================================
 # ================   Brax   ======================
 # ================================================
+
+
+def get_brax_env(config: dict):
+    env = envs.get_environment(env_name=config["problem"]["environnment"])
+    return EpisodeWrapper(
+        env, episode_length=config["problem"]["episode_length"], action_repeat=1
+    )
+
+
 def _rollout_brax(
     config: dict, model, model_parameters, env, rng_reset: jrd.KeyArray
 ) -> float:

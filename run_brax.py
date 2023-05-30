@@ -11,7 +11,7 @@ import json
 from time import time
 
 from gene.encoding import Encoding_size_function
-from gene.evaluate import evaluate_individual_brax
+from gene.evaluate import evaluate_individual_brax, get_brax_env
 from gene.tracker import Tracker
 
 
@@ -32,10 +32,7 @@ def run(config: dict, wdb_run):
     tracker = Tracker(config)
     tracker_state = tracker.init()
 
-    env = envs.get_environment(env_name=config["problem"]["environnment"])
-    env = EpisodeWrapper(
-        env, episode_length=config["problem"]["episode_length"], action_repeat=1
-    )
+    env = get_brax_env(config)
     partial_evaluate_individual = partial(
         evaluate_individual_brax, config=config, env=env
     )
