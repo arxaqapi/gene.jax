@@ -7,12 +7,10 @@ Loss Landscape Analysis code.
 import jax
 import jax.numpy as jnp
 import jax.random as jrd
-from jax import jit, vmap, lax
 from brax import envs
 from brax.envs.wrapper import EpisodeWrapper
 
 from pathlib import Path
-from functools import partial
 
 
 def get_env(config: dict):

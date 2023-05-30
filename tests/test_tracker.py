@@ -1,6 +1,5 @@
 import unittest
 import chex
-import jax
 import jax.numpy as jnp
 
 from gene.tracker import Tracker

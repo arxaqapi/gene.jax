@@ -1,12 +1,10 @@
 import jax.numpy as jnp
 from jax import jit
 import chex
-import wandb
 
 from gene.encoding import Encoding_size_function
 
 from functools import partial
-from time import time
 from pathlib import Path
 
 
@@ -118,7 +116,7 @@ class Tracker:
         wdb_run.log(
             {
                 "training": {
-                    f"top_k_fit": {
+                    "top_k_fit": {
                         f"top_{t}_fit": float(
                             tracker_state["training"]["top_k_fit"][gen][t]
                         )

@@ -1,8 +1,5 @@
-from jax import jit, vmap, lax, default_backend
-import jax.numpy as jnp
+from jax import jit, vmap, default_backend
 import jax.random as jrd
-from brax import envs
-from brax.envs.wrapper import EpisodeWrapper
 import evosax
 import wandb
 

@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from gene.distances import _L2_dist, L2_dist, pL2_dist, tag_dist, _a
+from gene.distances import pL2_dist, _a
 
 
 class TestAFunc(unittest.TestCase):
