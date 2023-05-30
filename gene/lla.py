@@ -115,5 +115,5 @@ def plot_ll(
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
     )
 
-    fig.write_html(f"{title.replace(' ', '_')}.html")
-    fig.write_image(f"{title.replace(' ', '_')}.png")
+    fig.write_html(f"{title}.html")
+    fig.write_image(f"{title}.png")

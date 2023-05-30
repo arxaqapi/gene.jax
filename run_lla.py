@@ -6,6 +6,7 @@ from gene.lla import load_genomes, interpolate_2D, plot_ll
 from gene.evaluate import evaluate_individual, evaluate_individual_brax, get_brax_env
 
 from functools import partial
+from pathlib import Path
 
 
 def run_lla_gymnax(
@@ -41,14 +42,20 @@ def run_lla_gymnax(
     values = vmap_eval(genomes)
 
     # NOTE - 5. plot landscape
+    plot_save_path = Path(run.dir) / "lla" / title
+    plot_save_path.parent.mkdir(parents=True, exist_ok=True)
     plot_ll(
         values,
         xs,
         ys,
         evaluate_individual(initial_genome, eval_rng, config),
         evaluate_individual(final_genome, eval_rng, config),
-        title=title,
+        title=str(plot_save_path),
     )
+
+    # NOTE - 6. Save LL to run
+    run.upload_file(f"{str(plot_save_path)}.html", root=f"{run.dir}")
+    run.upload_file(f"{str(plot_save_path)}.png", root=f"{run.dir}")
 
 
 def run_lla_brax(
@@ -87,25 +94,38 @@ def run_lla_brax(
     values = vmap_eval(genomes)
 
     # NOTE - 5. plot landscape
+    plot_save_path = Path(run.dir) / "lla" / title
+    plot_save_path.parent.mkdir(parents=True, exist_ok=True)
+
     plot_ll(
         values,
         xs,
         ys,
         evaluate_individual_brax(initial_genome, eval_rng, config, env=env),
         evaluate_individual_brax(final_genome, eval_rng, config, env=env),
-        title=title,
+        title=str(plot_save_path),
     )
+
+    # NOTE - 6. Save LL to run
+    run.upload_file(f"{str(plot_save_path)}.html", root=f"{run.dir}")
+    run.upload_file(f"{str(plot_save_path)}.png", root=f"{run.dir}")
 
 
 if __name__ == "__main__":
     rng = jrd.PRNGKey(1)
 
-    run_lla_gymnax(rng, title="Direct encoding on Cartpole")
+    # run_lla_gymnax(
+    #     rng,
+    #     run_name="arxaqapi/Cartpole/r1jh45f7",
+    #     initial_genome_name="genomes/1685094261_g0_mean_indiv.npy",
+    #     final_genome_name="genomes/1685094261_g100_mean_indiv.npy",
+    #     title="GENE encoding on Cartpole",
+    # )
 
-    run_lla_gymnax(
+    run_lla_brax(
         rng,
-        run_name="arxaqapi/Cartpole/r1jh45f7",
-        initial_genome_name="genomes/1685094261_g0_mean_indiv.npy",
-        final_genome_name="genomes/1685094261_g100_mean_indiv.npy",
-        title="GENE encoding on Cartpole",
+        run_name="arxaqapi/Brax halfcheetah/qugsbu6j",
+        initial_genome_name="genomes/g0_mean_indiv.npy",
+        final_genome_name="genomes/g500_mean_indiv.npy",
+        title="GENE encoding on Brax Halfcheetah",
     )
