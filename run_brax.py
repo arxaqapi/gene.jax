@@ -72,14 +72,14 @@ def run(config: dict, wdb_run):
 if __name__ == "__main__":
     assert default_backend() == "gpu"
 
-    with open("config/brax_light.json") as f:
+    with open("config/brax_sep_cmaes.json") as f:
         config = json.load(f)
 
     seeds = [15684, 253694, 78851363, 148, 9562]
+    config["seed"] = seeds[0]
 
     wdb_run = wandb.init(project="Brax halfcheetah", config=config)
 
-    config["seed"] = seeds[0]
     run(config, wdb_run)
 
     wdb_run.finish()
