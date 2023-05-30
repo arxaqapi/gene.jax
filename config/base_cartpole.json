@@ -15,6 +15,7 @@
     },
     "problem": {
         "environnment": "CartPole-v1",
-        "maximize": true
+        "maximize": true,
+        "episode_length": 500
     }
 }
