@@ -16,6 +16,7 @@ from gene.tracker import Tracker
 
 
 def run(config: dict, wdb_run):
+    assert wdb_run is not None
     rng = jrd.PRNGKey(config["seed"])
     num_dims = Encoding_size_function[config["encoding"]["type"]](config)
 
@@ -41,7 +42,8 @@ def run(config: dict, wdb_run):
     vmap_evaluate_individual = vmap(partial_evaluate_individual, in_axes=(0, None))
     jit_vmap_evaluate_individual = jit(vmap_evaluate_individual)
 
-    generation_means = [state.mean]
+    # ANCHOR - Saving
+    tracker.wandb_save_genome(state.mean, wdb_run, now=True)
 
     for _generation in range(config["evo"]["n_generations"]):
         print(f"[Log] - gen {_generation} @ {time()}")
@@ -65,12 +67,9 @@ def run(config: dict, wdb_run):
             rng_eval=rng_eval,
         )
         tracker.wandb_log(tracker_state, wdb_run)
-        generation_means.append(state.mean)
+        # ANCHOR - Saving
+        tracker.wandb_save_genome(state.mean, wdb_run, now=True)
 
-    print(f"[Log] - saving all generations @ {time()}")
-    # NOTE: Save all generations
-    for i, genome in enumerate(generation_means):
-        tracker.wandb_save_genome(genome, wdb_run, generation=i)
     print(f"[Log] - end @ {time()}")
 
     return state
@@ -82,8 +81,11 @@ if __name__ == "__main__":
     with open("config/brax_light.json") as f:
         config = json.load(f)
 
-    # seeds = [15684, 253694, 78851363, 148, 9562]
+    seeds = [15684, 253694, 78851363, 148, 9562]
 
     wdb_run = wandb.init(project="Brax halfcheetah", config=config)
+
+    config["seed"] = seeds[0]
     run(config, wdb_run)
+
     wdb_run.finish()

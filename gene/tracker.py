@@ -1,6 +1,7 @@
 import jax.numpy as jnp
 from jax import jit
 import chex
+import wandb
 
 from gene.encoding import Encoding_size_function
 
@@ -15,6 +16,7 @@ class Tracker:
     def __init__(self, config: dict, top_k: int = 3) -> None:
         self.config: dict = config
         self.top_k: int = top_k
+        self.genome_counter: int = 0
 
     @partial(jit, static_argnums=(0,))
     def init(self) -> chex.ArrayTree:
@@ -133,15 +135,14 @@ class Tracker:
             }
         )
 
-    def wandb_save_genome(self, genome, wdb_run, generation: int = None) -> None:
-        # gen_string = f"_g{generation}_" if generation is not None else "_"
-        gen_string = f"g{generation}_"
-        save_path = (
-            Path(wdb_run.dir)
-            / "genomes"
-            / f"{gen_string}mean_indiv.npy"
-            # / f"{str(int(time()))}{gen_string}mean_indiv.npy"
-        )
+    def wandb_save_genome(self, genome: chex.Array, wdb_run, now: bool = False) -> None:
+        gen_string = f"g{str(self.genome_counter).zfill(3)}_"
+        save_path = Path(wdb_run.dir) / "genomes" / f"{gen_string}mean_indiv.npy"
         save_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(save_path, "wb") as temp_f:
-            jnp.save(temp_f, genome)
+        with open(save_path, "wb") as f:
+            jnp.save(f, genome)
+
+        if now:
+            wdb_run.save(str(save_path), base_path=f"{wdb_run.dir}/", policy="now")
+
+        self.genome_counter += 1
