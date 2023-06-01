@@ -37,8 +37,8 @@ RUN pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/ja
 RUN pip install flax chex
 RUN pip install scalene
 RUN pip install matplotlib evosax gymnax "gymnasium[atari, accept-rom-license]" \
-    black ruff jax-smi wandb \
-    plotly nbformat kaleido
+    "black[jupyter]" ruff jax-smi wandb \
+    plotly nbformat kaleido ipykernel
 
 WORKDIR /home
 
