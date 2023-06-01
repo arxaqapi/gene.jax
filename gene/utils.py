@@ -2,7 +2,7 @@ from functools import partial
 
 import jax.random as jrd
 import jax.numpy as jnp
-from jax import vmap
+from jax import vmap, jit
 import matplotlib.pyplot as plt
 
 from gene.evaluate import evaluate_individual
@@ -48,3 +48,39 @@ def evaluate_bench(
         "population_center": center_fitness.mean(axis=0),
         "population_std": center_fitness.std(axis=0),
     }
+
+
+def parjit(static: tuple[int] = None):
+    """Only positional arguments are supported; keyword arguments will not work as expected fail.
+
+    - static tuple[int]: All arguments to partially apply
+    """
+
+    def inner_decorator(f):
+        def wrapped(*args, **kwargs):
+            new_f = f
+            # partially apply all static arguments
+            for stat_arg in static:
+                new_f = partial(new_f, args[stat_arg])
+            # remove applied arguments and keep the non-applied ones
+            args = list(
+                map(
+                    lambda e: e[1],
+                    filter((lambda e: e[0] not in static), enumerate(args)),
+                )
+            )
+            return jit(new_f)(*args, **kwargs)  # (*args, **kwargs)
+
+        return wrapped
+
+    return inner_decorator
+
+
+if __name__ == "__main__":
+
+    @parjit(static=(0,))
+    def test(config: dict, n):
+        return n * config["seed"]
+
+    res = test({"seed": 4, "wtf": [1, 6, 9, 8], "name": "aze"}, 6)
+    print(res)
