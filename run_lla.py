@@ -125,7 +125,7 @@ if __name__ == "__main__":
     run_lla_brax(
         rng,
         run_name="arxaqapi/Brax halfcheetah/qugsbu6j",
-        initial_genome_name="genomes/g0_mean_indiv.npy",
+        initial_genome_name="genomes/g000_mean_indiv.npy",
         final_genome_name="genomes/g500_mean_indiv.npy",
         title="GENE encoding on Brax Halfcheetah",
     )
