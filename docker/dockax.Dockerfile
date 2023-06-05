@@ -38,7 +38,8 @@ RUN pip install flax chex
 RUN pip install scalene
 RUN pip install matplotlib evosax gymnax "gymnasium[atari, accept-rom-license]" \
     "black[jupyter]" ruff jax-smi wandb \
-    plotly nbformat kaleido ipykernel
+    plotly nbformat kaleido ipykernel \
+    scikit-learn
 
 WORKDIR /home
 

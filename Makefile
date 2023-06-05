@@ -26,8 +26,12 @@ build:
 sail:
 	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax -p 8888:8888 $(DIMAGE):$(VERSION)
 
+STAFE_VERSION:=0.0.3
+build-stafe:
+	docker build -t stafe:$(STAFE_VERSION) -f docker/stafe.Dockerfile .
+
 sail-stafe:
-	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax -p 8888:8888 stafe:0.0.2
+	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax -p 8888:8888 stafe:$(STAFE_VERSION)
 
 c clean:
 	rm -rf __pycache__
@@ -49,7 +53,7 @@ notebook:
 	xvfb-run -s "-screen 0 1400x900x24" jupyter notebook --ip 0.0.0.0 --allow-root
 
 zipall: c
-	zip -r gene.zip . -x "wandb/*"
+	zip -r gene.zip . -x "wandb/*" -x "profiles/*" -x "notebooks/*" -x "examples/*"
 
 unzipall:
 	unzip gene.zip -d gene.jax
