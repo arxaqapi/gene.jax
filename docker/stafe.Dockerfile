@@ -2,8 +2,7 @@ FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
 RUN echo 'root:root' | chpasswd
 WORKDIR /home/
-COPY qdax.txt /home/
-COPY jax_gpu_test.py /home/
+COPY docker/qdax.txt /home/
 
 # tzdata hangs: https://dev.to/grigorkh/fix-tzdata-hangs-during-docker-image-build-4o9m
 ENV TZ=Europe/Berlin
@@ -24,7 +23,8 @@ RUN pip install jaxlib==0.3.15+cuda11.cudnn82 -f https://storage.googleapis.com/
 RUN pip install -r /home/qdax.txt
 RUN pip install --upgrade pip 
 RUN pip install scalene
-RUN pip install evosax gymnax evojax "gymnasium[atari, accept-rom-license]" black ruff jax-smi
+RUN pip install evosax gymnax evojax "gymnasium[atari, accept-rom-license]" \
+    black ruff jax-smi wandb ipykernel
 
 RUN chsh -s /usr/bin/fish
 ENV SHELL=/usr/bin/fish
