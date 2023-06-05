@@ -58,9 +58,9 @@ def interpolate_2D(
     v2 = v2 - jnp.dot(v2, v1) * v1 / jnp.dot(v1, v1)
     v2 = v2 / jnp.linalg.norm(v2) * jnp.linalg.norm(v1)
 
-    x, y = jnp.meshgrid(jnp.linspace(-4, 5, n), jnp.linspace(-4, 5, n))
+    # x, y = jnp.meshgrid(jnp.linspace(-4, 5, n), jnp.linspace(-4, 5, n))
     # x, y = jnp.meshgrid(jnp.linspace(-2, 3, n), jnp.linspace(-2, 3, n))
-    # x, y = jnp.meshgrid(jnp.linspace(-1, 2, n), jnp.linspace(-1, 2, n))
+    x, y = jnp.meshgrid(jnp.linspace(-1, 2, n), jnp.linspace(-1, 2, n))
     _x = x.reshape((-1, 1))
     _y = y.reshape((-1, 1))
 
