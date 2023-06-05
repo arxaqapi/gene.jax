@@ -5,6 +5,8 @@ from flax.linen import Module
 import gymnax
 from brax import envs
 from brax.envs.wrapper import EpisodeWrapper
+# from brax.v1 import envs
+# from brax.v1.envs.wrappers import EpisodeWrapper
 
 
 from gene.encoding import genome_to_model
