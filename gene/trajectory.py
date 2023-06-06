@@ -59,6 +59,7 @@ def pca(M, n_components: int = 2):
     projected = pca.fit_transform(M)
     return pca, projected
 
+
 # TODO - scatter projected points in 2D
 # TODO - add 2D colormap
 
@@ -75,6 +76,3 @@ if __name__ == "__main__":
     genome_data = load_genome_data(genome_names)
     M = compute_M(config, genome_data)
     pca, projected = pca(M)
-
-
-
