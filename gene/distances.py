@@ -1,5 +1,9 @@
 import jax.numpy as jnp
 from jax import jit, vmap
+import chex
+import flax.linen as nn
+
+from functools import partial
 
 
 @jit
@@ -51,6 +55,19 @@ def jit_vmap_distance_f(distance_f: str):
             in_axes=(None, 0, None),
         )
     )
+
+
+@chex.dataclass
+class NonLinearDistance:
+    model: nn.Module
+    model_parameters: nn.FrozenDict
+
+    @partial(jit, static_argnums=(0))
+    def _apply(self, x) -> float:
+        return self.model.apply(self.model_parameters, x)
+
+    def nn_distance(self, x, n1_i, n2_i):
+        return self._apply(jnp.concatenate(x[n1_i], x[n2_i]))
 
 
 Distances = {"L2": L2_dist, "tag": tag_dist, "pL2": pL2_dist}
