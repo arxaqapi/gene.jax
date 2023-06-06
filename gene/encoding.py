@@ -15,12 +15,19 @@ def gene_enc_genome_size(config: dict):
     return l_dims[0] * d + sum(l_dims[1:]) * (d + 1)
 
 
-def direct_enc_genome_size(config: dict):
-    layer_dims = config["net"]["layer_dimensions"]
-
+def _direct_enc_genome_size(layer_dims: list[int]) -> int:
     return sum(
         in_f * out_f + out_f for in_f, out_f in zip(layer_dims[:-1], layer_dims[1:])
     )
+
+
+def direct_enc_genome_size(config: dict):
+    layer_dims = config["net"]["layer_dimensions"]
+
+    return _direct_enc_genome_size(layer_dims)
+
+
+# Decoding functions
 
 
 def gene_decoding(genome: jnp.ndarray, config: dict):
