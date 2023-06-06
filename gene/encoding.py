@@ -2,7 +2,7 @@ import jax.numpy as jnp
 from jax import lax
 import flax.linen as nn
 
-from gene.network import LinearModel
+from gene.network import BoundedLinearModel
 from gene.distances import Vectorized_distances
 
 
@@ -91,7 +91,7 @@ def direct_decoding(genome: jnp.ndarray, config: dict):
 def genome_to_model(genome: jnp.ndarray, config: dict):
     model_parameters = Encoding_function[config["encoding"]["type"]](genome, config)
 
-    model = LinearModel(config["net"]["layer_dimensions"][1:])
+    model = BoundedLinearModel(config["net"]["layer_dimensions"][1:])
 
     return model, nn.FrozenDict({"params": model_parameters})
 

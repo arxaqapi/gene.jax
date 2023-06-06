@@ -4,7 +4,7 @@ import flax.linen as nn
 
 
 # TODO: generalize
-class _LinearModel(nn.Module):
+class LinearModel(nn.Module):
     features: Sequence[int]
 
     @nn.compact
@@ -16,7 +16,7 @@ class _LinearModel(nn.Module):
         return x
 
 
-class LinearModel(nn.Module):
+class BoundedLinearModel(nn.Module):
     features: Sequence[int]
 
     @nn.compact
