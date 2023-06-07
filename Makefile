@@ -4,7 +4,7 @@ VERSION:=0.1.2
 .PHONY:f format r run t test prof profile build sail sail-stafe c clean backup chowner notebook zipall unzipall
 
 f format:
-	ruff check .; black .
+	ruff check .; black -t py39 .
 
 r run:
 	python run.py
