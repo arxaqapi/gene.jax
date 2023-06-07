@@ -33,7 +33,9 @@ class TestDirectEncoding(unittest.TestCase):
         self.assertEqual(model_param["Dense_1"]["bias"].shape, (10,))
 
     def test_direct_enc_genome_size(self):
-        """Test the direct_enc_genome_size(...) function, so that the generated genome, has the correct size"""
+        """Test the function `direct_enc_genome_size`,
+        so that the generated genome has the correct size.
+        """
         layer_dims = [784, 64, 10]  # (784, 64) (64, 10)
         # (50816,)
         genome_w_length = prod(layer_dims[:2]) + prod(layer_dims[1:])

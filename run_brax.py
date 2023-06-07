@@ -47,7 +47,7 @@ def run(config: dict, wdb_run):
         x, state = strategy.ask(rng_gen, state, es_params)
         # NOTE - Evaluate
         temp_fitness = jit_vmap_evaluate_individual(x, rng_eval)
-        fitness = -1 * temp_fitness
+        fitness = -1 * temp_fitness  # we want to maximize the objective f.
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
