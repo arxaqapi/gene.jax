@@ -6,6 +6,8 @@ import jax
 
 from encoding import Encoding_size_function
 
+raise NotImplementedError
+
 
 # 1 - get all genomes
 def get_all_genomes(run, download: bool = False) -> jax.Array:
@@ -20,9 +22,10 @@ def get_all_genomes(run, download: bool = False) -> jax.Array:
                 file.download(replace=True)
     try:
         all_genomes.sort(key=lambda e: int(e[9:12]))
-    except ValueError as _e:
+    except ValueError:
         print(
-            f"[ :( ] Sorting key is not correct, because genome name is not correct: {all_genomes[0][:13]}"
+            f"[ :( ] Sorting key is not correct, \
+            because genome name is not correct: {all_genomes[0][:13]}"
         )
         exit(5)
     return all_genomes

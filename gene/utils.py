@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 
 def plot(*args, info: str = ""):
     """Simple plotting utility function.
-    *args: is sequence of tuples of size 3. Each tuple contains the mean value vector, its standart deviation and a label
+    *args: is sequence of tuples of size 3.
+    Each tuple contains the mean value vector, its standart deviation and a label.
     """
     plt.style.use("bmh")  # fivethirtyeight
     plt.figure(figsize=(12, 6))
@@ -21,7 +22,8 @@ def plot(*args, info: str = ""):
 
 
 def parjit(static: tuple[int] = None):
-    """Only positional arguments are supported; keyword arguments will not work as expected fail.
+    """Only positional arguments are supported.
+    Keyword arguments will not work as expected and can fail.
 
     - static tuple[int]: All arguments to partially apply
     """

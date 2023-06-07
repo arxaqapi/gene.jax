@@ -1,11 +1,11 @@
+from functools import partial
+from pathlib import Path
+
 import jax.numpy as jnp
 from jax import jit
 import chex
 
 from gene.encoding import Encoding_size_function
-
-from functools import partial
-from pathlib import Path
 
 
 # NOTE: once initialized, the object should not be modified in compiled functions
@@ -35,7 +35,8 @@ class Tracker:
                 "empirical_mean_std": jnp.zeros((self.config["evo"]["n_generations"],)),
             },
             "eval": {
-                # Fitness of the individual at the center of the population (used to draw offspring pop lambda)
+                # Fitness of the individual at the center of the population,
+                # used to draw the offspring population lambda.
                 "mean_fit": jnp.zeros((self.config["evo"]["n_generations"],)),
             },
             "backup": {

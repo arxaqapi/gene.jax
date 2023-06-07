@@ -1,9 +1,9 @@
+from functools import partial
+
 import jax.numpy as jnp
 from jax import jit, vmap
 import chex
 import flax.linen as nn
-
-from functools import partial
 
 
 @jit
@@ -27,7 +27,7 @@ def L2_dist(x, n1_i, n2_i):
 
 
 def tag_dist(x, n1_i, n2_i):
-    """Introduced in [A comparison of genetic regulatory network dynamics and encoding](https://doi.org/10.1145/3071178.3071322) ''"""
+    """Introduced in [A comparison of genetic regulatory network dynamics and encoding](https://doi.org/10.1145/3071178.3071322)"""
     # raise ValueError("Does not work as expected")
     n1 = x[n1_i]
     n2 = x[n2_i]
@@ -37,9 +37,11 @@ def tag_dist(x, n1_i, n2_i):
 
 
 def pL2_dist(x, n1_i, n2_i):
-    """The product L2 distance, is simply the L2 distance multiplied by the bounded prouduct
-    of all components of the vector. This is not a mathematically strict "distance"
-    function, since it allows for negative values."""
+    """The product L2 distance, is simply the L2 distance multiplied by the
+    bounded prouduct of all components of the vector.
+    This is not a mathematically strict _distance_ function, since it allows
+    for negative values.
+    """
     diff = x[n1_i] - x[n2_i]
     return _a(jnp.prod(diff)) * _L2_dist(x[n1_i], x[n2_i])
 
@@ -58,7 +60,7 @@ def jit_vmap_distance_f(distance_f: str):
 
 
 @chex.dataclass
-class NonLinearDistance:
+class NNDistance:
     model: nn.Module
     model_parameters: nn.FrozenDict
 

@@ -1,14 +1,11 @@
 import jax.random as jrd
 import jax.numpy as jnp
+import jax.nn as jnn
 from jax import lax, jit
-from flax.linen import Module
+import flax.linen as nn
 import gymnax
-
-# from brax import envs
-# from brax.envs.wrapper import EpisodeWrapper
-from brax.v1 import envs
-from brax.v1.envs.wrappers import EpisodeWrapper
-
+from brax.v1 import envs  # brax
+from brax.v1.envs.wrappers import EpisodeWrapper  # brax.envs.wrapper
 
 from gene.encoding import genome_to_model
 
@@ -19,12 +16,14 @@ from gene.encoding import genome_to_model
 
 
 def _rollout_problem_lax(
-    model: Module,
-    model_parameters: dict,
+    model: nn.Module,
+    model_parameters: nn.FrozenDict,
     rng: jrd.KeyArray,
     config: dict,
 ):
-    """Perform a complete rollout of the current env, declared in 'config', for a specific individual and returns the cumulated reward as the fitness"""
+    """Perform a complete rollout of the current env, declared in 'config',
+    for a specific individual and returns the cumulated reward as the fitness.
+    """
     rng, rng_reset = jrd.split(rng, 2)
 
     env, env_params = gymnax.make(config["problem"]["environnment"])
@@ -83,6 +82,8 @@ def _rollout_brax(
 ) -> float:
     state = jit(env.reset)(rng_reset)
 
+    # jax.debug.print("[🤯] Observation vector: {x}", x=state.obs.shape)
+
     def rollout_loop(carry, x):
         # FIXME: carry could be reduced
         env_state, cum_reward = carry
@@ -104,7 +105,6 @@ def _rollout_brax(
     return carry[-1]  # Access cumuluative reward aka. return
 
 
-@partial(jit, static_argnums=(1, 2, 3))
 def evaluate_individual_brax(
     genome: jnp.array,
     rng: jrd.KeyArray,
@@ -112,6 +112,9 @@ def evaluate_individual_brax(
     env,
 ) -> float:
     model, model_parameters = genome_to_model(genome, config=config)
+
+    # from jax import tree_util
+    # print(tree_util.tree_map(lambda x: x.shape, model_parameters))
 
     fitness = _rollout_brax(
         model=model,

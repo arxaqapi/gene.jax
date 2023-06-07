@@ -4,13 +4,13 @@ Loss Landscape Analysis code.
 - Create the grid to interpolate onto.
 - Vmap over all points and evaluate interpolated genomes
 """
+from pathlib import Path
+
 import jax
 import jax.numpy as jnp
 import jax.random as jrd
 from brax import envs
 from brax.envs.wrapper import EpisodeWrapper
-
-from pathlib import Path
 
 
 def get_env(config: dict):
@@ -36,12 +36,13 @@ def interpolate_2D(
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
     """Performs 2D interpolation between the initial and final network.
 
-    - .. _An empirical analysis of the optimization of deep network loss surfaces: http://arxiv.org/abs/1612.04010.
-    - .. _Visualizing the Loss Landscape of Neural Nets: http://arxiv.org/abs/1712.09913.
+    - [An empirical analysis of the optimization of deep network loss surfaces](http://arxiv.org/abs/1612.04010)
+    - [Visualizing the Loss Landscape of Neural Nets](http://arxiv.org/abs/1712.09913)
 
 
     Args:
-        initial_genome (jax.Array): The genome of the initial individual's neural network.
+        initial_genome (jax.Array):
+            The genome of the initial individual's neural network.
         final_genome (jax.Array): The genome of the final individual's neural network.
         n (int): number of points to interpolate per axis.
         key (jrd.KeyArray): key used to generate the random vector.
@@ -77,15 +78,19 @@ def plot_ll(
     final_genome_fitness: float,
     title: str,
 ) -> None:
-    """Loss Landscape plotting function. Exports the final plot as a png and an interactive html file using plotly.
+    """Loss Landscape plotting function.
+    Exports the final plot as a png and an interactive html file using plotly.
 
     Args:
         values (jax.Array): Computed fitness values for each interpolated genomes
         X (jax.Array): X values of the interpolated genomes
         Y (jax.Array): Y values of the interpolated genomes
-        initial_genome (jax.Array): genomes of the initial individual. Starting point of the search.
-        final_genome (jax.Array): genomes of the final individual. End point of the search.
-        export_name (str, optional): Name of the output visualization files. Defaults to "test".
+        initial_genome (jax.Array):
+            genomes of the initial individual. Starting point of the search.
+        final_genome (jax.Array):
+            genomes of the final individual. End point of the search.
+        export_name (str, optional):
+            Name of the output visualization files. Defaults to "test".
     """
     import plotly.graph_objects as go
 

@@ -1,13 +1,15 @@
 import jax.numpy as jnp
-from jax import lax
+from jax import lax, jit, vmap
 import flax.linen as nn
 
 from gene.network import BoundedLinearModel
-from gene.distances import Vectorized_distances
+from gene.distances import Vectorized_distances, NNDistance
 
 
 def gene_enc_genome_size(config: dict):
-    """Computes the effective size of the genome based on the layers dimensionnalities."""
+    """Computes the effective size of the genome based on the
+    layers dimensionnalities.
+    """
     # The first value in layer_dimension does is only used for the dimensionnality
     # of the input features. So biases are attributed to it
     d = config["encoding"]["d"]
@@ -35,12 +37,14 @@ def gene_decoding(genome: jnp.ndarray, config: dict):
     layer_dims = config["net"]["layer_dimensions"]
     d = config["encoding"]["d"]
 
-    # To facilitate acces to the encoding of the weights and the biases (and reduce confusion and possible error in computing indexes), we split the genome in 2 parts
+    # To facilitate acces to the encoding of the weights and the biases
+    # (and reduce confusion and possible error in computing indexes),
+    # we split the genome in 2 parts
     genome_w, genome_b = jnp.split(genome, [sum(layer_dims) * d])
 
-    model_parameters = {}
+    model_parameters: nn.FrozenDict = {}
     for i, (layer_in, layer_out) in enumerate(zip(layer_dims[:-1], layer_dims[1:])):
-        # Split the genome into subarrays, each subarray is the position vector for one neuron
+        # Split genome into subarrays, where each is the position vector for one neuron
         genome_w_positions = jnp.array(jnp.split(genome_w, sum(layer_dims)))
 
         layer_offset = sum(layer_dims[:i])
@@ -52,7 +56,8 @@ def gene_decoding(genome: jnp.ndarray, config: dict):
         weight_matrix = Vectorized_distances[config["encoding"]["distance"]](
             genome_w_positions, src_idx, target_idx
         )
-        # Biases are directly encoded into the genome, they are stored at the end of the genome, in genome_b
+        # Biases are directly encoded into the genome,
+        # they are stored at the end of the genome, in genome_b
         biases = lax.dynamic_slice(
             genome_b, (sum(layer_dims[1 : i + 1]),), (layer_out,)
         )
@@ -66,7 +71,9 @@ def gene_decoding(genome: jnp.ndarray, config: dict):
 
 
 def direct_decoding(genome: jnp.ndarray, config: dict):
-    """Each weight and bias of the neural network is encoded as a single gene in the genome"""
+    """Each weight and bias of the neural network is encoded as a single gene
+    in the genome.
+    """
     layer_dims = config["net"]["layer_dimensions"]
 
     genome_w, genome_b = jnp.split(
@@ -74,7 +81,7 @@ def direct_decoding(genome: jnp.ndarray, config: dict):
         [sum(layer_dims[i] * layer_dims[i + 1] for i in range(len(layer_dims) - 1))],
     )
 
-    model_parameters = {}
+    model_parameters: nn.FrozenDict = {}
     offset = 0
     for i, (layer_in, layer_out) in enumerate(zip(layer_dims[:-1], layer_dims[1:])):
         section_length = layer_in * layer_out
@@ -95,8 +102,12 @@ def direct_decoding(genome: jnp.ndarray, config: dict):
     return model_parameters
 
 
-def genome_to_model(genome: jnp.ndarray, config: dict):
-    model_parameters = Encoding_function[config["encoding"]["type"]](genome, config)
+def genome_to_model(
+    genome: jnp.ndarray, config: dict
+) -> tuple[BoundedLinearModel, nn.FrozenDict]:
+    model_parameters: nn.FrozenDict = Encoding_function[config["encoding"]["type"]](
+        genome, config
+    )
 
     model = BoundedLinearModel(config["net"]["layer_dimensions"][1:])
 
