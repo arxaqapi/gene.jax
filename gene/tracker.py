@@ -1,7 +1,9 @@
 from functools import partial
 from pathlib import Path
+from typing import Callable
 
 import jax.numpy as jnp
+import jax.random as jrd
 from jax import jit
 import chex
 
@@ -18,8 +20,7 @@ class Tracker:
 
     @partial(jit, static_argnums=(0,))
     def init(self) -> chex.ArrayTree:
-        """Initialize the tracker state where:
-
+        """Initializes the tracker state
         Returns:
             chex.ArrayTree: State of the tracker
         """
@@ -57,22 +58,25 @@ class Tracker:
     def update(
         self,
         tracker_state: chex.ArrayTree,
-        fitness: chex.Array,
+        fitnesses: chex.Array,
         mean_ind: chex.Array,
-        eval_f,
+        eval_f: Callable[[chex.Array, jrd.KeyArray], float],
         rng_eval,
     ) -> chex.ArrayTree:
         """Update the tracker object with the metrics of the current generation
 
         Args:
-            tracker_state (chex.ArrayTree): _description_
-            fitness (chex.Array): _description_
-            mean_ind (chex.Array): _description_
-            eval_f (_type_): _description_
-            rng_eval (_type_): _description_
+            tracker_state (chex.ArrayTree):
+                pytree containing the current state of the tracker
+            fitnesses (chex.Array):
+                fitnesses of the individuals in the current population
+            mean_ind (chex.Array): sample mean of the current population
+            eval_f (Callable[[chex.Array, jrd.KeyArray], float]): Function used
+                to evaluate the individuals. Will be used to evaluate the sample mean.
+            rng_eval (_type_): RNG used for evaluating the sample mean.
 
         Returns:
-            chex.ArrayTree: _description_
+            chex.ArrayTree: the updated state of the tracker.
         """
         i = tracker_state["gen"]
         # [Training] - update top_k_fitness using old state (carry best over)
@@ -82,7 +86,7 @@ class Tracker:
             .get(mode="fill", fill_value=0.0)
         )
         # TODO - argmax/armgin | maximize/minimize
-        top_k_f = jnp.sort(jnp.hstack((fitness, last_fit)))[::-1][: self.top_k]
+        top_k_f = jnp.sort(jnp.hstack((fitnesses, last_fit)))[::-1][: self.top_k]
 
         # NOTE - Update top k fitnesses
         tracker_state["training"]["top_k_fit"] = (
@@ -90,10 +94,10 @@ class Tracker:
         )
         # NOTE - Update empirical fitness mean and std
         tracker_state["training"]["empirical_mean_fit"] = (
-            tracker_state["training"]["empirical_mean_fit"].at[i].set(fitness.mean())
+            tracker_state["training"]["empirical_mean_fit"].at[i].set(fitnesses.mean())
         )
         tracker_state["training"]["empirical_mean_std"] = (
-            tracker_state["training"]["empirical_mean_std"].at[i].set(fitness.std())
+            tracker_state["training"]["empirical_mean_std"].at[i].set(fitnesses.std())
         )
 
         # NOTE - Update center of population fitness
@@ -135,6 +139,16 @@ class Tracker:
         )
 
     def wandb_save_genome(self, genome: chex.Array, wdb_run, now: bool = False) -> None:
+        """Saves the current genome to the curretn wandb run folder
+        and uploads the file based in the chosen policy `now`.
+
+        Args:
+            genome (chex.Array): Genome to save as a pickled binary file.
+            wdb_run (_type_): Current Wandb Run object.
+            now (bool, optional):
+                if now is false, the upload will be delayed until the end of the run.
+                Defaults to False.
+        """
         gen_string = f"g{str(self.genome_counter).zfill(3)}_"
         save_path = Path(wdb_run.dir) / "genomes" / f"{gen_string}mean_indiv.npy"
         save_path.parent.mkdir(parents=True, exist_ok=True)

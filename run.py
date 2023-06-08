@@ -52,7 +52,7 @@ def run(
         # NOTE - Track metrics
         tracker_state = tracker.update(
             tracker_state=tracker_state,
-            fitness=temp_fitness,
+            fitnesses=temp_fitness,
             mean_ind=state.mean,
             eval_f=partial_evaluate_individual,
             rng_eval=rng_eval,
