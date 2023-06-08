@@ -39,6 +39,7 @@ c clean:
 	rm -rf .ruff_cache
 	rm -rf .ipynb_checkpoints
 	rm -rf gene.zip
+	rm -rf genomes/ gene/genomes/
 
 backup:
 	git add -A
