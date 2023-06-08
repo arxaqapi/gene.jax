@@ -2,11 +2,11 @@
     "seed": 0,
     "evo": {
         "strategy_name": "Sep_CMA_ES",
-        "n_generations": 1000,
-        "population_size": 200
+        "n_generations": 20,
+        "population_size": 20
     },
     "net": {
-        "layer_dimensions": [17, 128, 128, 6]
+        "layer_dimensions": [18, 128, 128, 6]
     },
     "encoding": {
         "d": 3,
