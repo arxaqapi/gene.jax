@@ -1,9 +1,13 @@
-from functools import partial
+# from functools import partial
 
 import jax.numpy as jnp
-from jax import jit, vmap
-import chex
-import flax.linen as nn
+from jax import jit, vmap  # , Array
+
+# import chex
+# import flax.linen as nn
+
+# from gene.encoding import _direct_decoding
+# from gene.network import LinearModel
 
 
 @jit
@@ -59,19 +63,60 @@ def jit_vmap_distance_f(distance_f: str):
     )
 
 
-@chex.dataclass
-class NNDistance:
-    model: nn.Module
-    model_parameters: nn.FrozenDict
-
-    @partial(jit, static_argnums=(0))
-    def _apply(self, x) -> float:
-        return self.model.apply(self.model_parameters, x)
-
-    def nn_distance(self, x, n1_i, n2_i):
-        return self._apply(jnp.concatenate(x[n1_i], x[n2_i]))
-
-
 Distances = {"L2": L2_dist, "tag": tag_dist, "pL2": pL2_dist}
 
 Vectorized_distances = {k: jit_vmap_distance_f(k) for k, _v in Distances.items()}
+
+
+# ====================================================================================
+# ============================ Experimental ==========================================
+# ====================================================================================
+
+# FIXME - Circular imports
+# @chex.dataclass
+# class NNDistance:
+#     """Neural Network Distance function.
+
+#     This distance function uses a neural network to compute
+#     the distance between two vectors.
+#     """
+
+#     distance_genome: Array
+#     layer_dimensions: tuple[int]
+
+#     def __post_init__(self):
+#         model, model_parameters = self._genome_to_nn_distance_model(
+#             self.distance_genome, self.layer_dimensions
+#         )
+#         self.model: nn.Module = model
+#         self.model_parameters: nn.FrozenDict = model_parameters
+
+#     @partial(jit, static_argnums=(0))
+#     def _apply(self, x) -> float:
+#         return self.model.apply(self.model_parameters, x)
+
+#     def nn_distance(self, x, n1_i, n2_i):
+#         return self._apply(jnp.concatenate(x[n1_i], x[n2_i]))
+
+#     @property
+#     def vmap_evaluate(self):
+#         """Returns the vectorized version of `nn_distance` and caches it.
+#         Can then be used to retrieve the vectorized function"""
+#         # Create vectorized function if not already created
+#         if not hasattr(self, "_f"):
+#             self._f = jit(
+#                 vmap(
+#                     vmap(self.nn_distance, in_axes=(None, None, 0)),
+#                     in_axes=(None, 0, None),
+#                 )
+#             )
+#         return self._f
+
+#     def _genome_to_nn_distance_model(
+#         distance_genome: jnp.ndarray, layer_dimensions: list[int]
+#     ):
+#         # layer_dims are static
+
+#         model_parameters = _direct_decoding(distance_genome, layer_dimensions)
+#         model = LinearModel(layer_dimensions[1:])
+#         return model, nn.FrozenDict({"params": model_parameters})
