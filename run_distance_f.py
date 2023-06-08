@@ -7,6 +7,7 @@ if __name__ == "__main__":
     with open("config/brax.json") as f:
         config = json.load(f)
 
-    fit = learn_distance_f_evo(config)
+    fit, center = learn_distance_f_evo(config)
 
     print(sorted(fit, reverse=True)[:3])
+    print(f"{center=}")

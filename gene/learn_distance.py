@@ -112,6 +112,7 @@ def evaluate_distance_f(
     rng_eval: jrd.KeyArray,
     config: dict,
     distance_layer_dimensions: tuple[int],
+    gene_sample_size: int = 20,
 ):
     """Evaluate a single `distance_genome` function.
 
@@ -125,8 +126,12 @@ def evaluate_distance_f(
             using the parametrized distance function.
     """
     # 1. Sample GENE individuals
-    sampled_gene_individuals_genomes = jrd.normal(
-        rng_sample, shape=(20, gene_enc_genome_size(config))
+    # TODO - Use a smaller sigma (0.5, 0.1) for gene sampling
+    sigma = 1.0  # "variance" of the normal distribution
+    # TODO - Try with high sigma value ?
+    sampled_gene_individuals_genomes = (
+        jrd.normal(rng_sample, shape=(gene_sample_size, gene_enc_genome_size(config)))
+        * sigma
     )
     # 2. Generate the parametrized distance fun (the model and the model parameters)
     distance = NNDistance(
@@ -147,7 +152,10 @@ def evaluate_distance_f(
     fitnesses = jit_vmap_evaluate_individual(sampled_gene_individuals_genomes)
 
     # 3. Average all fitnesses and return the value
-    return jnp.mean(fitnesses)
+    average_fitness = jnp.mean(fitnesses)
+    # TODO - penalize fitness based on the variance (if too high, reduce fitness)
+    # TODO - log all stats (mean, median, variance, ..stddev)
+    return average_fitness
 
 
 # FIXME - redefine config file
@@ -164,7 +172,7 @@ def learn_distance_f_evo(config):
         _type_: _description_
     """
     D = config["encoding"]["d"]
-    distance_layer_dimensions = [D * 2, 4, 4, 1]
+    distance_layer_dimensions = [D * 2, 32, 32, 1]
     dist_f_n_dimensions: int = _direct_enc_genome_size(distance_layer_dimensions)
 
     rng = jrd.PRNGKey(config["seed"])
@@ -190,7 +198,12 @@ def learn_distance_f_evo(config):
     for _generation in range(config["evo"]["n_generations"]):
         print(f"[Log] - gen {_generation} @ {time()}")
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
-        rng, *rng_sample = jrd.split(rng, config["evo"]["population_size"] + 1)
+        # + 1 to create a new rng and +1 for evaluating the population mean
+        (
+            rng,
+            rng_sample_center,
+            *rng_sample,
+        ) = jrd.split(rng, config["evo"]["population_size"] + 2)
         rng_sample = jnp.array(rng_sample)
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
@@ -203,5 +216,15 @@ def learn_distance_f_evo(config):
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
 
+        # TODO - Evaluate and log center of the es state.mean
+        # use a bigger GENE genomes' sample size (400 ? n_gen * 20 ?)
+        center_fitness = partial_evaluate_distance_f(
+            state.mean, rng_sample_center, rng_eval, gene_sample_size=400
+        )
+        # TODO - log to W&B:
+        # - sample mean fitness
+        # - empirical variance
+        # - empirical mean
+
     # returns fitnesses
-    return temp_fitness
+    return temp_fitness, center_fitness
