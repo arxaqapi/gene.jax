@@ -19,7 +19,7 @@
         "sample_sigma": 1.0,
         "evo": {
             "strategy_name": "Sep_CMA_ES",
-            "n_generations": 2,
+            "n_generations": 10,
             "population_size": 20
         }
     }
