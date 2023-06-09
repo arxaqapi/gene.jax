@@ -1,0 +1,26 @@
+{
+    "seed": 0,
+    "net": {
+        "layer_dimensions": [18, 128, 128, 6]
+    },
+    "encoding": {
+        "d": 3,
+        "distance": "pL2",
+        "type": "gene"
+    },
+    "problem": {
+        "environnment": "halfcheetah",
+        "maximize": true,
+        "episode_length": 1000
+    },
+    "distance_network": {
+        "layer_dimensions": [6, 32, 32, 1],
+        "gene_sample_size": 20,
+        "sample_sigma": 1.0,
+        "evo": {
+            "strategy_name": "Sep_CMA_ES",
+            "n_generations": 2,
+            "population_size": 20
+        }
+    }
+}
