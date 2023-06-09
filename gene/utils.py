@@ -26,6 +26,14 @@ def parjit(static: tuple[int] = None):
     Keyword arguments will not work as expected and can fail.
 
     - static tuple[int]: All arguments to partially apply
+
+    Example:
+    >>> @parjit(static=(0,))
+    >>> def test(config: dict, n):
+    >>>     return n * config["key"]
+    >>>
+    >>> test({"key": 4, ..., }, 6)
+
     """
 
     def inner_decorator(f):
