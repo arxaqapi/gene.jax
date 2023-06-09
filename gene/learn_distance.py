@@ -170,10 +170,8 @@ def evaluate_distance_f(
             using the parametrized distance function.
     """
     # 1. Sample GENE individuals
-    # TODO - Use a smaller sigma (0.5, 0.1) for gene sampling
     # "variance" of the normal distribution
     sigma = config["distance_network"]["sample_sigma"]
-    # TODO - Try with high sigma value ?
     sampled_gene_individuals_genomes = (
         jrd.normal(
             rng_sample,
@@ -317,10 +315,6 @@ def learn_distance_f_evo(config: dict, wdb_run):
             rng_eval,
             config["distance_network"]["gene_sample_size"] * 10,
         )
-        # TODO - log to W&B:
-        # - sample mean fitness
-        # - empirical variance
-        # - empirical mean
         # NOTE - Log
         batch_wandb_log(
             wdb_run,
@@ -328,6 +322,10 @@ def learn_distance_f_evo(config: dict, wdb_run):
             config["distance_network"]["gene_sample_size"],
             prefix="dist_individual",
         )
+        # TODO - log to W&B:
+        # - sample mean fitness
+        # - empirical variance
+        # - empirical mean
 
     # returns fitnesses
     return statistics["fitness"]["mean"], center_stats
