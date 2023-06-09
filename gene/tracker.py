@@ -4,7 +4,7 @@ from typing import Callable
 
 import jax.numpy as jnp
 import jax.random as jrd
-from jax import jit
+from jax import jit, tree_util
 import chex
 
 from gene.encoding import Encoding_size_function
@@ -159,3 +159,14 @@ class Tracker:
             wdb_run.save(str(save_path), base_path=f"{wdb_run.dir}/", policy="now")
 
         self.genome_counter += 1
+
+
+def batch_wandb_log(
+    wdb_run, statistics, batch_size: int, prefix: str = "individual"
+) -> None:
+    log_dict = {
+        f"{prefix}_{i}": tree_util.tree_map(lambda e: e[i], statistics)
+        for i in range(batch_size)
+    }
+
+    wdb_run.log(log_dict)

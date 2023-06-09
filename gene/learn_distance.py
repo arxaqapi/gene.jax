@@ -21,7 +21,7 @@ from functools import partial
 
 import jax.random as jrd
 import jax.numpy as jnp
-from jax import Array, jit, vmap
+from jax import Array, jit, vmap, tree_util
 import flax.linen as nn
 import evosax
 import chex
@@ -32,10 +32,54 @@ from gene.encoding import (
     gene_enc_genome_size,
 )
 from gene.evaluate import get_brax_env, _rollout_brax
-
-# from gene.distances import NNDistance
+from gene.tracker import batch_wandb_log
 from gene.encoding import _direct_decoding
 from gene.network import LinearModel, BoundedLinearModel
+
+
+# ========================================
+# =============== Helpers ================
+# ========================================
+def dict_of_arrays_to_array_of_flat_phenotype(tree, config: dict):
+    """Transforms a dict of parameters of `n` networks (phenotypes) to
+    a flattened representation of `n` penotypes.
+
+    {[20, n]} to [20, {n}].
+    """
+    flat_tree = tree_util.tree_flatten(tree)[0]
+
+    trans_tree = jnp.array(
+        [
+            jnp.concatenate(tree_util.tree_map(lambda e: jnp.ravel(e[i]), flat_tree))
+            for i in range(flat_tree[0].shape[0])
+        ]
+    )
+    return trans_tree
+
+
+@jit
+def genome_distance_from_center(genomes: Array, center: Array) -> float:
+    """Compute the mean distance between the genomes and the center
+
+    Args:
+        genomes (Array): The genomes on which to evaluate the distance.
+        center (Array): The center of the genomes
+
+    Returns:
+        float: Distance.
+    """
+    chex.assert_equal(
+        genomes.shape[1],
+        center.shape[0],
+    )
+    distances = jnp.linalg.norm(genomes - center, ord=2, axis=1)
+    # distances should be a matrix with leading axis shape 20 (config)
+    return jnp.mean(distances, axis=0)
+
+
+# ========================================
+# ============ End helpers ===============
+# ========================================
 
 
 @chex.dataclass
@@ -103,16 +147,16 @@ def evaluate_individual_brax_w_distance(
         env=env,
         rng_reset=rng,
     )
-    return fitness
+    return fitness, model_parameters
 
 
 def evaluate_distance_f(
     distance_genome: Array,
     rng_sample: jrd.KeyArray,
     rng_eval: jrd.KeyArray,
+    gene_sample_size: int,
     config: dict,
     distance_layer_dimensions: tuple[int],
-    gene_sample_size: int = 20,
 ):
     """Evaluate a single `distance_genome` function.
 
@@ -127,10 +171,17 @@ def evaluate_distance_f(
     """
     # 1. Sample GENE individuals
     # TODO - Use a smaller sigma (0.5, 0.1) for gene sampling
-    sigma = 1.0  # "variance" of the normal distribution
+    # "variance" of the normal distribution
+    sigma = config["distance_network"]["sample_sigma"]
     # TODO - Try with high sigma value ?
     sampled_gene_individuals_genomes = (
-        jrd.normal(rng_sample, shape=(gene_sample_size, gene_enc_genome_size(config)))
+        jrd.normal(
+            rng_sample,
+            shape=(
+                gene_sample_size,
+                gene_enc_genome_size(config),
+            ),
+        )
         * sigma
     )
     # 2. Generate the parametrized distance fun (the model and the model parameters)
@@ -149,17 +200,56 @@ def evaluate_distance_f(
     )
     jit_vmap_evaluate_individual = jit(vmap(_partial_evaluate_individual, in_axes=(0,)))
 
-    fitnesses = jit_vmap_evaluate_individual(sampled_gene_individuals_genomes)
+    fitnesses, all_models_parameters = jit_vmap_evaluate_individual(
+        sampled_gene_individuals_genomes
+    )
+
+    # We need to extract the flattened representation of the networks parameters
+    # to compute statistics
+    flat_model_parameters = dict_of_arrays_to_array_of_flat_phenotype(
+        all_models_parameters, config
+    )
 
     # 3. Average all fitnesses and return the value
-    average_fitness = jnp.mean(fitnesses)
     # TODO - penalize fitness based on the variance (if too high, reduce fitness)
-    # TODO - log all stats (mean, median, variance, ..stddev)
-    return average_fitness
+    _penality = 1.0
+    # NOTE - Log all stats (mean, median, variance, ..stddev)
+    statistics = {
+        "fitness": {
+            "mean": jnp.mean(fitnesses, axis=0),
+            "median": jnp.median(fitnesses),
+            "variance": jnp.var(fitnesses),  # stddev can be derived from var
+            "min": jnp.min(fitnesses),
+            "max": jnp.max(fitnesses),
+        },
+        # neural network parameters stats
+        "phenotypes": {
+            # distance from the measured center of the phenotypes
+            "dist_from_emp_center": genome_distance_from_center(
+                genomes=flat_model_parameters,
+                center=jnp.mean(flat_model_parameters, axis=0),
+            ),
+            # distance from the projected center of the phenotypes
+            "dist_from_center": genome_distance_from_center(
+                genomes=flat_model_parameters,
+                center=jnp.zeros_like(flat_model_parameters[0]),
+            ),
+        },
+        "genotypes": {
+            "dist_from_emp_center": genome_distance_from_center(
+                genomes=sampled_gene_individuals_genomes,
+                center=jnp.mean(sampled_gene_individuals_genomes, axis=0),
+            ),
+            "dist_from_center": genome_distance_from_center(
+                genomes=sampled_gene_individuals_genomes,
+                center=jnp.zeros_like(sampled_gene_individuals_genomes[0]),
+            ),
+        },
+    }
+    return statistics
 
 
-# FIXME - redefine config file
-def learn_distance_f_evo(config):
+def learn_distance_f_evo(config: dict, wdb_run):
     """Learn a distance function that maximizes the fitness
     of the evaluated gene-encoded networks.
 
@@ -167,19 +257,15 @@ def learn_distance_f_evo(config):
 
     Args:
         config (dict): config of the run
-
-    Returns:
-        _type_: _description_
     """
-    D = config["encoding"]["d"]
-    distance_layer_dimensions = [D * 2, 32, 32, 1]
+    distance_layer_dimensions = config["distance_network"]["layer_dimensions"]
     dist_f_n_dimensions: int = _direct_enc_genome_size(distance_layer_dimensions)
 
     rng = jrd.PRNGKey(config["seed"])
     rng, rng_init = jrd.split(rng, 2)
 
-    strategy = evosax.Strategies[config["evo"]["strategy_name"]](
-        popsize=config["evo"]["population_size"],
+    strategy = evosax.Strategies[config["distance_network"]["evo"]["strategy_name"]](
+        popsize=config["distance_network"]["evo"]["population_size"],
         num_dims=dist_f_n_dimensions,
     )
 
@@ -192,10 +278,11 @@ def learn_distance_f_evo(config):
         distance_layer_dimensions=distance_layer_dimensions,
     )
     vectorized_evaluate_distance_f = jit(
-        vmap(partial_evaluate_distance_f, in_axes=(0, 0, None))
+        vmap(partial_evaluate_distance_f, in_axes=(0, 0, None, None)),
+        static_argnames=["gene_sample_size"],
     )
 
-    for _generation in range(config["evo"]["n_generations"]):
+    for _generation in range(config["distance_network"]["evo"]["n_generations"]):
         print(f"[Log] - gen {_generation} @ {time()}")
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # + 1 to create a new rng and +1 for evaluating the population mean
@@ -203,28 +290,44 @@ def learn_distance_f_evo(config):
             rng,
             rng_sample_center,
             *rng_sample,
-        ) = jrd.split(rng, config["evo"]["population_size"] + 2)
+        ) = jrd.split(rng, config["distance_network"]["evo"]["population_size"] + 2)
         rng_sample = jnp.array(rng_sample)
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
 
         # NOTE - Evaluate
-        temp_fitness = vectorized_evaluate_distance_f(x, rng_sample, rng_eval)
-        print(f"mean fit: {jnp.mean(temp_fitness)}")
-        fitness = -1 * temp_fitness  # we want to maximize the objective f.
+        # statistics -> array of elements, one for each distance_individual
+        statistics = vectorized_evaluate_distance_f(
+            x,
+            rng_sample,
+            rng_eval,
+            config["distance_network"]["gene_sample_size"],
+        )
+        fitness = (
+            -1 * statistics["fitness"]["mean"]
+        )  # we want to maximize the objective f.
+        print(statistics, "\n")
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
 
-        # TODO - Evaluate and log center of the es state.mean
-        # use a bigger GENE genomes' sample size (400 ? n_gen * 20 ?)
-        center_fitness = partial_evaluate_distance_f(
-            state.mean, rng_sample_center, rng_eval, gene_sample_size=400
+        center_stats = partial_evaluate_distance_f(
+            state.mean,
+            rng_sample_center,
+            rng_eval,
+            config["distance_network"]["gene_sample_size"] * 10,
         )
         # TODO - log to W&B:
         # - sample mean fitness
         # - empirical variance
         # - empirical mean
+        # NOTE - Log
+        batch_wandb_log(
+            wdb_run,
+            statistics,
+            config["distance_network"]["gene_sample_size"],
+            prefix="dist_individual",
+        )
 
     # returns fitnesses
-    return temp_fitness, center_fitness
+    return statistics["fitness"]["mean"], center_stats
