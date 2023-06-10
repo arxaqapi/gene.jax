@@ -304,7 +304,6 @@ def learn_distance_f_evo(config: dict, wdb_run):
         fitness = (
             -1 * statistics["fitness"]["mean"]
         )  # we want to maximize the objective f.
-        print(statistics, "\n")
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = strategy.tell(x, fitness, state, es_params)
@@ -322,10 +321,10 @@ def learn_distance_f_evo(config: dict, wdb_run):
             config["distance_network"]["gene_sample_size"],
             prefix="dist_individual",
         )
-        # TODO - log to W&B:
         # - sample mean fitness
-        # - empirical variance
-        # - empirical mean
+        wdb_run.log({"center_stats": center_stats})
+        # - empirical mean ?
+        # - empirical variance ?
 
     # returns fitnesses
     return statistics["fitness"]["mean"], center_stats
