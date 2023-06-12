@@ -267,6 +267,7 @@ def evaluate_distance_f(
             # distance from the projected center of the phenotypes
             "dist_from_center": genome_distance_from_center(
                 genomes=flat_model_parameters,
+                # FIXME - not the correct center
                 center=jnp.zeros_like(flat_model_parameters[0]),
             ),
         },
@@ -277,6 +278,7 @@ def evaluate_distance_f(
             ),
             "dist_from_center": genome_distance_from_center(
                 genomes=sampled_gene_individuals_genomes,
+                # FIXME - not the correct center
                 center=jnp.zeros_like(sampled_gene_individuals_genomes[0]),
             ),
         },
@@ -330,6 +332,7 @@ def learn_distance_f_evo(config: dict, wdb_run, base_genome: Array):
             *rng_sample,
         ) = jrd.split(rng, config["distance_network"]["evo"]["population_size"] + 2)
         rng_sample = jnp.array(rng_sample)
+
         # NOTE - Ask
         x, state = strategy.ask(rng_gen, state, es_params)
 
@@ -366,5 +369,6 @@ def learn_distance_f_evo(config: dict, wdb_run, base_genome: Array):
         # - empirical mean ?
         # - empirical variance ?
 
+    # TODO - extract model and model_parameters
     # returns fitnesses
     return statistics["fitness"]["mean"], center_stats
