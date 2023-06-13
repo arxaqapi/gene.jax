@@ -154,18 +154,18 @@ def _sample_arround_genome(
     rng_sample: jrd.KeyArray,
     gene_sample_size: int,
     config: dict,
-    base_genome: Array = None,
+    sample_center_genome: Array = None,
 ):
-    """Sample gene genomes arround `base_genome` or the point `(0,...,0)`.
+    """Sample gene genomes arround `sample_center_genome` or the point `(0,...,0)`.
     The genomes are sampled using a normal distribution with parameter `sigma`,
     found in the `config` file.
 
     Args:
         rng_sample (jrd.KeyArray): rng key used to sample arround
-            the `base_genome` point.
+            the `sample_center_genome` point.
         gene_sample_size (int): Amount of samples drawn.
         config (dict): config dict of the current run.
-        base_genome (Array, optional): _description_. Defaults to None.
+        sample_center_genome (Array, optional): _description_. Defaults to None.
 
     Returns:
         Array: (gene_sample_size, D)
@@ -186,7 +186,7 @@ def _sample_arround_genome(
         )
         * sigma
     )
-    return base_genome + noise
+    return sample_center_genome + noise
 
 
 def evaluate_distance_f(
@@ -196,7 +196,7 @@ def evaluate_distance_f(
     gene_sample_size: int,
     config: dict,
     distance_layer_dimensions: tuple[int],
-    base_genome: Array,
+    sample_center_genome: Array,
 ):
     """Evaluate a single `distance_genome` function.
 
@@ -214,10 +214,11 @@ def evaluate_distance_f(
         float: fitness of the mean of the evaluated sampled population
             using the parametrized distance function.
     """
+    chex.assert_tree_no_nones(sample_center_genome)
     # 1. Sample GENE individuals
     # "variance" of the normal distribution
     sampled_gene_individuals_genomes = _sample_arround_genome(
-        rng_sample, gene_sample_size, config, base_genome
+        rng_sample, gene_sample_size, config, sample_center_genome
     )
     # 2. Generate the parametrized distance fun (the model and the model parameters)
     distance = NNDistance(
@@ -286,7 +287,7 @@ def evaluate_distance_f(
     return statistics
 
 
-def learn_distance_f_evo(config: dict, wdb_run, base_genome: Array):
+def learn_distance_f_evo(config: dict, wdb_run, sample_center_genome: Array):
     """Learn a distance function that maximizes the fitness
     of the evaluated gene-encoded networks.
 
@@ -315,7 +316,7 @@ def learn_distance_f_evo(config: dict, wdb_run, base_genome: Array):
         evaluate_distance_f,
         config=config,
         distance_layer_dimensions=distance_layer_dimensions,
-        base_genome=base_genome,
+        sample_center_genome=sample_center_genome,
     )
     vectorized_evaluate_distance_f = jit(
         vmap(partial_evaluate_distance_f, in_axes=(0, 0, None, None)),
