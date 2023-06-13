@@ -20,13 +20,13 @@ class TestNNDistance(unittest.TestCase):
         )
 
         save_f = Path("test.aze")
-        distance.save(save_f)
+        distance.save_parameters(save_f)
 
         pytree = distance.model_parameters
 
         self.assertTrue(save_f.with_suffix(".pkl").exists())
 
-        distance.load(save_f)
+        distance.load_parameters(save_f)
         pytree_unpickled = distance.model_parameters
 
         self.assertIsNone(chex.assert_trees_all_equal(pytree, pytree_unpickled))
