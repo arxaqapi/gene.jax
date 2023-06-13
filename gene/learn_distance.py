@@ -170,11 +170,6 @@ def _sample_arround_genome(
     Returns:
         Array: (gene_sample_size, D)
     """
-    chex.assert_tree_no_nones(base_genome)
-
-    if base_genome is None:
-        base_genome = jnp.zeros((gene_enc_genome_size(config)))
-
     sigma = config["distance_network"]["sample_sigma"]
     noise = (
         jrd.normal(
@@ -326,16 +321,19 @@ def learn_distance_f_evo(config: dict, wdb_run, sample_center_genome: Array):
     for _generation in range(config["distance_network"]["evo"]["n_generations"]):
         print(f"[Log] - gen {_generation} @ {time()}")
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
-        # + 1 to create a new rng and +1 for evaluating the population mean
+        # + 1 to create a new rng
+        # + 1 for evaluating the population mean
+        # + 1 for evaluating the best member
         (
             rng,
             rng_sample_center,
+            rng_best_member,
             *rng_sample,
-        ) = jrd.split(rng, config["distance_network"]["evo"]["population_size"] + 2)
+        ) = jrd.split(rng, config["distance_network"]["evo"]["population_size"] + 3)
         rng_sample = jnp.array(rng_sample)
 
         # NOTE - Ask
-        x, state = strategy.ask(rng_gen, state, es_params)
+        x, state = jit(strategy.ask)(rng_gen, state, es_params)
 
         # NOTE - Evaluate
         # statistics -> array of elements, one for each distance_individual
@@ -352,24 +350,30 @@ def learn_distance_f_evo(config: dict, wdb_run, sample_center_genome: Array):
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = jit(strategy.tell)(x, fitness, state, es_params)
 
+        # Evaluate current center of the population
         center_stats = partial_evaluate_distance_f(
             state.mean,
             rng_sample_center,
             rng_eval,
-            config["distance_network"]["gene_sample_size"] * 10,
+            config["distance_network"]["gene_sample_size"] * 25,
         )
-        # NOTE - Log
+        # Evaluate current best individual
+        best_member_stats = partial_evaluate_distance_f(
+            state.best_member,
+            rng_best_member,
+            rng_eval,
+            config["distance_network"]["gene_sample_size"] * 25,
+        )
+        # NOTE - Log stats, center_stats and best_member_stats to w&b
         batch_wandb_log(
             wdb_run,
             statistics,
             config["distance_network"]["gene_sample_size"],
             prefix="dist_individual",
         )
-        # - sample mean fitness
         wdb_run.log({"center_stats": center_stats})
-        # - empirical mean ?
-        # - empirical variance ?
+        wdb_run.log({"best_member_stats": best_member_stats})
 
     # TODO - extract model and model_parameters
     # returns fitnesses
-    return statistics["fitness"]["mean"], center_stats
+    return statistics, center_stats, best_member_stats
