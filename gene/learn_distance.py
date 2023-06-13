@@ -350,7 +350,7 @@ def learn_distance_f_evo(config: dict, wdb_run, sample_center_genome: Array):
         )  # we want to maximize the objective f.
 
         # NOTE - Tell: overwrites current strategy state with the new updated one
-        state = strategy.tell(x, fitness, state, es_params)
+        state = jit(strategy.tell)(x, fitness, state, es_params)
 
         center_stats = partial_evaluate_distance_f(
             state.mean,
