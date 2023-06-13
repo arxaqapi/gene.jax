@@ -268,8 +268,8 @@ def evaluate_distance_f(
             # distance from the projected center of the phenotypes
             "dist_from_center": genome_distance_from_center(
                 genomes=flat_model_parameters,
-                # FIXME - not the correct center
-                center=jnp.zeros_like(flat_model_parameters[0]),
+                center=sample_center_genome,
+                # center=jnp.zeros_like(flat_model_parameters[0]),
             ),
         },
         "genotypes": {
@@ -279,8 +279,8 @@ def evaluate_distance_f(
             ),
             "dist_from_center": genome_distance_from_center(
                 genomes=sampled_gene_individuals_genomes,
-                # FIXME - not the correct center
-                center=jnp.zeros_like(sampled_gene_individuals_genomes[0]),
+                center=sample_center_genome,
+                # center=jnp.zeros_like(sampled_gene_individuals_genomes[0]),
             ),
         },
     }
