@@ -23,6 +23,6 @@ if __name__ == "__main__":
         config=config,
     )
 
-    fit, center = learn_distance_f_evo(
+    learn_distance_f_evo(
         config=config, wdb_run=wdb_run, sample_center_genome=sample_center_genome
     )
