@@ -20,6 +20,7 @@ from time import time
 from functools import partial
 from pathlib import Path
 import pickle
+import wandb
 
 import jax.random as jrd
 import jax.numpy as jnp
@@ -128,22 +129,22 @@ class NNDistance:
         )
         self.model: nn.FrozenDict = LinearModel(layer_dimensions[1:])
 
-    def save(self, path: Path) -> None:
+    def save_parameters(self, path: Path) -> None:
         """Saves the `model_parameters` to `path`.
 
         Args:
             path (Path): The Path and name of the file where it will be saved
         """
-        with path.with_suffix(".pkl").open("wb") as f:
+        with path.open("wb") as f:
             pickle.dump(self.model_parameters, f)
 
-    def load(self, path: Path) -> None:
+    def load_parameters(self, path: Path) -> None:
         """Load the saved `model_parameters` from `path` to `self.model_parameters`.
 
         Args:
             path (Path): The Path and name of the file to retrieve.
         """
-        with path.with_suffix(".pkl").open("rb") as f:
+        with path.open("rb") as f:
             self.model_parameters = pickle.load(f)
 
 
@@ -231,7 +232,7 @@ def evaluate_distance_f(
     """
     chex.assert_tree_no_nones(sample_center_genome)
     # 1. Sample GENE individuals
-    # "variance" of the normal distribution
+    # mu: sample_center_genome | sigma: config[""]["sigma"]
     sampled_gene_individuals_genomes = _sample_arround_genome(
         rng_sample, gene_sample_size, config, sample_center_genome
     )
@@ -251,6 +252,7 @@ def evaluate_distance_f(
     )
     jit_vmap_evaluate_individual = jit(vmap(_partial_evaluate_individual, in_axes=(0,)))
 
+    # NOTE - all_models_parameters are the penotypes
     fitnesses, all_models_parameters = jit_vmap_evaluate_individual(
         sampled_gene_individuals_genomes
     )
@@ -283,8 +285,9 @@ def evaluate_distance_f(
             # distance from the projected center of the phenotypes
             "dist_from_center": genome_distance_from_center(
                 genomes=flat_model_parameters,
-                center=sample_center_genome,
-                # center=jnp.zeros_like(flat_model_parameters[0]),
+                # NOTE - center is the projected GENE genome into the phenotype space
+                # FIXME - Project genome_to_model to get the correct center
+                center=jnp.zeros_like(flat_model_parameters[0]),
             ),
         },
         "genotypes": {
@@ -295,7 +298,6 @@ def evaluate_distance_f(
             "dist_from_center": genome_distance_from_center(
                 genomes=sampled_gene_individuals_genomes,
                 center=sample_center_genome,
-                # center=jnp.zeros_like(sampled_gene_individuals_genomes[0]),
             ),
         },
     }
@@ -394,6 +396,17 @@ def learn_distance_f_evo(config: dict, wdb_run, sample_center_genome: Array):
         wdb_run.log({"center_stats": center_stats})
         wdb_run.log({"best_member_stats": best_member_stats})
 
-    # TODO - extract model and model_parameters
-    # returns fitnesses
+    best_distance_f = NNDistance(
+        distance_genome=state.best_member, layer_dimensions=distance_layer_dimensions
+    )
+    save_path = Path("best_member")
+    # save best_member_params to file and w&b as artifact
+    best_distance_f.save_parameters(save_path)
+
+    artifact = wandb.Artifact(name="best_member_model_parameters", type="model")
+    artifact.add_file(
+        local_path=save_path,
+    )
+    wdb_run.log_artifact(artifact)
+
     return statistics, center_stats, best_member_stats
