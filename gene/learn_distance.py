@@ -243,7 +243,7 @@ def evaluate_distance_f(
 
     # 3. Average all fitnesses and return the value
     # TODO - penalize fitness based on the variance (if too high, reduce fitness)
-    _penality = 1.0
+    _penality = 1.0 * (jnp.max(fitnesses) - jnp.min(fitnesses))
     # NOTE - Log all stats (mean, median, variance, ..stddev)
     statistics = {
         "fitness": {

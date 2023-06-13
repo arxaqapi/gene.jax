@@ -15,7 +15,7 @@ if __name__ == "__main__":
     with open(
         _old_run.file("genomes/g996_mean_indiv.npy").download(replace=True).name, "rb"
     ) as f:
-        base_genome = jnp.load(f)
+        sample_center_genome = jnp.load(f)
     # !SECTION - Get learned gene genome
 
     wdb_run = wandb.init(
@@ -24,5 +24,5 @@ if __name__ == "__main__":
     )
 
     fit, center = learn_distance_f_evo(
-        config=config, wdb_run=wdb_run, base_genome=base_genome
+        config=config, wdb_run=wdb_run, sample_center_genome=sample_center_genome
     )
