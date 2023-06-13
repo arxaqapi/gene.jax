@@ -18,6 +18,8 @@ D_gene variable aléatoire qui renvoie un genome compressé GENE
 """
 from time import time
 from functools import partial
+from pathlib import Path
+import pickle
 
 import jax.random as jrd
 import jax.numpy as jnp
@@ -125,6 +127,24 @@ class NNDistance:
             {"params": _direct_decoding(distance_genome, layer_dimensions)}
         )
         self.model: nn.FrozenDict = LinearModel(layer_dimensions[1:])
+
+    def save(self, path: Path) -> None:
+        """Saves the `model_parameters` to `path`.
+
+        Args:
+            path (Path): The Path and name of the file where it will be saved
+        """
+        with path.with_suffix(".pkl").open("wb") as f:
+            pickle.dump(self.model_parameters, f)
+
+    def load(self, path: Path) -> None:
+        """Load the saved `model_parameters` from `path` to `self.model_parameters`.
+
+        Args:
+            path (Path): The Path and name of the file to retrieve.
+        """
+        with path.with_suffix(".pkl").open("rb") as f:
+            self.model_parameters = pickle.load(f)
 
 
 def evaluate_individual_brax_w_distance(
