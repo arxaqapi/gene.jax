@@ -150,9 +150,23 @@ class NNDistance:
 
 def evaluate_individual_brax_w_distance(
     genome: jnp.array, rng: jrd.KeyArray, config: dict, env, distance: NNDistance
-) -> float:
+) -> tuple[float, nn.FrozenDict]:
+    """Evaluates a single individual `genome` using a parametrized distance function `distance`.
+
+
+    Args:
+        genome (jnp.array): _description_
+        rng (jrd.KeyArray): _description_
+        config (dict): _description_
+        env (_type_): _description_
+        distance (NNDistance): _description_
+
+    Returns:
+        tuple[float, nn.FrozenDict]: the fitness as a float
+            and the `model_parameters` of the decoded genome
+    """
     model = BoundedLinearModel(config["net"]["layer_dimensions"][1:])
-    model_parameters = nn.FrozenDict(
+    model_parameters: nn.FrozenDict = nn.FrozenDict(
         {
             "params": gene_decoding_w_dist(
                 genome, config=config, distance_network=distance
@@ -276,30 +290,8 @@ def evaluate_distance_f(
             "max": jnp.max(fitnesses),
         },
         # neural network parameters stats
-        "phenotypes": {
-            # distance from the measured center of the phenotypes
-            "dist_from_emp_center": genome_distance_from_center(
-                genomes=flat_model_parameters,
-                center=jnp.mean(flat_model_parameters, axis=0),
-            ),
-            # distance from the projected center of the phenotypes
-            "dist_from_center": genome_distance_from_center(
-                genomes=flat_model_parameters,
-                # NOTE - center is the projected GENE genome into the phenotype space
-                # FIXME - Project genome_to_model to get the correct center
-                center=jnp.zeros_like(flat_model_parameters[0]),
-            ),
-        },
-        "genotypes": {
-            "dist_from_emp_center": genome_distance_from_center(
-                genomes=sampled_gene_individuals_genomes,
-                center=jnp.mean(sampled_gene_individuals_genomes, axis=0),
-            ),
-            "dist_from_center": genome_distance_from_center(
-                genomes=sampled_gene_individuals_genomes,
-                center=sample_center_genome,
-            ),
-        },
+        # SECTION - to fix
+        # !SECTION - to fix
     }
     return statistics
 
@@ -387,6 +379,7 @@ def learn_distance_f_evo(config: dict, wdb_run, sample_center_genome: Array):
             config["distance_network"]["gene_sample_size"] * 25,
         )
         # NOTE - Log stats, center_stats and best_member_stats to w&b
+        # FIXME - merge log events
         batch_wandb_log(
             wdb_run,
             statistics,
