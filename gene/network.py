@@ -27,3 +27,16 @@ class BoundedLinearModel(nn.Module):
         x = nn.Dense(self.features[-1])(x)
         x = nn.tanh(x)
         return x
+
+
+class TanhLinearModel(nn.Module):
+    features: Sequence[int]
+
+    @nn.compact
+    def __call__(self, x):
+        for feat in self.features[:-1]:
+            x = nn.Dense(feat)(x)
+            x = nn.tanh(x)
+        x = nn.Dense(self.features[-1])(x)
+        x = nn.tanh(x)
+        return x
