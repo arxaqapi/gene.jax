@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from gene.distances import pL2_dist, _a
+from gene.core.distances import pL2Distance, _a
 
 
 class TestAFunc(unittest.TestCase):
@@ -14,24 +14,34 @@ class TestAFunc(unittest.TestCase):
         )
 
 
-class TestL2Dist(unittest.TestCase):
-    def test_L2_dist(self):
-        x_1 = np.array([0.9, 1.2, -0.5, 4.0])
-        x_2 = np.array([-1.0, 3.2, 0.4, -0.8])
+class TestpL2(unittest.TestCase):
+    def setUp(self) -> None:
+        self.df = pL2Distance()
+        return super().setUp()
 
-        self.assertEqual(pL2_dist([x_1, x_2], 0, 1), np.linalg.norm(x_1 - x_2, 2))
-        self.assertEqual(pL2_dist([-x_1, -x_2], 0, 1), np.linalg.norm(-x_1 - (-x_2), 2))
-
-
-class TestpL2Dist(unittest.TestCase):
     def test_pL2_dist_pos(self):
         x_1 = np.array([0.9, 1.2, -0.5, 4.0])
         x_2 = np.array([-1.0, 3.2, 0.4, -0.8])
 
-        self.assertEqual(pL2_dist([x_1, x_2], 0, 1), 1 * np.linalg.norm(x_1 - x_2, 2))
+        self.assertEqual(
+            self.df.measure([x_1, x_2], 0, 1), 1 * np.linalg.norm(x_1 - x_2, 2)
+        )
 
     def test_pL2_dist_neg(self):
         x_1 = np.array([0.9, 1.2, -0.5, -4.0])
         x_2 = np.array([-1.0, 3.2, 0.4, -0.8])
 
-        self.assertEqual(pL2_dist([x_1, x_2], 0, 1), -1 * np.linalg.norm(x_1 - x_2, 2))
+        self.assertEqual(
+            self.df.measure([x_1, x_2], 0, 1), -1 * np.linalg.norm(x_1 - x_2, 2)
+        )
+
+    def test_pL2_extra(self):
+        x_1 = np.array([0.9, 1.2, -0.5, 4.0])
+        x_2 = np.array([-1.0, 3.2, 0.4, -0.8])
+
+        self.assertEqual(
+            self.df.measure([x_1, x_2], 0, 1), np.linalg.norm(x_1 - x_2, 2)
+        )
+        self.assertEqual(
+            self.df.measure([-x_1, -x_2], 0, 1), np.linalg.norm(-x_1 - (-x_2), 2)
+        )
