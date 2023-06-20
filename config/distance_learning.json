@@ -8,7 +8,7 @@
         "distance": "pL2",
         "type": "gene"
     },
-    "problem": {
+    "task": {
         "environnment": "halfcheetah",
         "maximize": true,
         "episode_length": 1000
