@@ -273,7 +273,7 @@ def evaluate_distance_f(
 
     # We need to extract the flattened representation of the networks parameters
     # to compute statistics
-    flat_model_parameters = dict_of_arrays_to_array_of_flat_phenotype(
+    _flat_model_parameters = dict_of_arrays_to_array_of_flat_phenotype(
         all_models_parameters, config
     )
 
