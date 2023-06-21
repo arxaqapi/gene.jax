@@ -6,6 +6,14 @@ import jax.numpy as jnp
 from gene.core import decoding, distances
 
 
+class TestBaseDecoder(unittest.TestCase):
+    def test_init(self):
+        config = {}
+        d = decoding.Decoder(config, None, None)
+
+        self.assertTrue(type(d) is decoding.Decoder)
+
+
 class TestDirectDecoder(unittest.TestCase):
     def setUp(self) -> None:
         self.config = {"net": {"layer_dimensions": [784, 64, 10]}, "encoding": {"d": 1}}
