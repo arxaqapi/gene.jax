@@ -3,14 +3,13 @@ from __future__ import annotations
 from jax import Array, lax
 import jax.numpy as jnp
 import flax.linen as nn
-
-
-from gene.core.distances import Distance_functions
+from jax.tree_util import register_pytree_node_class
 
 
 Phenotype = nn.FrozenDict
 
 
+@register_pytree_node_class
 class Decoder:
     """A `Decoder` is a class that transforms a genotype into a phenotype."""
 
@@ -37,12 +36,23 @@ class Decoder:
         """
         raise NotImplementedError
 
+    # Pytree methods
+    def tree_flatten(self):
+        children = ()  # arrays / dynamic values
+        aux_data = {"config": self.config}  # static values
+        return (children, aux_data)
 
-# TODO - Test
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(aux_data["config"])
+
+
+@register_pytree_node_class
 class DirectDecoder(Decoder):
     """The `DirectDecoder` is a class that transforms a genotype into a phenotype,
     using direct encoding. Where each parameter is a single gene.
     """
+
     def __init__(self, config: dict, *args, **kwargs) -> None:
         super().__init__(config, *args, **kwargs)
 
@@ -93,17 +103,31 @@ class DirectDecoder(Decoder):
 
         return nn.FrozenDict({"params": model_parameters})
 
+    # def tree_flatten(self):
+    #     return super().tree_flatten()
+
+    # @property
+    # def tree_unflatten():
+    #     return super().tree_unflatten
+
 
 # TODO - test me
+@register_pytree_node_class
 class GENEDecoder(Decoder):
     """The `GENEDecoder`, is a class that transforms a genotype into a phenotype,
     using a specific distance function, saved as `distance_function`,
     and optional parameters.
     """
-    def __init__(self, config: dict, distance_function: "Distance.DistanceFunction", *args, **kwargs) -> None:
+
+    def __init__(
+        self,
+        config: dict,
+        distance_function: "Distance.DistanceFunction",
+        *args,
+        **kwargs,
+    ) -> None:
         super().__init__(config, *args, **kwargs)
         self.distance_function = distance_function
-        # self.distance_function = Distance_functions[config["encoding"]["distance"]]
 
     def encoding_size(self) -> int:
         """Size of the awaited genotype GENE encoding
@@ -154,6 +178,19 @@ class GENEDecoder(Decoder):
                 "bias": biases,
             }
         return nn.FrozenDict({"params": model_parameters})
+
+    def tree_flatten(self):
+        children = ()  # arrays / dynamic values
+        aux_data = {
+            "config": self.config,
+            "distance_function": self.distance_function,
+        }  # static values
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(aux_data["config"], aux_data["distance_function"])
+        # return cls(*aux_data.values())
 
 
 Decoders = {

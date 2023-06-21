@@ -2,8 +2,8 @@ import pickle
 from pathlib import Path
 
 import flax.linen as nn
-import jax.numpy as jnp
 from jax import Array, jit, vmap
+import jax.numpy as jnp
 
 from gene.core import decoding, models
 
@@ -22,7 +22,7 @@ def _a(x):
 
 
 class DistanceFunction:
-    def __init__(self) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
     def distance(self, v1: Array, v2: Array) -> float:
@@ -106,8 +106,4 @@ class CGPDistance(DistanceFunction):
         raise NotImplementedError
 
 
-Distance_functions = {
-    "pL2": pL2Distance,
-    "nn": NNDistance,
-    "cgp": CGPDistance
-}
+Distance_functions = {"pL2": pL2Distance, "nn": NNDistance, "cgp": CGPDistance}
