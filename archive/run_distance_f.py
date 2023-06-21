@@ -3,6 +3,8 @@ import jax.numpy as jnp
 
 from gene.learn_distance import learn_distance_f_evo
 
+# from gene.encoding import gene_enc_genome_size
+
 
 if __name__ == "__main__":
     import json
@@ -17,6 +19,7 @@ if __name__ == "__main__":
     ) as f:
         sample_center_genome = jnp.load(f)
     # !SECTION - Get learned gene genome
+    # sample_center_genome = jnp.zeros((gene_enc_genome_size(config)))
 
     wdb_run = wandb.init(
         project="Distance-tests",

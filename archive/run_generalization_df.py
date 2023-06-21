@@ -26,6 +26,7 @@ from gene.encoding import (
 from gene.network import BoundedLinearModel
 from gene.evaluate import _rollout_brax
 from gene.tracker import Tracker
+from run_brax import run
 
 
 def get_learned_distance_f(config: dict):
@@ -117,7 +118,9 @@ def learn_task_with_df(config: dict, distance: NNDistance, wdb_run):
         env=env,
         distance=distance,
     )
-    jit_vmap_evaluate_individual = jit(vmap(_partial_evaluate_individual, in_axes=(0, None)))
+    jit_vmap_evaluate_individual = jit(
+        vmap(_partial_evaluate_individual, in_axes=(0, None))
+    )
 
     # NOTE - Ask/Eval/Tell Loop
     for _generation in range(config["evo"]["n_generations"]):
@@ -183,7 +186,7 @@ if __name__ == "__main__":
 
     for task, layer_info in benchmark_configs.items():
         config = deepcopy(base_config)
-        config["problem"]["environnment"] = task
+        config["task"]["environnment"] = task
         config["net"]["layer_dimensions"] = (
             [layer_info["in"]] + [128, 128] + [layer_info["out"]]
         )
@@ -191,13 +194,14 @@ if __name__ == "__main__":
         wdb_run = wandb.init(
             project="Brax bench",
             config=config,
-            tags=[config["problem"]["environnment"]],
+            tags=[config["task"]["environnment"], "from-scratch"],
         )
-        learn_task_with_df(
-            config=config,
-            distance=get_learned_distance_f(config),
-            wdb_run=wdb_run,
-        )
+        # learn_task_with_df(
+        #     config=config,
+        #     distance=get_learned_distance_f(config),
+        #     wdb_run=wdb_run,
+        # )
+
+        run(config, wdb_run)
 
         wdb_run.finish()
-    pass

@@ -7,9 +7,9 @@ from functools import partial
 import json
 from time import time
 
-from gene.encoding import Encoding_size_function
-from gene.evaluate import evaluate_individual_brax, get_brax_env
-from gene.tracker import Tracker
+from gene.v1.encoding import Encoding_size_function
+from gene.v1.evaluate import evaluate_individual_brax, get_brax_env
+from gene.v1.tracker import Tracker
 
 
 def run(config: dict, wdb_run):
