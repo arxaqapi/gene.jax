@@ -8,7 +8,7 @@ import gymnax
 import time
 from pathlib import Path
 
-from gene.evaluate import genome_to_model, get_brax_env
+from gene.v1.evaluate import genome_to_model, get_brax_env
 
 
 def run_env(genome: jnp.ndarray, config: dict, rng: jrd.KeyArray = jrd.PRNGKey(0)):

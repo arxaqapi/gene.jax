@@ -7,7 +7,7 @@ import jax.random as jrd
 from jax import jit, tree_util
 import chex
 
-from gene.encoding import Encoding_size_function
+from gene.v1.encoding import Encoding_size_function
 
 
 # NOTE: once initialized, the object should not be modified in compiled functions

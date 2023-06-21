@@ -29,15 +29,15 @@ import flax.linen as nn
 import evosax
 import chex
 
-from gene.encoding import (
+from gene.v1.encoding import (
     _direct_enc_genome_size,
     gene_decoding_w_dist,
     gene_enc_genome_size,
 )
-from gene.evaluate import get_brax_env, _rollout_brax
-from gene.tracker import batch_wandb_log
-from gene.encoding import _direct_decoding
-from gene.network import LinearModel, BoundedLinearModel
+from gene.v1.evaluate import get_brax_env, _rollout_brax
+from gene.v1.tracker import batch_wandb_log
+from gene.v1.encoding import _direct_decoding
+from gene.v1.network import LinearModel, BoundedLinearModel
 
 
 # ========================================

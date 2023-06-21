@@ -7,7 +7,7 @@ import gymnax
 from brax.v1 import envs  # brax
 from brax.v1.envs.wrappers import EpisodeWrapper  # brax.envs.wrapper
 
-from gene.encoding import genome_to_model
+from gene.v1.encoding import genome_to_model
 
 
 # ================================================

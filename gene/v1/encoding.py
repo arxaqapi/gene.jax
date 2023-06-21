@@ -2,8 +2,8 @@ import jax.numpy as jnp
 from jax import lax
 import flax.linen as nn
 
-from gene.network import BoundedLinearModel
-from gene.distances import Vectorized_distances
+from gene.v1.network import BoundedLinearModel
+from gene.v1.distances import Vectorized_distances
 
 
 def _gene_enc_genome_size(layer_dims: tuple[int], d: int) -> int:
