@@ -48,7 +48,6 @@ class TestpL2(unittest.TestCase):
         )
 
 
-
 class TestpL2InDecoder(unittest.TestCase):
     def setUp(self) -> None:
         self.config = {}
@@ -59,7 +58,8 @@ class TestpL2InDecoder(unittest.TestCase):
         x_2 = np.array([-1.0, 3.2, 0.4, -0.8])
 
         self.assertEqual(
-            self.decoder.distance_function.measure([x_1, x_2], 0, 1), 1 * np.linalg.norm(x_1 - x_2, 2)
+            self.decoder.distance_function.measure([x_1, x_2], 0, 1),
+            1 * np.linalg.norm(x_1 - x_2, 2),
         )
 
     def test_pL2_dist_neg(self):
@@ -67,7 +67,8 @@ class TestpL2InDecoder(unittest.TestCase):
         x_2 = np.array([-1.0, 3.2, 0.4, -0.8])
 
         self.assertEqual(
-            self.decoder.distance_function.measure([x_1, x_2], 0, 1), -1 * np.linalg.norm(x_1 - x_2, 2)
+            self.decoder.distance_function.measure([x_1, x_2], 0, 1),
+            -1 * np.linalg.norm(x_1 - x_2, 2),
         )
 
     def test_pL2_extra(self):
@@ -75,8 +76,10 @@ class TestpL2InDecoder(unittest.TestCase):
         x_2 = np.array([-1.0, 3.2, 0.4, -0.8])
 
         self.assertEqual(
-            self.decoder.distance_function.measure([x_1, x_2], 0, 1), np.linalg.norm(x_1 - x_2, 2)
+            self.decoder.distance_function.measure([x_1, x_2], 0, 1),
+            np.linalg.norm(x_1 - x_2, 2),
         )
         self.assertEqual(
-            self.decoder.distance_function.measure([-x_1, -x_2], 0, 1), np.linalg.norm(-x_1 - (-x_2), 2)
+            self.decoder.distance_function.measure([-x_1, -x_2], 0, 1),
+            np.linalg.norm(-x_1 - (-x_2), 2),
         )

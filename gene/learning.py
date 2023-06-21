@@ -44,7 +44,6 @@ def learn_brax_task(
     rng, rng_init = jrd.split(rng, 2)
 
     decoder = Decoders[config["encoding"]["type"]](config, df)
-    decoder.encoding_size()
 
     strategy = evosax.Strategies[config["evo"]["strategy_name"]](
         popsize=config["evo"]["population_size"],
@@ -75,9 +74,8 @@ def learn_brax_task(
 
         # TODO - update tracker
         # - re-evaluate mean individual for fitness
+        print(eval_f(state.mean, rng_eval))
         # - save top genome
         # - save mean genome
-
-        print(true_fitness[:5])
 
     return ()

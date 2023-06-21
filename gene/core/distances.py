@@ -1,5 +1,6 @@
 import pickle
 from pathlib import Path
+from functools import partial
 
 import flax.linen as nn
 from jax import Array, jit, vmap
@@ -45,7 +46,8 @@ class DistanceFunction:
     @property
     def vectorized_measure(self):
         return jit(
-            vmap(vmap(self.measure, in_axes=(None, None, 0)), in_axes=(None, 0, None))
+            vmap(vmap(self.measure, in_axes=(None, None, 0)), in_axes=(None, 0, None)),
+            static_argnums=(0,),
         )
 
 
@@ -53,6 +55,7 @@ class pL2Distance(DistanceFunction):
     def __init__(self) -> None:
         super().__init__()
 
+    @partial(jit, static_argnums=(0))
     def distance(self, v1: Array, v2: Array) -> float:
         diff = v1 - v2
         return _a(jnp.prod(diff)) * _L2_dist(v1, v2)
@@ -73,6 +76,7 @@ class NNDistance(DistanceFunction):
             self.config["distance_network"]["layer_dimensions"][1:]
         )
 
+    @partial(jit, static_argnums=(0))
     def distance(self, v1: Array, v2: Array) -> float:
         return self.model.apply(self.model_parameters, jnp.concatenate((v1, v2)))
 
@@ -101,8 +105,8 @@ class NNDistance(DistanceFunction):
 
 
 class CGPDistance(DistanceFunction):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         raise NotImplementedError
 
 

@@ -1,4 +1,3 @@
-# FIXME - change API (decoder stuff)
 import jax.random as jrd
 import jax.numpy as jnp
 from jax import lax, jit
@@ -78,7 +77,6 @@ def rollout_brax_task(
 
     carry, _ = lax.scan(
         f=rollout_loop,
-        # init={"state": state, "reward": reward},
         init=(state, state.reward),
         xs=None,
         length=config["task"]["episode_length"],
