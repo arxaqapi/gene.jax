@@ -45,10 +45,13 @@ class DistanceFunction:
 
     @property
     def vectorized_measure(self):
-        return jit(
-            vmap(vmap(self.measure, in_axes=(None, None, 0)), in_axes=(None, 0, None)),
-            static_argnums=(0,),
-        )
+        if not hasattr(self, "_f"):
+            self._f = jit(
+                vmap(
+                    vmap(self.measure, in_axes=(None, None, 0)), in_axes=(None, 0, None)
+                ),
+            )
+        return self._f
 
 
 class pL2Distance(DistanceFunction):
