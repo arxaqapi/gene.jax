@@ -75,17 +75,9 @@ if __name__ == "__main__":
     with open("config/brax.json") as f:
         config = json.load(f)
 
-    # seeds = [8_791_624]
-    seeds = [15684, 253694, 78851363, 148, 9562]
-    for encoding in ["direct", "gene"]:
-        config["encoding"]["type"] = encoding
+    wdb_run = wandb.init(
+        project="Brax halfcheetah", config=config, tags=["2L-full-bench-bv1"]
+    )
+    run(config, wdb_run)
 
-        for seed in seeds:
-            config["seed"] = seed
-
-            wdb_run = wandb.init(
-                project="Brax halfcheetah", config=config, tags=["2L-full-bench-bv1"]
-            )
-            run(config, wdb_run)
-
-            wdb_run.finish()
+    wdb_run.finish()
