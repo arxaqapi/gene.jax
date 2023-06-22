@@ -1,12 +1,11 @@
-from jax import default_backend
-
 from gene.learning import learn_brax_task
 from gene.core.distances import Distance_functions
-from gene.utils import load_config
+from gene.utils import load_config, fail_if_not_device
 
 
 if __name__ == "__main__":
-    assert default_backend() == "gpu"
+    fail_if_not_device()
+
     config = load_config("config/brax.json")
 
     learn_brax_task(
