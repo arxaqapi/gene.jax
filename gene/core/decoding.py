@@ -17,7 +17,8 @@ class Decoder:
         self.config = config
 
     def decode(self, genotype: Array) -> Phenotype:
-        """Takes in a genome defined as the `genotype`, and outputs its corresponding `Phenotype`.
+        """Takes in a genome defined as the `genotype`, and outputs its corresponding
+        `Phenotype`.
 
         Args:
             genotype (Array): The genome we try to decode, using the stored
@@ -122,7 +123,7 @@ class GENEDecoder(Decoder):
     def __init__(
         self,
         config: dict,
-        distance_function: "Distance.DistanceFunction",
+        distance_function: DistanceFunction,
         *args,
         **kwargs,
     ) -> None:
@@ -155,7 +156,7 @@ class GENEDecoder(Decoder):
 
         model_parameters: nn.FrozenDict = {}
         for i, (layer_in, layer_out) in enumerate(zip(layer_dims[:-1], layer_dims[1:])):
-            # Split genome into subarrays, where each is the position vector for one neuron
+            # Split genome into subarrays, each is the position vector of one neuron
             genome_w_positions = jnp.array(jnp.split(genome_w, sum(layer_dims)))
 
             layer_offset = sum(layer_dims[:i])

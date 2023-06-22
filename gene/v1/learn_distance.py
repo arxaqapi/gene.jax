@@ -151,7 +151,8 @@ class NNDistance:
 def evaluate_individual_brax_w_distance(
     genome: jnp.array, rng: jrd.KeyArray, config: dict, env, distance: NNDistance
 ) -> tuple[float, nn.FrozenDict]:
-    """Evaluates a single individual `genome` using a parametrized distance function `distance`.
+    """Evaluates a single individual `genome` using a parametrized
+    distance function `distance`.
 
 
     Args:

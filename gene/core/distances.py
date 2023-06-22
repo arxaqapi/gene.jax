@@ -30,7 +30,8 @@ class DistanceFunction:
         raise NotImplementedError
 
     def measure(self, genotype_weights: Array, gene_1: int, gene_2: int) -> float:
-        """Measures the distance between `genotype_weights[gene_1]` and `genotype_weights[gene_2]`
+        """Measures the distance between `genotype_weights[gene_1]`
+        and `genotype_weights[gene_2]`
 
         Args:
             genotype_weights (Array): Array of weight vectors, representing the
@@ -93,7 +94,8 @@ class NNDistance(DistanceFunction):
             pickle.dump(self.model_parameters, f)
 
     def load_parameters(self, path: Path) -> dict:
-        """Load the saved `model_parameters` from `path` to the model_parameters attribute.
+        """Load the saved `model_parameters` from `path`
+        to the model_parameters attribute.
 
         Args:
             path (Path): The Path and name of the file to retrieve.
