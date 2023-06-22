@@ -56,7 +56,6 @@ def get_brax_env(config: dict):
     )
 
 
-# TODO - make carry a dictionnary
 def rollout_brax_task(
     config: dict,
     model: nn.Module,
