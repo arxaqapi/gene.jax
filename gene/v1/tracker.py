@@ -144,9 +144,13 @@ class Tracker:
         )
 
     def wandb_save_genome(
-        self, genome: chex.Array, wdb_run, generation: int, now: bool = False
+        self,
+        genome: chex.Array,
+        wdb_run,
+        file_name: str = "mean_indiv",
+        now: bool = False,
     ) -> None:
-        """Saves the current genome to the curretn wandb run folder
+        """Saves the current genome to the current wandb run folder
         and uploads the file based in the chosen policy `now`.
 
         Args:
@@ -156,9 +160,10 @@ class Tracker:
                 if now is false, the upload will be delayed until the end of the run.
                 Defaults to False.
         """
-        gen_string = f"g{str(generation).zfill(3)}_"
-        save_path = Path(wdb_run.dir) / "genomes" / f"{gen_string}mean_indiv.npy"
+        save_path = Path(wdb_run.dir) / "genomes" / file_name
+        save_path = save_path.with_suffix(".npy")
         save_path.parent.mkdir(parents=True, exist_ok=True)
+
         with open(save_path, "wb") as f:
             jnp.save(f, genome)
 

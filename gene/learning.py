@@ -8,6 +8,7 @@ from gene.core.models import BoundedLinearModelConf
 from gene.core.decoding import Decoders, Decoder
 from gene.core.distances import DistanceFunction
 from gene.core.evaluation import get_brax_env, rollout_brax_task
+from gene.v1.tracker import Tracker
 
 
 def brax_eval(genome, rng, decoder: Decoder, config: dict, env):
@@ -25,20 +26,18 @@ def brax_eval(genome, rng, decoder: Decoder, config: dict, env):
     return fitness
 
 
-# FIXME - merge with experiment
-def learn_brax_task(
-    config: dict,
-    df: DistanceFunction,
-):
+def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
     """Run a es training loop specifically tailored for brax tasks.
 
     Args:
         config (dict): config of the current run.
         df (DistanceFunction): Distance function to use, can be parametrized.
+        wdb_run: wandb run object used to log
 
     Returns:
         _type_: _description_
     """
+    assert wdb_run is not None
     rng = jrd.PRNGKey(config["seed"])
     rng, rng_init = jrd.split(rng, 2)
 
@@ -59,7 +58,12 @@ def learn_brax_task(
     ask = jit(strategy.ask)
     tell = jit(strategy.tell)
 
-    # init tracker
+    tracker = Tracker(config)
+    tracker_state = tracker.init()
+
+    # NOTE - save first individual
+    if wdb_run is not None:
+        tracker.wandb_save_genome(state.mean, wdb_run, "initial_best_indiv", now=True)
     for _generation in range(config["evo"]["n_generations"]):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
@@ -75,10 +79,30 @@ def learn_brax_task(
         # NOTE - Tell
         state = tell(x, fitness, state)
 
-        # TODO - update tracker
-        # - re-evaluate mean individual for fitness
-        print(eval_f(state.mean, rng_eval))
-        # - save top genome
-        # - save mean genome
+        # NOTE - Track metrics
+        tracker_state = tracker.update(
+            tracker_state=tracker_state,
+            fitnesses=true_fitness,
+            mean_ind=state.mean,
+            eval_f=eval_f,
+            rng_eval=rng_eval,
+        )
+        if wdb_run is not None:
+            tracker.wandb_log(tracker_state, wdb_run)
+            # if (_generation + 1) % 100 == 0:
+            tracker.wandb_save_genome(
+                genome=state.mean,
+                wdb_run=wdb_run,
+                file_name=f"g{str(_generation).zfill(3)}_mean_indiv",
+                now=True,
+            )
+    # NOTE - Save best at end of run
+    if wdb_run is not None:
+        tracker.wandb_save_genome(
+            genome=state.best_member,
+            wdb_run=wdb_run,
+            file_name="final_best_indiv",
+            now=True,
+        )
 
-    return ()
+    return state, tracker
