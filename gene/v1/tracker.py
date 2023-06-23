@@ -10,6 +10,9 @@ import chex
 from gene.v1.encoding import Encoding_size_function
 
 
+TrackerState = chex.ArrayTree
+
+
 # NOTE: once initialized, the object should not be modified in compiled functions
 # TODO: add plot possibility (error bars & stuff)
 class Tracker:
@@ -19,7 +22,7 @@ class Tracker:
         self.genome_counter: int = 0
 
     @partial(jit, static_argnums=(0,))
-    def init(self) -> chex.ArrayTree:
+    def init(self) -> TrackerState:
         """Initializes the tracker state
         Returns:
             chex.ArrayTree: State of the tracker
@@ -57,16 +60,16 @@ class Tracker:
     @partial(jit, static_argnums=(0, 4))
     def update(
         self,
-        tracker_state: chex.ArrayTree,
+        tracker_state: TrackerState,
         fitnesses: chex.Array,
         mean_ind: chex.Array,
         eval_f: Callable[[chex.Array, jrd.KeyArray], float],
         rng_eval,
-    ) -> chex.ArrayTree:
+    ) -> TrackerState:
         """Update the tracker object with the metrics of the current generation
 
         Args:
-            tracker_state (chex.ArrayTree):
+            tracker_state (TrackerState):
                 pytree containing the current state of the tracker
             fitnesses (chex.Array):
                 fitnesses of the individuals in the current population
@@ -76,7 +79,7 @@ class Tracker:
             rng_eval (_type_): RNG used for evaluating the sample mean.
 
         Returns:
-            chex.ArrayTree: the updated state of the tracker.
+            TrackerState: the updated state of the tracker.
         """
         i = tracker_state["gen"]
         # [Training] - update top_k_fitness using old state (carry best over)
@@ -86,8 +89,10 @@ class Tracker:
             .get(mode="fill", fill_value=0.0)
         )
         # TODO - argmax/armgin | maximize/minimize
-        top_k_f = jnp.sort(jnp.hstack((fitnesses, last_fit)))[::-1][: self.top_k]
-
+        if self.config["task"]["maximize"] is True:
+            top_k_f = jnp.sort(jnp.hstack((fitnesses, last_fit)))[::-1][: self.top_k]
+        else:
+            raise ValueError("minimization of the fitness value is not supported")
         # NOTE - Update top k fitnesses
         tracker_state["training"]["top_k_fit"] = (
             tracker_state["training"]["top_k_fit"].at[i].set(top_k_f)
@@ -115,7 +120,7 @@ class Tracker:
         tracker_state["gen"] += 1
         return tracker_state
 
-    def wandb_log(self, tracker_state, wdb_run) -> None:
+    def wandb_log(self, tracker_state: TrackerState, wdb_run) -> None:
         gen = tracker_state["gen"] - 1
 
         wdb_run.log(
@@ -138,7 +143,9 @@ class Tracker:
             }
         )
 
-    def wandb_save_genome(self, genome: chex.Array, wdb_run, now: bool = False) -> None:
+    def wandb_save_genome(
+        self, genome: chex.Array, wdb_run, generation: int, now: bool = False
+    ) -> None:
         """Saves the current genome to the curretn wandb run folder
         and uploads the file based in the chosen policy `now`.
 
@@ -149,7 +156,7 @@ class Tracker:
                 if now is false, the upload will be delayed until the end of the run.
                 Defaults to False.
         """
-        gen_string = f"g{str(self.genome_counter).zfill(3)}_"
+        gen_string = f"g{str(generation).zfill(3)}_"
         save_path = Path(wdb_run.dir) / "genomes" / f"{gen_string}mean_indiv.npy"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "wb") as f:
@@ -158,12 +165,18 @@ class Tracker:
         if now:
             wdb_run.save(str(save_path), base_path=f"{wdb_run.dir}/", policy="now")
 
-        self.genome_counter += 1
-
 
 def batch_wandb_log(
     wdb_run, statistics, batch_size: int, prefix: str = "individual"
 ) -> None:
+    """Map over each leaf of the pytree.
+
+    Args:
+        wdb_run (_type_): current run
+        statistics (_type_): Statistics dictionnary, array of one value per individual.
+        batch_size (int): _description_
+        prefix (str, optional): _description_. Defaults to "individual".
+    """
     log_dict = {
         f"{prefix}_{i}": tree_util.tree_map(lambda e: e[i], statistics)
         for i in range(batch_size)
