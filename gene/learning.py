@@ -105,4 +105,4 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
             now=True,
         )
 
-    return state, tracker
+    return tracker_state

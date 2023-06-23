@@ -19,7 +19,6 @@ class Tracker:
     def __init__(self, config: dict, top_k: int = 3) -> None:
         self.config: dict = config
         self.top_k: int = top_k
-        self.genome_counter: int = 0
 
     @partial(jit, static_argnums=(0,))
     def init(self) -> TrackerState:
@@ -29,7 +28,7 @@ class Tracker:
         """
         return {
             "training": {
-                # Fitness of the top k individuals during training (ordered)
+                # Fitness of the top k individuals during training (desending order)
                 "top_k_fit": jnp.zeros(
                     (self.config["evo"]["n_generations"], self.top_k)
                 ),
