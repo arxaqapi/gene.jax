@@ -37,7 +37,6 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
     Returns:
         _type_: _description_
     """
-    assert wdb_run is not None
     rng = jrd.PRNGKey(config["seed"])
     rng, rng_init = jrd.split(rng, 2)
 

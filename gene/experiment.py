@@ -1,6 +1,5 @@
-from typing import Callable
-
 import jax.numpy as jnp
+import wandb
 
 from gene.tracker import Tracker
 from gene.learning import learn_brax_task
@@ -14,7 +13,7 @@ class Experiment:
     def run(self):
         raise NotImplementedError
 
-    def run_n(self, wdb_run, seeds: list[int]) -> list[Tracker]:
+    def run_n(self, seeds: list[int]) -> list[Tracker]:
         """Run n experiments, conditioned by the number of seeds provided,
         and returns all statistics.
 
@@ -27,15 +26,22 @@ class Experiment:
 
         for seed in seeds:
             self.config["seed"] = seed
+
+            wdb_run = wandb.init(
+                "Brax expe bench test", config=self.config, tags=["single"]
+            )
+
             tracker_state = learn_brax_task(
                 self.config,
                 df=Distance_functions[self.config["encoding"]["distance"]](),
-                wdb_run=None,
+                wdb_run=wdb_run,
             )
 
             mean_fitnesses.append(tracker_state["eval"]["mean_fit"])
             # Get best individual [0] from last generation [-1]
             best_fitnesses.append(tracker_state["training"]["top_k_fit"][-1][0])
+
+            wdb_run.finish()
 
         stats = {
             "mean_mean_fitnesses": jnp.array(mean_fitnesses).mean(),
@@ -44,4 +50,4 @@ class Experiment:
             "var_best_fitnesses": jnp.array(best_fitnesses).var(),
         }
 
-        wdb_run.log(stats)
+        return stats

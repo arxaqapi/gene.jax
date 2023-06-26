@@ -10,7 +10,10 @@ if __name__ == "__main__":
     config = load_config("config/brax.json")
 
     exp = Experiment(config)
-    exp.run_n(
-        exp_wdb_run=wandb.init(project="Brax expe bench test", config=config),
+    stats = exp.run_n(
         seeds=[0, 1, 2, 3, 4, 5],
     )
+
+    exp_wdb_run = wandb.init(project="Brax expe bench test", config=config)
+
+    exp_wdb_run.log(stats)
