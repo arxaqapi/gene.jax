@@ -93,3 +93,10 @@ class TanhLinearModelConf(nn.Module):
             x = layer(x)
             x = nn.tanh(x)
         return x
+
+
+Models = {
+    "linear": LinearModelConf,
+    "bounded_linear": BoundedLinearModelConf,
+    "tanh_linear": TanhLinearModelConf,
+}
