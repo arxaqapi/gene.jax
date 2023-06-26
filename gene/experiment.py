@@ -28,7 +28,7 @@ class Experiment:
             self.config["seed"] = seed
 
             wdb_run = wandb.init(
-                "Brax expe bench test", config=self.config, tags=["single"]
+                project="Brax expe bench test", config=self.config, tags=["single"]
             )
 
             tracker_state = learn_brax_task(
