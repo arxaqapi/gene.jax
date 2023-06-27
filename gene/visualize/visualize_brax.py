@@ -7,9 +7,8 @@ from pathlib import Path
 import jax.random as jrd
 import flax.linen as nn
 from jax import jit, lax, tree_util, Array
-from brax.v1.io import html
 
-from gene.core.evaluation import get_brax_env
+from gene.core.evaluation import get_brax_env, get_braxv2_env
 from gene.core.decoding import Decoder, Decoders
 from gene.core.distances import DistanceFunction
 
@@ -28,7 +27,7 @@ def visualize_brax(
     model_parameters = decoder.decode(genome)
 
     # 2. get env
-    env = get_brax_env(config)
+    env = get_brax_env(config) if use_v1 else get_braxv2_env(config)
 
     # 3. rollout w. static evaluation function
     base_state = jit(env.reset)(rng)
@@ -36,33 +35,36 @@ def visualize_brax(
     if use_v1:
 
         def f(carry, x: None):
-            cur_state = carry
+            cur_state, r = carry
 
             actions = model.apply(model_parameters, cur_state.obs)
             new_state = jit(env.step)(cur_state, actions)
 
-            new_carry = new_state
+            new_carry = new_state, r + new_state.reward
             # Brax v1, state.qp
             return new_carry, cur_state.qp
 
     else:
 
         def f(carry, x: None):
-            cur_state = carry
+            cur_state, r = carry
 
             actions = model.apply(model_parameters, cur_state.obs)
             new_state = jit(env.step)(cur_state, actions)
 
-            new_carry = new_state
+            new_carry = new_state, r + new_state.reward
             # Brax v2, state.pipeline_state
             return new_carry, cur_state.pipeline_state
 
-    _, pipeline_states = lax.scan(
+    _carry, pipeline_states = lax.scan(
         f=f,
-        init=base_state,
+        init=(base_state, base_state.reward),
         xs=None,
         length=config["task"]["episode_length"],
     )
+
+    # NOTE - to remove
+    print(_carry[-1])
 
     flat_pipeline_states = [
         tree_util.tree_map(lambda x: x[i], pipeline_states)
@@ -74,13 +76,17 @@ def visualize_brax(
 
 def render_brax(env, pipeline_states: list, use_v1: bool = True, output_file: str = ""):
     if use_v1:
-        html_string = html.render(
+        from brax.v1.io import html as html_v1
+
+        html_string = html_v1.render(
             env.sys,
             pipeline_states,
             height="100",
         )
     else:
-        html_string = html.render(
+        from brax.io import html as html_v2
+
+        html_string = html_v2.render(
             env.sys.replace(dt=env.dt), pipeline_states, height="100", colab=False
         )
 

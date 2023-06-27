@@ -3,8 +3,6 @@ import jax.numpy as jnp
 from jax import lax, jit
 import flax.linen as nn
 import gymnax
-from brax.v1 import envs
-from brax.v1.envs.wrappers import EpisodeWrapper  # brax.envs.wrapper
 
 
 # ================================================
@@ -49,9 +47,23 @@ def rollout_gymnax_task(
 # ================================================
 
 
+# TODO - rename to get_braxv1_env
 def get_brax_env(config: dict):
-    env = envs.get_environment(env_name=config["task"]["environnment"])
-    return EpisodeWrapper(
+    from brax.v1 import envs as envs_v1
+    from brax.v1.envs.wrappers import EpisodeWrapper as EpisodeWrapper_v1
+
+    env = envs_v1.get_environment(env_name=config["task"]["environnment"])
+    return EpisodeWrapper_v1(
+        env, episode_length=config["task"]["episode_length"], action_repeat=1
+    )
+
+
+def get_braxv2_env(config: dict):
+    from brax import envs as envs_v2
+    from brax.envs.wrapper import EpisodeWrapper as EpisodeWrapper_v2
+
+    env = envs_v2.get_environment(env_name=config["task"]["environnment"])
+    return EpisodeWrapper_v2(
         env, episode_length=config["task"]["episode_length"], action_repeat=1
     )
 
