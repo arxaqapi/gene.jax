@@ -88,20 +88,25 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
         )
         if wdb_run is not None:
             tracker.wandb_log(tracker_state, wdb_run)
-            # if (_generation + 1) % 100 == 0:
+            # Saves only every 100 generation
+            if (_generation + 1) % 100 == 0:
+                tracker.wandb_save_genome(
+                    genome=state.mean,
+                    wdb_run=wdb_run,
+                    file_name=f"g{str(_generation).zfill(3)}_mean_indiv",
+                    now=True,
+                )
+    # NOTE - Save best individuals at end of run
+    if wdb_run is not None:
+        # Last generation best individuals
+        for i, top_k_indiv in enumerate(
+            tracker_state["backup"]["top_k_individuals"][-1]
+        ):
             tracker.wandb_save_genome(
-                genome=state.mean,
+                genome=top_k_indiv,
                 wdb_run=wdb_run,
-                file_name=f"g{str(_generation).zfill(3)}_mean_indiv",
+                file_name=f"final_top_{i}_indiv",
                 now=True,
             )
-    # NOTE - Save best at end of run
-    if wdb_run is not None:
-        tracker.wandb_save_genome(
-            genome=state.best_member,
-            wdb_run=wdb_run,
-            file_name="final_best_indiv",
-            now=True,
-        )
 
     return tracker_state

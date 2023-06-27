@@ -26,6 +26,9 @@ class Tracker:
         Returns:
             chex.ArrayTree: State of the tracker
         """
+        genome_size = Encoding_size_function[self.config["encoding"]["type"]](
+            self.config
+        )
         return {
             "training": {
                 # Fitness of the top k individuals during training (desending order)
@@ -47,11 +50,12 @@ class Tracker:
                 "sample_mean_ind": jnp.zeros(
                     (
                         self.config["evo"]["n_generations"],
-                        Encoding_size_function[self.config["encoding"]["type"]](
-                            self.config
-                        ),
+                        genome_size,
                     )
                 ),
+                # genomes of the top k individulas,
+                # in descending order according to their fitness
+                "top_k_individuals": jnp.zeros((self.top_k, genome_size)),
             },
             "gen": 0,
         }
@@ -60,6 +64,7 @@ class Tracker:
     def update(
         self,
         tracker_state: TrackerState,
+        individuals: chex.Array,
         fitnesses: chex.Array,
         mean_ind: chex.Array,
         eval_f: Callable[[chex.Array, jrd.KeyArray], float],
@@ -70,6 +75,7 @@ class Tracker:
         Args:
             tracker_state (TrackerState):
                 pytree containing the current state of the tracker
+            individuals (chex.Array): Population of individuals (genomes)
             fitnesses (chex.Array):
                 fitnesses of the individuals in the current population
             mean_ind (chex.Array): sample mean of the current population
@@ -87,8 +93,10 @@ class Tracker:
             .at[i - 1]
             .get(mode="fill", fill_value=0.0)
         )
-        # TODO - argmax/armgin | maximize/minimize
         if self.config["task"]["maximize"] is True:
+            # Sorts best from run run t and t-1, get top_k
+            # this handles carry over of the best individuals
+            # to keep track of the overall best individuals
             top_k_f = jnp.sort(jnp.hstack((fitnesses, last_fit)))[::-1][: self.top_k]
         else:
             raise ValueError("minimization of the fitness value is not supported")
@@ -105,9 +113,9 @@ class Tracker:
         )
 
         # NOTE - Update center of population fitness
-        fitness = eval_f(mean_ind, rng_eval)
+        mean_fitness = eval_f(mean_ind, rng_eval)
         tracker_state["eval"]["mean_fit"] = (
-            tracker_state["eval"]["mean_fit"].at[i].set(fitness)
+            tracker_state["eval"]["mean_fit"].at[i].set(mean_fitness)
         )
 
         # NOTE: Update backup individuals
@@ -115,6 +123,15 @@ class Tracker:
             tracker_state["backup"]["sample_mean_ind"].at[i].set(mean_ind)
         )
 
+        # get top 3 fitness index (individuals, fitnesses)
+        # retrieve top 3 indiv
+        # TODO - check that it works correctly
+        best_args = jnp.flip(jnp.argsort(fitnesses))[:3]
+        tracker_state["backup"]["top_k_individuals"] = (
+            tracker_state["backup"]["top_k_individuals"]
+            .at[i]
+            .set(individuals[best_args])
+        )
         # NOTE - Update current generation counter
         tracker_state["gen"] += 1
         return tracker_state
