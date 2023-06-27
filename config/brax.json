@@ -6,7 +6,8 @@
         "population_size": 20
     },
     "net": {
-        "layer_dimensions": [18, 128, 128, 6]
+        "layer_dimensions": [18, 128, 128, 6],
+        "architecture": "tanh_linear"
     },
     "encoding": {
         "d": 3,
