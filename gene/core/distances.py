@@ -116,3 +116,7 @@ class CGPDistance(DistanceFunction):
 
 
 Distance_functions = {"pL2": pL2Distance, "nn": NNDistance, "cgp": CGPDistance}
+
+
+def get_df(config: dict) -> nn.Module:
+    return Distance_functions[config["encoding"]["distance"]]
