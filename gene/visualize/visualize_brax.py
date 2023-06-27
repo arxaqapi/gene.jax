@@ -77,12 +77,14 @@ def render_brax(env, pipeline_states: list, use_v1: bool = True, output_file: st
         html_string = html.render(
             env.sys,
             pipeline_states,
-            height="100vh",
+            height="100",
         )
     else:
         html_string = html.render(
-            env.sys.replace(dt=env.dt), pipeline_states, height="100vh", colab=False
+            env.sys.replace(dt=env.dt), pipeline_states, height="100", colab=False
         )
+
+    html_string = html_string.replace("height: 100px;", "height: 100vh;")
 
     out = Path(output_file).with_suffix(".html")
 
