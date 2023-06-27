@@ -4,16 +4,16 @@ from jax import jit, vmap
 import jax.random as jrd
 import evosax
 
-from gene.core.models import BoundedLinearModelConf
+from gene.v1.tracker import Tracker
+from gene.core.models import Models
 from gene.core.decoding import Decoders, Decoder
 from gene.core.distances import DistanceFunction
 from gene.core.evaluation import get_brax_env, rollout_brax_task
-from gene.v1.tracker import Tracker
 
 
 def brax_eval(genome, rng, decoder: Decoder, config: dict, env):
     model_parameters = decoder.decode(genome)
-    model = BoundedLinearModelConf(config)
+    model = Models[config["net"]["architecture"]](config)
 
     fitness = rollout_brax_task(
         config=config,

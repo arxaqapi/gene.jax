@@ -100,3 +100,7 @@ Models = {
     "bounded_linear": BoundedLinearModelConf,
     "tanh_linear": TanhLinearModelConf,
 }
+
+
+def get_model(config: dict) -> nn.Module:
+    return Models[config["net"]["architecture"]](config)
