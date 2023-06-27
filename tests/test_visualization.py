@@ -20,21 +20,17 @@ class TestVizBrax(unittest.TestCase):
         self.genome = jnp.zeros((GENEDecoder(self.config, self.df).encoding_size(),))
 
     def test_output_file_v1(self):
-        # FIXME - AttributeError: 'System' object has no attribute 'replace'
-        #  File "/home/gene.jax/gene/visualize/visualize_brax.py", line 74, in render_brax
         self.assertIsNone(
             render_brax(
                 *visualize_brax(self.config, self.genome, self.model, self.df),
-                output_file="/tmp/test_file",
+                output_file="test_file",
             )
         )
 
-    # def test_output_file_v2(self):
-    #     self.assertIsNone(
-    #         render_brax(
-    #             *visualize_brax(
-    #                 self.config, self.genome, self.model, self.df, use_v1=False
-    #             ),
-    #             output_file="/tmp/test_file_2",
-    #         )
-    #     )
+    def test_output_file_v2(self):
+        self.assertIsNone(
+            render_brax(
+                *visualize_brax(self.config, self.genome, self.model, self.df),
+                output_file="test_file_2",
+            )
+        )

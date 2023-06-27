@@ -66,13 +66,20 @@ def visualize_brax(
         for i in range(config["task"]["episode_length"])
     ]
 
-    return env, flat_pipeline_states
+    return env, flat_pipeline_states, use_v1
 
 
-def render_brax(env, pipeline_states: list, output_file: str = ""):
-    html_string = html.render(
-        env.sys.replace(dt=env.dt), pipeline_states, height="100vh", colab=False
-    )
+def render_brax(env, pipeline_states: list, use_v1: bool = True, output_file: str = ""):
+    if use_v1:
+        html_string = html.render(
+            env.sys,
+            pipeline_states,
+            height="100vh",
+        )
+    else:
+        html_string = html.render(
+            env.sys.replace(dt=env.dt), pipeline_states, height="100vh", colab=False
+        )
 
     with open(f"{output_file}.html", "w") as f:
         f.writelines(html_string)
