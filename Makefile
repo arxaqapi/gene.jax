@@ -56,7 +56,7 @@ notebook:
 	xvfb-run -s "-screen 0 1400x900x24" jupyter notebook --ip 0.0.0.0 --allow-root
 
 zipall: c
-	zip -r gene.zip . -x "wandb/*" -x "profiles/*" -x "notebooks/*" -x "examples/*" -x "archive/*"
+	zip -r gene.zip . -x "wandb/*" -x "profiles/*" -x "notebooks/*" -x "examples/*" -x "archive/*" -x "html/*"
 
 unzipall:
 	unzip gene.zip -d gene.jax

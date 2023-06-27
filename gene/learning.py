@@ -81,6 +81,7 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
         # NOTE - Track metrics
         tracker_state = tracker.update(
             tracker_state=tracker_state,
+            individuals=x,
             fitnesses=true_fitness,
             mean_ind=state.mean,
             eval_f=eval_f,
