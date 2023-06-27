@@ -36,10 +36,12 @@ sail-stafe:
 c clean:
 	rm -rf __pycache__
 	rm -rf */__pycache__
+	rm -rf */*/__pycache__
 	rm -rf .ruff_cache
 	rm -rf .ipynb_checkpoints
 	rm -rf gene.zip
-	rm -rf genomes/ gene/genomes/
+	rm -rf genomes/ gene/genomes/ notebooks/genomes/
+	rm -rf *.html notebooks/*.html
 
 backup:
 	git add -A
@@ -54,7 +56,7 @@ notebook:
 	xvfb-run -s "-screen 0 1400x900x24" jupyter notebook --ip 0.0.0.0 --allow-root
 
 zipall: c
-	zip -r gene.zip . -x "wandb/*" -x "profiles/*" -x "notebooks/*" -x "examples/*"
+	zip -r gene.zip . -x "wandb/*" -x "profiles/*" -x "notebooks/*" -x "examples/*" -x "archive/*"
 
 unzipall:
 	unzip gene.zip -d gene.jax
