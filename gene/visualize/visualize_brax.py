@@ -64,7 +64,7 @@ def visualize_brax(
     )
 
     # NOTE - to remove
-    print(_carry[-1])
+    print(f"Fitness: {_carry[-1]}")
 
     flat_pipeline_states = [
         tree_util.tree_map(lambda x: x[i], pipeline_states)

@@ -1,4 +1,5 @@
 import unittest
+import os
 
 import jax.numpy as jnp
 
@@ -39,3 +40,9 @@ class TestVizBrax(unittest.TestCase):
                 output_file="test_file_2",
             )
         )
+
+    def tearDown(self) -> None:
+        if os.path.exists("test_file.html"):
+            os.remove("test_file.html")
+        if os.path.exists("test_file_2.html"):
+            os.remove("test_file_2.html")
