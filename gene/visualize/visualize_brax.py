@@ -2,6 +2,8 @@
 Utility code to visualize brax learned policies on
 the given task.
 """
+from pathlib import Path
+
 import jax.random as jrd
 import flax.linen as nn
 from jax import jit, lax, tree_util, Array
@@ -12,6 +14,7 @@ from gene.core.decoding import Decoder, Decoders
 from gene.core.distances import DistanceFunction
 
 
+# TODO - replace model with otional dependency and get it from config file
 def visualize_brax(
     config: dict,
     genome: Array,
@@ -81,5 +84,7 @@ def render_brax(env, pipeline_states: list, use_v1: bool = True, output_file: st
             env.sys.replace(dt=env.dt), pipeline_states, height="100vh", colab=False
         )
 
-    with open(f"{output_file}.html", "w") as f:
+    out = Path(output_file).with_suffix(".html")
+
+    with out.open("w") as f:
         f.writelines(html_string)
