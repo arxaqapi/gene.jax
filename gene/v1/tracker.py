@@ -26,6 +26,7 @@ class Tracker:
         Returns:
             chex.ArrayTree: State of the tracker
         """
+        # FIXME
         genome_size = Encoding_size_function[self.config["encoding"]["type"]](
             self.config
         )
@@ -60,7 +61,7 @@ class Tracker:
             "gen": 0,
         }
 
-    @partial(jit, static_argnums=(0, 4))
+    @partial(jit, static_argnums=(0, 5))
     def update(
         self,
         tracker_state: TrackerState,
@@ -122,16 +123,11 @@ class Tracker:
         tracker_state["backup"]["sample_mean_ind"] = (
             tracker_state["backup"]["sample_mean_ind"].at[i].set(mean_ind)
         )
+        # get top 3 fitness indexes (individuals, fitnesses)
+        best_args_idx = jnp.flip(jnp.argsort(fitnesses))[:3]
+        # take takes only scalar values
+        tracker_state["backup"]["top_k_individuals"] = individuals[best_args_idx]
 
-        # get top 3 fitness index (individuals, fitnesses)
-        # retrieve top 3 indiv
-        # TODO - check that it works correctly
-        best_args = jnp.flip(jnp.argsort(fitnesses))[:3]
-        tracker_state["backup"]["top_k_individuals"] = (
-            tracker_state["backup"]["top_k_individuals"]
-            .at[i]
-            .set(individuals[best_args])
-        )
         # NOTE - Update current generation counter
         tracker_state["gen"] += 1
         return tracker_state

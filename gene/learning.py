@@ -99,10 +99,8 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
                 )
     # NOTE - Save best individuals at end of run
     if wdb_run is not None:
-        # Last generation best individuals
-        for i, top_k_indiv in enumerate(
-            tracker_state["backup"]["top_k_individuals"][-1]
-        ):
+        # Overall best individuals
+        for i, top_k_indiv in enumerate(tracker_state["backup"]["top_k_individuals"]):
             tracker.wandb_save_genome(
                 genome=top_k_indiv,
                 wdb_run=wdb_run,
