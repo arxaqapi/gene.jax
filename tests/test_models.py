@@ -12,6 +12,7 @@ from gene.core.models import (
     BoundedLinearModelConf,
     TanhLinearModel,
     TanhLinearModelConf,
+    get_model,
 )
 
 
@@ -105,3 +106,22 @@ class TestModelInit(unittest.TestCase):
         )
         # Check output is the same
         self.assertIsNone(chex.assert_trees_all_close(out_c, out))
+
+
+class TestModelUtils(unittest.TestCase):
+    def setUp(self) -> None:
+        self.config = {"net": {}}
+
+    def test_get_model_base(self):
+        self.assertTrue(type(get_model(self.config)) is BoundedLinearModelConf)
+
+    def test_get_model_parametrized(self):
+        # tests that get_model works as expected
+        self.config["net"]["architecture"] = "linear"
+        self.assertTrue(type(get_model(self.config)) is LinearModelConf)
+
+        self.config["net"]["architecture"] = "bounded_linear"
+        self.assertTrue(type(get_model(self.config)) is BoundedLinearModelConf)
+
+        self.config["net"]["architecture"] = "tanh_linear"
+        self.assertTrue(type(get_model(self.config)) is TanhLinearModelConf)

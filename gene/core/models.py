@@ -103,4 +103,13 @@ Models = {
 
 
 def get_model(config: dict) -> nn.Module:
-    return Models[config["net"]["architecture"]](config)
+    """Returns the instatianted model fitting the config file.
+
+    Args:
+        config (dict): config file of the current run
+
+    Returns:
+        nn.Module: Neural network architecture used for evaluation.
+    """
+    arch = config["net"].get("architecture")
+    return Models[arch if arch is not None else "bounded_linear"](config)

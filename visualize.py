@@ -6,7 +6,7 @@ import jax.random as jrd
 import wandb
 
 from gene.visualize.visualize_brax import visualize_brax, render_brax
-from gene.core.models import BoundedLinearModelConf, TanhLinearModelConf
+from gene.core.models import get_model
 from gene.core.distances import Distance_functions
 
 if __name__ == "__main__":
@@ -63,9 +63,7 @@ if __name__ == "__main__":
         *visualize_brax(
             config,
             genome,
-            # TODO - replace me
-            # get from conf
-            model=TanhLinearModelConf(config),
+            model=get_model(config),
             df=Distance_functions[config["encoding"]["distance"]](),
             rng=jrd.PRNGKey(args.rng),
         ),
