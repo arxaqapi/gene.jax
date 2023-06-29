@@ -1,6 +1,7 @@
 from functools import partial
 
-from jax import jit, vmap
+from jax import jit, vmap, Array
+import jax.numpy as jnp
 import jax.random as jrd
 import evosax
 
@@ -11,7 +12,7 @@ from gene.core.distances import DistanceFunction
 from gene.core.evaluation import get_brax_env, rollout_brax_task
 
 
-def brax_eval(genome, rng, decoder: Decoder, config: dict, env):
+def brax_eval(genome: Array, rng: jrd.KeyArray, decoder: Decoder, config: dict, env):
     model_parameters = decoder.decode(genome)
     model = Models[config["net"]["architecture"]](config)
 
@@ -26,8 +27,39 @@ def brax_eval(genome, rng, decoder: Decoder, config: dict, env):
     return fitness
 
 
+def brax_eval_n_times(
+    genome: Array,
+    rng: jrd.KeyArray,
+    decoder: Decoder,
+    config: dict,
+    env,
+    number_evaluations: int = 10,
+):
+    """This evaluates a single genome 0 times with different seeds and returns
+    the median over the collected returns.
+
+    Doing so forces the learning process to generalize to multiple envs, and not be
+    stuck in a fragile exploitation setting.
+
+    Args:
+        genome (Array): The genome of the evaluated individual.
+        rng (jrd.KeyArray): rng key used to evaluate
+        decoder (Decoder): The decoder object used to decode the individuals `genome`.
+        config (dict): The config dict of the current run.
+        env (_type_): The brax environment used to evaluate the individual.
+        number_evaluations (int, optional): Number of time the individual
+            is evaluated. Defaults to 10.
+    """
+    rngs = jrd.split(rng, number_evaluations)
+    eval_f = partial(brax_eval, decoder=decoder, config=config, env=env)
+    fitnesses = jit(vmap(eval_f, in_axes=(None, 0)))(genome, rngs)
+
+    # take median fitness and returns it
+    return jnp.median(fitnesses)
+
+
 def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
-    """Run a es training loop specifically tailored for brax tasks.
+    """Run an es training loop specifically tailored for brax tasks.
 
     Args:
         config (dict): config of the current run.
