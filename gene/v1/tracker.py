@@ -19,11 +19,12 @@ class Tracker:
     def __init__(self, config: dict, top_k: int = 3) -> None:
         self.config: dict = config
         self.top_k: int = top_k
-        raise NotImplementedError(
-            "Keep track of the best individuals at each generation and \
-            carry over its genome. Otherwise, there is a chance \
-            it will be lost during the learning, depending on the ES used."
-        )
+        # FIXME - urgently
+        # raise NotImplementedError(
+        #     "Keep track of the best individuals at each generation and \
+        #     carry over its genome. Otherwise, there is a chance \
+        #     it will be lost during the learning, depending on the ES used."
+        # )
 
     @partial(jit, static_argnums=(0,))
     def init(self) -> TrackerState:
