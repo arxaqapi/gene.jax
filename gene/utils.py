@@ -37,9 +37,24 @@ def fail_if_not_device(device: str = "gpu"):
 
 
 def validate_json(config: dict):
+    """Validates the json format of the passed configuration file.
+    Only checks that all fields are present, and not their type.
+
+    Args:
+        config (dict): The configuration file to validate
+
+    Raises:
+        ConfigFileIncomplete: Is the configuration file is incomplete
+            this error will be raised in response
+    """
     base_template = {
         "seed": None,
-        "evo": {"strategy_name": None, "n_generations": None, "population_size": None},
+        "evo": {
+            "strategy_name": None,
+            "n_generations": None,
+            "population_size": None,
+            "n_evaluations": None,
+        },
         "net": {"layer_dimensions": None, "architecture": None},
         "encoding": {"d": None, "distance": None, "type": None},
         "task": {"environnment": None, "maximize": None, "episode_length": None},

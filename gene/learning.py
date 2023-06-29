@@ -83,8 +83,13 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
 
     env = get_brax_env(config)
 
-    eval_f = partial(brax_eval, decoder=decoder, config=config, env=env)
-    vectorized_eval_f = jit(vmap(eval_f, in_axes=(0, None)))
+    # Each individual is evaluated a single time a multiple times in parallel
+    evaluation_f = (
+        brax_eval_n_times if config["evo"]["n_evaluations"] > 1 else brax_eval
+    )
+
+    partial_eval_f = partial(evaluation_f, decoder=decoder, config=config, env=env)
+    vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
 
     ask = jit(strategy.ask)
     tell = jit(strategy.tell)
@@ -116,7 +121,7 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
             individuals=x,
             fitnesses=true_fitness,
             mean_ind=state.mean,
-            eval_f=eval_f,
+            eval_f=partial_eval_f,
             rng_eval=rng_eval,
         )
         if wdb_run is not None:

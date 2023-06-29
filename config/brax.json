@@ -3,7 +3,8 @@
     "evo": {
         "strategy_name": "Sep_CMA_ES",
         "n_generations": 1000,
-        "population_size": 200
+        "population_size": 200,
+        "n_evaluations": 1
     },
     "net": {
         "layer_dimensions": [18, 128, 128, 6],
