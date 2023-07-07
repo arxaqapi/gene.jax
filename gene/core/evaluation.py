@@ -68,6 +68,9 @@ def get_braxv2_env(config: dict):
     )
 
 
+# FIXME - add an active episode tracking mechanism
+# Currently if the agents falls and get back up again we still sum up the rewards.
+# What should be done instead, is if the agent falls, we stop counting rewards.
 def rollout_brax_task(
     config: dict,
     model: nn.Module,
@@ -75,6 +78,7 @@ def rollout_brax_task(
     env,
     rng_reset: jrd.KeyArray,
 ) -> float:
+    raise NotImplementedError("Fix error with unhealthy agents")
     state = jit(env.reset)(rng_reset)
 
     def rollout_loop(carry, x):
