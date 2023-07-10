@@ -179,6 +179,10 @@ if __name__ == "__main__":
             "in": 17,
             "out": 6,
         },
+        "hopper": {
+            "in": 11,
+            "out": 3,
+        },
     }
     # Init new run
     # Run
