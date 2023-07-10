@@ -68,9 +68,6 @@ def get_braxv2_env(config: dict):
     )
 
 
-# FIXME - add an active episode tracking mechanism
-# Currently if the agents falls and get back up again we still sum up the rewards.
-# What should be done instead, is if the agent falls, we stop counting rewards.
 def rollout_brax_task(
     config: dict,
     model: nn.Module,
@@ -78,21 +75,40 @@ def rollout_brax_task(
     env,
     rng_reset: jrd.KeyArray,
 ) -> float:
-    raise NotImplementedError("Fix error with unhealthy agents")
+    """Perform a single rollout of the environnment
+    with the given policy parametrized by a `model` and its `model_parameters`.
+    The return (sum of all the undiscounted rewards) is used as a fitness value.
+
+    Args:
+        config (dict): config of the current run.
+        model (nn.Module): model used as a policy `f: S -> A`
+        model_parameters (nn.FrozenDict): parameters of the model
+        env (_type_): environnment used to perform the evaluation
+        rng_reset (jrd.KeyArray): rng key used for evaluation
+
+    Returns:
+        float: return used as a fitness value.
+    """
     state = jit(env.reset)(rng_reset)
 
     def rollout_loop(carry, x):
-        env_state, cum_reward = carry
+        env_state, cumulative_reward, active_episode = carry
         actions = model.apply(model_parameters, env_state.obs)
         new_state = jit(env.step)(env_state, actions)
 
-        corrected_reward = new_state.reward * (1 - new_state.done)
-        new_carry = new_state, cum_reward + corrected_reward
-        return new_carry, None
+        corrected_reward = new_state.reward * active_episode
+        cumulative_reward = cumulative_reward + corrected_reward
+        # we carry over the active_episode value.
+        # If it becomes 0, it stays at 0 because of the multiplication
+        # this desactivated the reward counting in cumulative_reward by setting
+        # the corrected_reward to 0
+        new_active_episode = active_episode * (1 - new_state.done)
+        return new_state, cumulative_reward, new_active_episode, None
 
+    active_episode = jnp.ones_like(state.reward)
     carry, _ = lax.scan(
         f=rollout_loop,
-        init=(state, state.reward),
+        init=(state, state.reward, active_episode),
         xs=None,
         length=config["task"]["episode_length"],
     )
