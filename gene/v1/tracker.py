@@ -38,7 +38,7 @@ class Tracker:
         )
         return {
             "training": {
-                # Fitness of the top k individuals during training (desending order)
+                # Fitness of the top k individuals during training (descending order)
                 "top_k_fit": jnp.zeros(
                     (self.config["evo"]["n_generations"], self.top_k)
                 ),
@@ -169,7 +169,7 @@ class Tracker:
         now: bool = False,
     ) -> None:
         """Saves the current genome to the current wandb run folder
-        and uploads the file based in the chosen policy `now`.
+        and uploads the file based on the chosen policy `now`.
 
         Args:
             genome (chex.Array): Genome to save as a pickled binary file.
@@ -192,7 +192,7 @@ class Tracker:
 def batch_wandb_log(
     wdb_run, statistics, batch_size: int, prefix: str = "individual"
 ) -> None:
-    """Map over each leaf of the pytree.
+    """Map over each leaf of the list pytrees and logs item in the lists.
 
     Args:
         wdb_run (_type_): current run
