@@ -5,11 +5,12 @@ import jax.numpy as jnp
 import chex
 
 from gene.v1.tracker import Tracker
+from gene.tracker import Tracker as Trackerv2
 from gene.core.decoding import GENEDecoder
 from gene.core.distances import pL2Distance
 
 
-class TestTracker(unittest.TestCase):
+class TestTrackerV1(unittest.TestCase):
     def setUp(self) -> None:
         self.config = {
             "evo": {"n_generations": 30},
@@ -130,3 +131,99 @@ class TestTracker(unittest.TestCase):
                 3.0, t_state["training"]["empirical_mean_fit"][1]
             )
         )
+
+
+class TestTracker(unittest.TestCase):
+    def setUp(self) -> None:
+        self.config = {
+            "evo": {
+                "n_generations": 1000,
+                "population_size": 200,
+            },
+            "net": {
+                "layer_dimensions": [18, 128, 128, 6],
+                "architecture": "tanh_linear",
+            },
+            "encoding": {"d": 3},
+            "task": {
+                "maximize": True,
+            },
+        }
+        self.decoder = GENEDecoder(self.config, pL2Distance())
+
+    def test(self):
+        """
+        Test that the best individuals, and its fitness is correctly carried
+        over generations
+        """
+        # Gen 0
+        population_gen_0 = jnp.array(
+            [
+                [1.0] * self.decoder.encoding_size(),
+                [3.0] * self.decoder.encoding_size(),
+                [5.0] * self.decoder.encoding_size(),
+                [7.0] * self.decoder.encoding_size(),
+                [9.0] * self.decoder.encoding_size(),
+                [11.0] * self.decoder.encoding_size(),
+            ]
+        )
+        # arg order = (5, 2, 4)
+        pop_gen_0_fit = jnp.array([2.0, -5.0, 6.0, 0.0, 3.0, 5555.0])
+
+        tracker = Trackerv2(self.config, self.decoder)
+        tracker_state = tracker.init()
+
+        tracker_state = tracker.update(
+            tracker_state, population_gen_0, pop_gen_0_fit, None
+        )
+
+        # check ordering of the best individuals
+        for i, eq_idx in enumerate([5, 2, 4]):
+            self.assertIsNone(
+                chex.assert_trees_all_equal(
+                    tracker_state["backup"]["top_k_individuals"][i],
+                    population_gen_0[eq_idx],
+                )
+            )
+        # check ordering of the fitness
+        for i, eq_idx in enumerate([5, 2, 4]):
+            self.assertIsNone(
+                chex.assert_trees_all_equal(
+                    tracker_state["training"]["top_k_fit"][0][i],
+                    pop_gen_0_fit[eq_idx],
+                )
+            )
+        # Gen 1
+        population_gen_1 = jnp.array(
+            [
+                [0.0] * self.decoder.encoding_size(),
+                [2.0] * self.decoder.encoding_size(),
+                [4.0] * self.decoder.encoding_size(),
+                [6.0] * self.decoder.encoding_size(),
+                [8.0] * self.decoder.encoding_size(),
+                [10.0] * self.decoder.encoding_size(),
+            ]
+        )
+        # arg order = (2, 3, 5)
+        pop_gen_1_fit = jnp.array([-5.3, 1.0, 1624.0, 7.6, -3.0, 3.0])
+
+        tracker_state = tracker.update(
+            tracker_state, population_gen_1, pop_gen_1_fit, None
+        )
+
+        # check ordering of the best individuals
+        for i, indiv_value in enumerate(jnp.array([11.0, 4.0, 6.0])):
+            self.assertIsNone(
+                chex.assert_trees_all_equal(
+                    tracker_state["backup"]["top_k_individuals"][i][0],
+                    indiv_value,
+                )
+            )
+        # check ordering of the fitness
+        for i, value in enumerate(jnp.array([5555.0, 1624.0, 7.6])):
+            self.assertIsNone(
+                chex.assert_trees_all_equal(
+                    tracker_state["training"]["top_k_fit"][1][i],
+                    value,
+                )
+            )
