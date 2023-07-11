@@ -23,8 +23,8 @@ class TestVizBrax(unittest.TestCase):
     def test_output_file_v1(self):
         self.assertIsNone(
             render_brax(
+                "test_file",
                 *visualize_brax(self.config, self.genome, self.model, self.df),
-                output_file="test_file",
             )
         )
 
@@ -34,10 +34,10 @@ class TestVizBrax(unittest.TestCase):
         self.config["net"]["layer_dimensions"][0] = 17
         self.assertIsNone(
             render_brax(
+                "test_file_2",
                 *visualize_brax(
                     self.config, self.genome, self.model, self.df, use_v1=False
                 ),
-                output_file="test_file_2",
             )
         )
 

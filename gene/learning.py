@@ -122,7 +122,7 @@ def learn_brax_task(
             tracker_state=tracker_state,
             individuals=x,
             fitnesses=true_fitness,
-            mean_ind=state.mean,
+            sample_mean=state.mean,
             eval_f=partial_eval_f,
             rng_eval=rng_eval,
         )

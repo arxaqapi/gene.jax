@@ -74,7 +74,7 @@ def visualize_brax(
     return env, flat_pipeline_states, use_v1
 
 
-def render_brax(env, pipeline_states: list, use_v1: bool = True, output_file: str = ""):
+def render_brax(output_file: Path, env, pipeline_states: list, use_v1: bool = True):
     if use_v1:
         from brax.v1.io import html as html_v1
 
