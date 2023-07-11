@@ -130,7 +130,6 @@ class GENEDecoder(Decoder):
         super().__init__(config, *args, **kwargs)
         self.distance_function = distance_function
 
-    # FIXME - make it a property and fix code
     def encoding_size(self) -> int:
         """Size of the awaited genotype GENE encoding
 

@@ -174,7 +174,12 @@ class TestTracker(unittest.TestCase):
         tracker_state = tracker.init()
 
         tracker_state = tracker.update(
-            tracker_state, population_gen_0, pop_gen_0_fit, None
+            tracker_state=tracker_state,
+            individuals=population_gen_0,
+            fitnesses=pop_gen_0_fit,
+            sample_mean=None,
+            eval_f=(lambda *_: None),
+            rng_eval=None,
         )
 
         # check ordering of the best individuals
@@ -208,7 +213,12 @@ class TestTracker(unittest.TestCase):
         pop_gen_1_fit = jnp.array([-5.3, 1.0, 1624.0, 7.6, -3.0, 3.0])
 
         tracker_state = tracker.update(
-            tracker_state, population_gen_1, pop_gen_1_fit, None
+            tracker_state=tracker_state,
+            individuals=population_gen_1,
+            fitnesses=pop_gen_1_fit,
+            sample_mean=None,
+            eval_f=(lambda *_: None),
+            rng_eval=None,
         )
 
         # check ordering of the best individuals
