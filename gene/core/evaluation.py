@@ -102,7 +102,7 @@ def rollout_brax_task(
         # this desactivated the reward counting in cumulative_reward by setting
         # the corrected_reward to 0
         new_active_episode = active_episode * (1 - new_state.done)
-        return new_state, cumulative_reward, new_active_episode, None
+        return (new_state, cumulative_reward, new_active_episode), None
 
     active_episode = jnp.ones_like(state.reward)
     carry, _ = lax.scan(
