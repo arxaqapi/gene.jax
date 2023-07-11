@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import jax.random as jrd
 import evosax
 
-from gene.v1.tracker import Tracker
+from gene.tracker import Tracker, TrackerState
 from gene.core.models import Models
 from gene.core.decoding import Decoders, Decoder
 from gene.core.distances import DistanceFunction
@@ -58,7 +58,9 @@ def brax_eval_n_times(
     return jnp.median(fitnesses)
 
 
-def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
+def learn_brax_task(
+    config: dict, df: DistanceFunction, wdb_run
+) -> tuple[Tracker, TrackerState]:
     """Run an es training loop specifically tailored for brax tasks.
 
     Args:
@@ -83,7 +85,7 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
 
     env = get_braxv1_env(config)
 
-    # Each individual is evaluated a single time a multiple times in parallel
+    # Each individual is evaluated a single time or multiple times in parallel
     evaluation_f = (
         brax_eval_n_times if config["evo"]["n_evaluations"] > 1 else brax_eval
     )
@@ -145,4 +147,4 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
                 now=True,
             )
 
-    return tracker_state
+    return tracker, tracker_state
