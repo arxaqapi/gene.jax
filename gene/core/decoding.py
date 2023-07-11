@@ -198,3 +198,7 @@ Decoders = {
     "direct": DirectDecoder,
     "gene": GENEDecoder,
 }
+
+
+def get_decoder(config: dict):
+    return Decoders[config["encoding"]["type"]]
