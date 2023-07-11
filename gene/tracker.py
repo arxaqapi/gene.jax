@@ -4,7 +4,7 @@ from typing import Callable
 
 import jax.numpy as jnp
 import jax.random as jrd
-from jax import jit, tree_util
+from jax import jit, tree_util, Array
 import chex
 
 from gene.core.decoding import Decoder
@@ -165,6 +165,16 @@ class Tracker:
 
         if now:
             wdb_run.save(str(save_path), base_path=f"{wdb_run.dir}/", policy="now")
+
+    # specific getters
+    def get_initial_center_individual(self, tracker_state) -> Array:
+        return tracker_state["backup"]["sample_mean_ind"][0]
+
+    def get_final_center_individual(self, tracker_state) -> Array:
+        return tracker_state["backup"]["sample_mean_ind"][-1]
+
+    def get_top_k_genomes(self, tracker_state) -> Array:
+        return tracker_state["backup"]["top_k_individuals"]
 
 
 def batch_wandb_log(
