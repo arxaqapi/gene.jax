@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Type
 
 from jax import Array, lax
 import jax.numpy as jnp
@@ -200,5 +201,13 @@ Decoders = {
 }
 
 
-def get_decoder(config: dict):
+def get_decoder(config: dict) -> Type[Decoder]:
+    """Get the Decoder object from a given configuration
+
+    Args:
+        config (dict): config file of the run.
+
+    Returns:
+        Decoder: The decoder object
+    """
     return Decoders[config["encoding"]["type"]]
