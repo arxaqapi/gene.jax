@@ -96,7 +96,7 @@ def learn_brax_task(
     ask = jit(strategy.ask)
     tell = jit(strategy.tell)
 
-    tracker = Tracker(config)
+    tracker = Tracker(config, decoder)
     tracker_state = tracker.init()
 
     # NOTE - save first individual
