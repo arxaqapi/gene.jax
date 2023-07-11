@@ -8,7 +8,7 @@ import jax.random as jrd
 import flax.linen as nn
 from jax import jit, lax, tree_util, Array
 
-from gene.core.evaluation import get_brax_env, get_braxv2_env
+from gene.core.evaluation import get_braxv1_env, get_braxv2_env
 from gene.core.decoding import Decoder, Decoders
 from gene.core.distances import DistanceFunction
 
@@ -27,7 +27,7 @@ def visualize_brax(
     model_parameters = decoder.decode(genome)
 
     # 2. get env
-    env = get_brax_env(config) if use_v1 else get_braxv2_env(config)
+    env = get_braxv1_env(config) if use_v1 else get_braxv2_env(config)
 
     # 3. rollout w. static evaluation function
     base_state = jit(env.reset)(rng)

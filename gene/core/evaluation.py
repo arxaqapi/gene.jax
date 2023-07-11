@@ -47,8 +47,7 @@ def rollout_gymnax_task(
 # ================================================
 
 
-# TODO - rename to get_braxv1_env
-def get_brax_env(config: dict):
+def get_braxv1_env(config: dict):
     from brax.v1 import envs as envs_v1
     from brax.v1.envs.wrappers import EpisodeWrapper as EpisodeWrapper_v1
 

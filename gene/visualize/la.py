@@ -10,7 +10,7 @@ import jax.random as jrd
 from jax import jit, vmap, Array
 
 from gene.v1.lla import interpolate_2D, plot_ll
-from gene.core.evaluation import get_brax_env
+from gene.core.evaluation import get_braxv1_env
 
 
 def run_lla_brax(
@@ -25,7 +25,7 @@ def run_lla_brax(
 
     # NOTE - 1. Get env
     # FIXME - pass it down ?
-    env = get_brax_env(config)
+    env = get_braxv1_env(config)
 
     # NOTE - 2. get genomes
     # FIXME - (as parameters)

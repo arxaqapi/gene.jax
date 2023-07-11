@@ -7,7 +7,7 @@ from jax import Array
 from gene.learning import brax_eval_n_times
 from gene.core.decoding import GENEDecoder
 from gene.core.distances import pL2Distance
-from gene.core.evaluation import get_brax_env
+from gene.core.evaluation import get_braxv1_env
 
 
 class TestLearningEvalLoop(unittest.TestCase):
@@ -33,7 +33,7 @@ class TestLearningEvalLoop(unittest.TestCase):
             rng=jrd.PRNGKey(0),
             decoder=self.decoder,
             config=self.config,
-            env=get_brax_env(self.config),
+            env=get_braxv1_env(self.config),
         )
 
         self.assertTrue(isinstance(fitness, Array))

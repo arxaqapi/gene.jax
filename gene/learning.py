@@ -9,7 +9,7 @@ from gene.v1.tracker import Tracker
 from gene.core.models import Models
 from gene.core.decoding import Decoders, Decoder
 from gene.core.distances import DistanceFunction
-from gene.core.evaluation import get_brax_env, rollout_brax_task
+from gene.core.evaluation import get_braxv1_env, rollout_brax_task
 
 
 def brax_eval(genome: Array, rng: jrd.KeyArray, decoder: Decoder, config: dict, env):
@@ -81,7 +81,7 @@ def learn_brax_task(config: dict, df: DistanceFunction, wdb_run):
 
     state = strategy.initialize(rng_init)
 
-    env = get_brax_env(config)
+    env = get_braxv1_env(config)
 
     # Each individual is evaluated a single time a multiple times in parallel
     evaluation_f = (
