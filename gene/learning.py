@@ -111,8 +111,7 @@ def learn_brax_task(
 
         # NOTE - Eval
         true_fitness = vectorized_eval_f(x, rng_eval)
-        if config["task"]["maximize"]:
-            fitness = -1 * true_fitness
+        fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
 
         # NOTE - Tell
         state = tell(x, fitness, state)
