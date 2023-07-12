@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from jax import default_backend
 
 
@@ -15,7 +14,7 @@ class ConfigFileIncomplete(Exception):
     pass
 
 
-def load_config(path: Path):
+def load_config(path: str):
     with open(path, "r") as f:
         config = json.load(f)
     return config

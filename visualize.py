@@ -60,6 +60,7 @@ if __name__ == "__main__":
     path.mkdir(exist_ok=True)
 
     render_brax(
+        path / f"run_{run_id.split('/')[-1]}_{genome_id[:-4]}",
         *visualize_brax(
             config,
             genome,
@@ -67,5 +68,4 @@ if __name__ == "__main__":
             df=Distance_functions[config["encoding"]["distance"]](),
             rng=jrd.PRNGKey(args.rng),
         ),
-        path / f"run_{run_id.split('/')[-1]}_{genome_id[:-4]}",
     )

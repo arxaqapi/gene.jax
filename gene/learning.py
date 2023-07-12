@@ -1,4 +1,5 @@
 from functools import partial
+from datetime import datetime
 
 from jax import jit, vmap, Array
 import jax.numpy as jnp
@@ -103,6 +104,9 @@ def learn_brax_task(
     if wdb_run is not None:
         tracker.wandb_save_genome(state.mean, wdb_run, "initial_best_indiv", now=True)
     for _generation in range(config["evo"]["n_generations"]):
+        print(
+            f"[Log] - Generation n° {_generation:>6} @ {datetime.now().strftime('%Y.%m.%d_%H:%M:%S')}"
+        )
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
 

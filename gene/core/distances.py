@@ -1,6 +1,7 @@
 import pickle
 from pathlib import Path
 from functools import partial
+from typing import Type
 
 import flax.linen as nn
 from jax import Array, jit, vmap
@@ -118,5 +119,5 @@ class CGPDistance(DistanceFunction):
 Distance_functions = {"pL2": pL2Distance, "nn": NNDistance, "cgp": CGPDistance}
 
 
-def get_df(config: dict) -> nn.Module:
+def get_df(config: dict) -> Type[DistanceFunction]:
     return Distance_functions[config["encoding"]["distance"]]

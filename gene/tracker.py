@@ -9,7 +9,7 @@ import chex
 
 from gene.core.decoding import Decoder
 
-TrackerState = chex.ArrayTree
+TrackerState = dict
 
 
 class Tracker:
@@ -24,7 +24,7 @@ class Tracker:
     - mean individuals at each generation size=(n_generations, dimensionnality)
     """
 
-    def __init__(self, config: int, decoder: Decoder, top_k: int = 3) -> None:
+    def __init__(self, config: dict, decoder: Decoder, top_k: int = 3) -> None:
         self.config: dict = config
         self.individuals_dimension: int = decoder.encoding_size()
         self.top_k: int = top_k
