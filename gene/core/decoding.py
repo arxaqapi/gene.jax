@@ -55,6 +55,7 @@ class DirectDecoder(Decoder):
     using direct encoding. Where each parameter is a single gene.
     """
 
+    # def __init__(self, layer_dimensions: list[int], *args, **kwargs) -> None:
     def __init__(self, config: dict, *args, **kwargs) -> None:
         super().__init__(config, *args, **kwargs)
 
@@ -105,15 +106,7 @@ class DirectDecoder(Decoder):
 
         return nn.FrozenDict({"params": model_parameters})
 
-    # def tree_flatten(self):
-    #     return super().tree_flatten()
 
-    # @property
-    # def tree_unflatten():
-    #     return super().tree_unflatten
-
-
-# TODO - test me
 @register_pytree_node_class
 class GENEDecoder(Decoder):
     """The `GENEDecoder`, is a class that transforms a genotype into a phenotype,
@@ -155,7 +148,7 @@ class GENEDecoder(Decoder):
         # we split the genome in 2 parts
         genome_w, genome_b = jnp.split(genotype, [sum(layer_dims) * d])
 
-        model_parameters: nn.FrozenDict = {}
+        model_parameters: dict = {}
         for i, (layer_in, layer_out) in enumerate(zip(layer_dims[:-1], layer_dims[1:])):
             # Split genome into subarrays, each is the position vector of one neuron
             genome_w_positions = jnp.array(jnp.split(genome_w, sum(layer_dims)))
@@ -202,7 +195,7 @@ Decoders = {
 
 
 def get_decoder(config: dict) -> Type[Decoder]:
-    """Get the Decoder object from a given configuration
+    """Get the Decoder object from a given configuration, to be initialized
 
     Args:
         config (dict): config file of the run.

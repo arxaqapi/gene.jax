@@ -28,6 +28,18 @@ class DistanceFunction:
         pass
 
     def distance(self, v1: Array, v2: Array) -> float:
+        """Distance computation between two vectors. Need to be reimplemented.
+
+        Args:
+            v1 (Array): Position vector of neuron 1
+            v2 (Array): Position vector of neuron 2
+
+        Raises:
+            NotImplementedError: _description_
+
+        Returns:
+            float: distance value between these two neurons.
+        """
         raise NotImplementedError
 
     def measure(self, genotype_weights: Array, gene_1: int, gene_2: int) -> float:
@@ -68,21 +80,33 @@ class pL2Distance(DistanceFunction):
 
 # TODO - finish implementation, add tests
 class NNDistance(DistanceFunction):
-    def __init__(self, distance_genome: Array, config: dict) -> None:
+    def __init__(
+        self,
+        distance_genome: Array,
+        config: dict,
+        nn_layers_dims: list[int] = [6, 32, 32, 1],
+    ) -> None:
+        """Initializes a neural network parametrized distance function,
+        that takes an input vector representing two neuron positions concatenated
+        adn returns a distance measure between them.
+
+        Args:
+            distance_genome (Array): genome of the distance function to decoded into
+
+            config (dict): _description_
+            nn_layers_dims (list[int]): layer dimensions of the neural network
+        """
         super().__init__()
         self.distance_genome = distance_genome
-        self.config = config
-        # self.layer_dims = ???
+        self.nn_layers_dims = nn_layers_dims
 
-        self.model_parameters: nn.FrozenDict = decoding.DirectDecoder(config).decode(
-            distance_genome
-        )
-        self.model: nn.Module = models.LinearModel(
-            self.config["distance_network"]["layer_dimensions"][1:]
-        )
+        self.model_parameters = decoding.DirectDecoder(config).decode(distance_genome)
+        self.model: nn.Module = models.LinearModel(self.nn_layers_dims[1:])
 
     @partial(jit, static_argnums=(0))
     def distance(self, v1: Array, v2: Array) -> float:
+        """Computes the neural-network parametrized distance between
+        vectors `v1` and `v2`"""
         return self.model.apply(self.model_parameters, jnp.concatenate((v1, v2)))
 
     def save_parameters(self, path: Path) -> None:
