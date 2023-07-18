@@ -8,9 +8,9 @@ import evosax
 
 from gene.tracker import Tracker, TrackerState
 from gene.core.models import Models
-from gene.core.decoding import Decoders, Decoder
+from gene.core.decoding import Decoder, get_decoder
 from gene.core.distances import DistanceFunction
-from gene.core.evaluation import get_braxv1_env, rollout_brax_task
+from gene.core.evaluation import get_braxv1_env, rollout_brax_task, rollout_gymnax_task
 
 
 def brax_eval(genome: Array, rng: jrd.KeyArray, decoder: Decoder, config: dict, env):
@@ -75,13 +75,12 @@ def learn_brax_task(
     rng = jrd.PRNGKey(config["seed"])
     rng, rng_init = jrd.split(rng, 2)
 
-    decoder = Decoders[config["encoding"]["type"]](config, df)
+    decoder = get_decoder(config)(config, df)
 
     strategy = evosax.Strategies[config["evo"]["strategy_name"]](
         popsize=config["evo"]["population_size"],
         num_dims=decoder.encoding_size(),
     )
-
     state = strategy.initialize(rng_init)
 
     env = get_braxv1_env(config)
@@ -105,7 +104,8 @@ def learn_brax_task(
         tracker.wandb_save_genome(state.mean, wdb_run, "initial_best_indiv", now=True)
     for _generation in range(config["evo"]["n_generations"]):
         print(
-            f"[Log] - Generation n° {_generation:>6} @ {datetime.now().strftime('%Y.%m.%d_%H:%M:%S')}"
+            f"[Log] - Generation n° {_generation:>6}"
+            + f"@ {datetime.now().strftime('%Y.%m.%d_%H:%M:%S')}"
         )
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
@@ -151,3 +151,99 @@ def learn_brax_task(
             )
 
     return tracker, tracker_state
+
+
+def learn_brax_task_untracked(
+    config: dict, df: DistanceFunction, rng: jrd.KeyArray
+) -> float:
+    """Run an es training loop specifically tailored for brax tasks.
+
+    Args:
+        config (dict): config of the current run.
+        df (DistanceFunction): Distance function to use, can be parametrized.
+        wdb_run: wandb run object used to log
+
+    Returns:
+        _type_: _description_
+    """
+    rng, rng_init = jrd.split(rng, 2)
+
+    decoder = get_decoder(config)(config, df)
+
+    strategy = evosax.Strategies[config["evo"]["strategy_name"]](
+        popsize=config["evo"]["population_size"],
+        num_dims=decoder.encoding_size(),
+    )
+    state = strategy.initialize(rng_init)
+    ask = jit(strategy.ask)
+    tell = jit(strategy.tell)
+
+    # Each individual is evaluated a single time or multiple times in parallel
+    evaluation_f = (
+        brax_eval_n_times if config["evo"]["n_evaluations"] > 1 else brax_eval
+    )
+
+    env = get_braxv1_env(config)
+    partial_eval_f = partial(evaluation_f, decoder=decoder, config=config, env=env)
+    vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
+
+    for _generation in range(config["evo"]["n_generations"]):
+        # RNG key creation for downstream usage
+        rng, rng_gen, rng_eval = jrd.split(rng, 3)
+
+        # NOTE - Ask
+        x, state = ask(rng_gen, state)
+
+        # NOTE - Eval
+        true_fitness = vectorized_eval_f(x, rng_eval)
+        fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
+
+        # NOTE - Tell
+        state = tell(x, fitness, state)
+
+    return partial_eval_f(state.mean, rng_eval)
+
+
+# ============================================================
+# =====================  Gymnax  =============================
+# ============================================================
+def gymnax_eval(
+    genome: Array,
+    rng: jrd.KeyArray,
+    decoder: Decoder,
+    config: dict,
+):
+    model_parameters = decoder.decode(genome)
+    model = Models[config["net"]["architecture"]](config)
+
+    return rollout_gymnax_task(model, model_parameters, rng, config)
+
+
+def learn_gymnax_task(config: dict, df: DistanceFunction, rng: jrd.KeyArray):
+    """Be sure that the config dict is correct"""
+    rng, rng_init = jrd.split(rng, 2)
+
+    decoder = get_decoder(config)(config, df)
+
+    strategy = evosax.Strategies[config["evo"]["strategy_name"]](
+        popsize=config["evo"]["population_size"], num_dims=decoder.encoding_size()
+    )
+    state = strategy.initialize(rng_init)
+    ask = jit(strategy.ask)
+    tell = jit(strategy.tell)
+
+    partial_eval_f = partial(gymnax_eval, decoder=decoder, config=config)
+    vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
+
+    for _generation in range(config["evo"]["n_generations"]):
+        # RNG key creation for downstream usage
+        rng, rng_gen, rng_eval = jrd.split(rng, 3)
+        # NOTE - Ask
+        x, state = ask(rng_gen, state)
+        # NOTE - Evaluate
+        true_fitness = vectorized_eval_f(x, rng_eval)
+        fitness = -1.0 * true_fitness if config["task"]["maximize"] else true_fitness
+        # NOTE - Tell: overwrites current strategy state with the new updated one
+        state = tell(x, fitness, state)
+
+    return partial_eval_f(state.mean, rng_eval)
