@@ -5,11 +5,12 @@ from jax import jit, vmap, Array
 import jax.numpy as jnp
 import jax.random as jrd
 import evosax
+import flax.linen as nn
 
 from gene.tracker import Tracker, TrackerState
 from gene.core.models import Models
 from gene.core.decoding import Decoder, get_decoder
-from gene.core.distances import DistanceFunction
+from gene.core.distances import DistanceFunction, NNDistanceSimple
 from gene.core.evaluation import get_braxv1_env, rollout_brax_task, rollout_gymnax_task
 
 
@@ -154,7 +155,7 @@ def learn_brax_task(
 
 
 def learn_brax_task_untracked(
-    config: dict, df: DistanceFunction, rng: jrd.KeyArray
+    df: DistanceFunction, rng: jrd.KeyArray, config: dict
 ) -> float:
     """Run an es training loop specifically tailored for brax tasks.
 
@@ -212,17 +213,41 @@ def gymnax_eval(
     rng: jrd.KeyArray,
     decoder: Decoder,
     config: dict,
-):
+) -> float:
     model_parameters = decoder.decode(genome)
     model = Models[config["net"]["architecture"]](config)
 
     return rollout_gymnax_task(model, model_parameters, rng, config)
 
 
-def learn_gymnax_task(config: dict, df: DistanceFunction, rng: jrd.KeyArray):
-    """Be sure that the config dict is correct"""
+def learn_gymnax_task(
+    df_genotype: Array,
+    rng: jrd.KeyArray,
+    meta_decoder: Decoder,
+    df_model: nn.Module,
+    config: dict,
+) -> float:
+    """Runs a gymnax learning loop using GENE encoding with a neural network
+    based distance function.
+    The distance function has to be decoded from its `df_genotype`.
+
+    Args:
+        df_genotype (Array): The genotype of the distance function.
+        rng (jrd.KeyArray): rng key used for initialization and training.
+        meta_decoder (Decoder): Decoder used to decode the distance funcion genotypes.
+        model (nn.Module): the model used as the distance function.
+        config (dict): config file used to specify the current runs values.
+
+    Returns:
+        float: Evaluated the sample mean of the distribution
+            and returns its `Return` as fitness.
+    """
     rng, rng_init = jrd.split(rng, 2)
 
+    # NOTE - The distance function genotype needs to be decoded here
+    # because objects cannot be given as input of vectorized functions
+    df_phenotype = meta_decoder.decode(df_genotype)
+    df = NNDistanceSimple(model_parameters=df_phenotype, model=df_model)
     decoder = get_decoder(config)(config, df)
 
     strategy = evosax.Strategies[config["evo"]["strategy_name"]](

@@ -15,7 +15,7 @@ def rollout_gymnax_task(
     model_parameters: nn.FrozenDict,
     rng: jrd.KeyArray,
     config: dict,
-):
+) -> float:
     """Perform a complete rollout of the current env, declared in 'config',
     for a specific individual and returns the cumulated reward as the fitness.
     """
