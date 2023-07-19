@@ -2,8 +2,8 @@
     "seed": 0,
     "evo": {
         "strategy_name": "Sep_CMA_ES",
-        "n_generations": 1000,
-        "population_size": 64,
+        "n_generations": 20,
+        "population_size": 8,
         "n_evaluations": 1
     },
     "net": {
@@ -15,6 +15,9 @@
         "distance": "",
         "type": "direct"
     },
+    "task": {
+        "maximize": true
+    },
     "curriculum": {
         "cart": {
             "task": {
@@ -25,7 +28,7 @@
             "evo": {
                 "strategy_name": "Sep_CMA_ES",
                 "n_generations": 50,
-                "population_size": 256,
+                "population_size": 4,
                 "n_evaluations": 1
             },
             "net": {
@@ -47,7 +50,7 @@
             "evo": {
                 "strategy_name": "Sep_CMA_ES",
                 "n_generations": 100,
-                "population_size": 256,
+                "population_size": 2,
                 "n_evaluations": 1
             },
             "net": {
@@ -69,7 +72,7 @@
             "evo": {
                 "strategy_name": "Sep_CMA_ES",
                 "n_generations": 200,
-                "population_size": 256,
+                "population_size": 2,
                 "n_evaluations": 1
             },
             "net": {

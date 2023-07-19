@@ -4,8 +4,9 @@ from functools import partial
 from typing import Type
 
 import flax.linen as nn
-from jax import Array, jit, vmap
 import jax.numpy as jnp
+from jax import Array, jit, vmap
+from jax.tree_util import register_pytree_node_class
 
 from gene.core import decoding, models
 
@@ -79,6 +80,7 @@ class pL2Distance(DistanceFunction):
 
 
 # TODO - finish implementation, add tests
+@register_pytree_node_class
 class NNDistance(DistanceFunction):
     def __init__(
         self,
@@ -91,17 +93,18 @@ class NNDistance(DistanceFunction):
         adn returns a distance measure between them.
 
         Args:
-            distance_genome (Array): genome of the distance function to decoded into
-
+            distance_genome (Array): genome of the distance function to decoded
+                into the phenotype (neural net)
             config (dict): _description_
             nn_layers_dims (list[int]): layer dimensions of the neural network
         """
         super().__init__()
         self.distance_genome = distance_genome
+        self.config = config
         self.nn_layers_dims = nn_layers_dims
 
         self.model_parameters = decoding.DirectDecoder(config).decode(distance_genome)
-        self.model: nn.Module = models.LinearModel(self.nn_layers_dims[1:])
+        self.model: nn.Module = models.LinearModel(nn_layers_dims[1:])
 
     @partial(jit, static_argnums=(0))
     def distance(self, v1: Array, v2: Array) -> float:
@@ -132,6 +135,80 @@ class NNDistance(DistanceFunction):
         with path.open("rb") as f:
             self.model_parameters = pickle.load(f)
         return state
+
+    # Pytree methods
+    def tree_flatten(self):
+        children = ()  # arrays / dynamic values
+        aux_data = {
+            "distance_genome": self.distance_genome,
+            "config": self.config,
+            "nn_layers_dims": self.nn_layers_dims,
+            "model_parameters": self.model_parameters,
+            "model": self.model,
+        }  # static values
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(
+            aux_data["distance_genome"], aux_data["config"], aux_data["nn_layers_dims"]
+        )
+
+
+@register_pytree_node_class
+class NNDistanceSimple(DistanceFunction):
+    def __init__(
+        self,
+        model_parameters,
+        model,
+    ) -> None:
+        """Dead simple neural-network based distance function"""
+        super().__init__()
+        self.model_parameters = model_parameters
+        self.model: nn.Module = model
+
+    @partial(jit, static_argnums=(0))
+    def distance(self, v1: Array, v2: Array) -> float:
+        """Computes the neural-network parametrized distance between
+        vectors `v1` and `v2`"""
+        return self.model.apply(self.model_parameters, jnp.concatenate((v1, v2)))
+
+    def save_parameters(self, path: Path) -> None:
+        """Saves the `model_parameters` to `path`.
+
+        Args:
+            path (Path): The Path and name of the file where it will be saved
+        """
+        with path.open("wb") as f:
+            pickle.dump(self.model_parameters, f)
+
+    def load_parameters(self, path: Path) -> dict:
+        """Load the saved `model_parameters` from `path`
+        to the model_parameters attribute.
+
+        Args:
+            path (Path): The Path and name of the file to retrieve.
+
+        Returns:
+            dict: state dictionnary of the loaded model parameters.
+        """
+        state = {}
+        with path.open("rb") as f:
+            self.model_parameters = pickle.load(f)
+        return state
+
+    # Pytree methods
+    def tree_flatten(self):
+        children = ()  # arrays / dynamic values
+        aux_data = {
+            "model_parameters": self.model_parameters,
+            "model": self.model,
+        }  # static values
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(*aux_data)
 
 
 class CGPDistance(DistanceFunction):

@@ -1,22 +1,17 @@
 from functools import partial
 
 import evosax
+
+# import chex
 import jax.random as jrd
+
+# import jax.numpy as jnp
 from jax import jit, vmap, Array
 
-from gene.core.decoding import DirectDecoder, Decoder
-from gene.core.distances import NNDistance
+from gene.core.decoding import DirectDecoder
+from gene.core.distances import NNDistanceSimple
+from gene.core.models import LinearModel
 from gene.learning import learn_gymnax_task, learn_brax_task_untracked
-
-
-def get_nn_df(x: Array, meta_decoder: Decoder, config: dict) -> NNDistance:
-    """takes an direct-encoded neural network, decodes it
-    and makes it a distance function"""
-
-    df_phenotype = meta_decoder.decode(x)
-    return NNDistance(
-        df_phenotype, config, nn_layers_dims=config["net"]["layer_dimensions"]
-    )
 
 
 def meta_learn_nn(config: dict):
@@ -45,36 +40,40 @@ def meta_learn_nn(config: dict):
     ask = jit(meta_strategy.ask)
     tell = jit(meta_strategy.tell)
 
-    vec_get_nn_df = vmap(partial(get_nn_df, meta_decoder=meta_decoder, config=config))
-    vec_learn_cartpole = vmap(
-        partial(learn_gymnax_task, config=config["curriculum"]["cart"]), in_axes=(0, None)
-    )
-    vec_learn_hc_100 = vmap(
-        partial(learn_brax_task_untracked, config=config["curriculum"]["hc_100"]),
-        in_axes=(0, None),
-    )
-    vec_learn_hc_1000 = vmap(
-        partial(learn_brax_task_untracked, config=config["curriculum"]["hc_1000"]),
-        in_axes=(0, None),
+    # Neural network distance network
+    nn_dst_model = LinearModel(config["net"]["layer_dimensions"][1:])
+
+    vec_learn_cartpole = jit(
+        vmap(
+            partial(
+                learn_gymnax_task,
+                meta_decoder=meta_decoder,
+                df_model=nn_dst_model,
+                config=config["curriculum"]["cart"],
+            ),
+            in_axes=(0, None),
+        )
     )
 
     for meta_generation in range(config["evo"]["n_generations"]):
+        print(f"[Meta gen n°{meta_generation:>5}]")
+
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # NOTE - Ask
         x, meta_state = ask(rng_gen, meta_state)
 
         # NOTE - Evaluation curriculum
         # NOTE - 1. DF genome to DF using decoder and NNDF, array of df
-        dfs: Array = vec_get_nn_df(x)
-
+        # Cannot create an array of DF and pass it down to vectorized functions because
+        # an array cannot contain objects (only floats and bools)
         # NOTE - 2. Complete training and evaluation on a curriculum of tasks
-        f_cp = vec_learn_cartpole(dfs, rng_eval)
-        f_hc_100 = vec_learn_hc_100(dfs, rng_eval) if f_cp > 400 else 0
-        f_hc_1000 = vec_learn_hc_1000(dfs, rng_eval) if f_hc_100 > 200 else 0
-
+        # All distance functions (x) are evaluated by running a complete policy learning loop
+        # using GENE with a nn distance function, the sample mean is then evaluated
+        f_cp = vec_learn_cartpole(x, rng_eval)
         # NOTE - 3. aggregate fitnesses and weight them
-        true_fitness = f_cp + 10 * f_hc_100 + 10e1 * f_hc_1000  # + 10e2 * f_w2d_1000
+        true_fitness = f_cp  # + 10 * f_hc_100 + 10e1 * f_hc_1000 + 10e2 * f_w2d_1000
         fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
+        print(f"{true_fitness=}")
 
         # NOTE - Tell
         meta_state = tell(x, fitness, meta_state)
