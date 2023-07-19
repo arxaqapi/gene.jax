@@ -54,7 +54,7 @@
                 "n_evaluations": 1
             },
             "net": {
-                "layer_dimensions": [17, 128, 128, 6],
+                "layer_dimensions": [18, 16, 16, 6],
                 "architecture": "tanh_linear"
             },
             "encoding": {
@@ -76,7 +76,7 @@
                 "n_evaluations": 1
             },
             "net": {
-                "layer_dimensions": [17, 128, 128, 6],
+                "layer_dimensions": [18, 16, 16, 6],
                 "architecture": "tanh_linear"
             },
             "encoding": {

@@ -14,4 +14,3 @@ Run all benchmarks for the paper
     1. NN based meta-evol
     2. CGP based meta-evol
 """
-
