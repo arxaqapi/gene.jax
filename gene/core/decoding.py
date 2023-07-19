@@ -169,8 +169,8 @@ class GENEDecoder(Decoder):
             )
 
             model_parameters[f"Dense_{i}"] = {
-                "kernel": weight_matrix,
-                "bias": biases,
+                "kernel": jnp.squeeze(weight_matrix),
+                "bias": jnp.squeeze(biases),
             }
         return nn.FrozenDict({"params": model_parameters})
 
