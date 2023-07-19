@@ -155,7 +155,11 @@ def learn_brax_task(
 
 
 def learn_brax_task_untracked(
-    df: DistanceFunction, rng: jrd.KeyArray, config: dict
+    df_genotype: Array,
+    rng: jrd.KeyArray,
+    meta_decoder: Decoder,
+    df_model: nn.Module,
+    config: dict,
 ) -> float:
     """Run an es training loop specifically tailored for brax tasks.
 
@@ -169,6 +173,10 @@ def learn_brax_task_untracked(
     """
     rng, rng_init = jrd.split(rng, 2)
 
+    # NOTE - The distance function genotype needs to be decoded here
+    # because objects cannot be given as input of vectorized functions
+    df_phenotype = meta_decoder.decode(df_genotype)
+    df = NNDistanceSimple(model_parameters=df_phenotype, model=df_model)
     decoder = get_decoder(config)(config, df)
 
     strategy = evosax.Strategies[config["evo"]["strategy_name"]](
