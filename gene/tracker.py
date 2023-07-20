@@ -194,3 +194,191 @@ def batch_wandb_log(
     }
 
     wdb_run.log(log_dict)
+
+
+class MetaTracker:
+    """Keeps track of:
+    - all dfs encountered during training & last sample mean
+    - stats:
+        - cp max fitness
+        - cp mean/var fitness
+        - hc 100 & 1000 max fitness
+        - hc 100 & 1000 mean/var fitness
+        - normalized fitness /
+    """
+
+    def __init__(self, config: dict, decoder: Decoder, top_k: int = 3) -> None:
+        self.config: dict = config
+        self.individuals_dimension: int = decoder.encoding_size()
+        self.top_k: int = top_k
+
+    @partial(jit, static_argnums=(0,))
+    def init(self) -> TrackerState:
+        return {
+            "training": {
+                "total_emp_mean_fitness": jnp.zeros(
+                    (self.config["evo"]["n_generations"])
+                ),
+                "cart": {
+                    # max fitness obtained at each generation
+                    "max_fitness": jnp.zeros((self.config["evo"]["n_generations"])),
+                    "emp_mean_fitnesses": jnp.zeros(
+                        (self.config["evo"]["n_generations"])
+                    ),
+                },
+                "hc_100": {
+                    "max_fitness": jnp.zeros((self.config["evo"]["n_generations"])),
+                    "emp_mean_fitnesses": jnp.zeros(
+                        (self.config["evo"]["n_generations"])
+                    ),
+                },
+                "hc_1000": {
+                    "max_fitness": jnp.zeros((self.config["evo"]["n_generations"])),
+                    "emp_mean_fitnesses": jnp.zeros(
+                        (self.config["evo"]["n_generations"])
+                    ),
+                },
+            },
+            "backup": {
+                "max_df": jnp.zeros(
+                    (
+                        self.config["evo"]["n_generations"],
+                        self.individuals_dimension,
+                    )
+                ),
+                "mean_df": jnp.zeros(
+                    (
+                        self.config["evo"]["n_generations"],
+                        self.individuals_dimension,
+                    )
+                ),
+            },
+            "gen": 0,
+        }
+
+    def update(
+        self,
+        tracker_state: TrackerState,
+        fitness_value: dict,
+        max_df: Array,
+        mean_df: Array,
+        gen: int = 0,
+    ) -> TrackerState:
+        # NOTE - Fitness values
+        # overall
+        tracker_state["training"]["total_emp_mean_fitness"] = (
+            tracker_state["training"]["total_emp_mean_fitness"]
+            .at[gen]
+            .set(fitness_value["total_emp_mean_fitness"])
+        )
+        # cartpole
+        tracker_state["training"]["cart"]["max_fitness"] = (
+            tracker_state["training"]["cart"]["max_fitness"]
+            .at[gen]
+            .set(fitness_value["cart"]["max_fitness"])
+        )
+        tracker_state["training"]["cart"]["emp_mean_fitnesses"] = (
+            tracker_state["training"]["cart"]["emp_mean_fitnesses"]
+            .at[gen]
+            .set(fitness_value["cart"]["emp_mean_fitnesses"])
+        )
+        # hc_100
+        tracker_state["training"]["hc_100"]["max_fitness"] = (
+            tracker_state["training"]["hc_100"]["max_fitness"]
+            .at[gen]
+            .set(fitness_value["hc_100"]["max_fitness"])
+        )
+        tracker_state["training"]["hc_100"]["emp_mean_fitnesses"] = (
+            tracker_state["training"]["hc_100"]["emp_mean_fitnesses"]
+            .at[gen]
+            .set(fitness_value["hc_100"]["emp_mean_fitnesses"])
+        )
+        # hc_1000
+        tracker_state["training"]["hc_1000"]["max_fitness"] = (
+            tracker_state["training"]["hc_1000"]["max_fitness"]
+            .at[gen]
+            .set(fitness_value["hc_1000"]["max_fitness"])
+        )
+        tracker_state["training"]["hc_1000"]["emp_mean_fitnesses"] = (
+            tracker_state["training"]["hc_1000"]["emp_mean_fitnesses"]
+            .at[gen]
+            .set(fitness_value["hc_1000"]["emp_mean_fitnesses"])
+        )
+        # NOTE - Backup
+        tracker_state["backup"]["max_df"] = (
+            tracker_state["backup"]["max_df"].at[gen].set(max_df)
+        )
+        tracker_state["backup"]["mean_df"] = (
+            tracker_state["backup"]["mean_df"].at[gen].set(mean_df)
+        )
+
+        tracker_state["gen"] += 1
+
+        return tracker_state
+
+    def wandb_log(self, tracker_state: TrackerState, wdb_run) -> None:
+        # gen - 1 because this is run after tracker.update(...)
+        gen = tracker_state["gen"] - 1
+
+        wdb_run.log(
+            {
+                "training": {
+                    "total_emp_mean_fitness": tracker_state["training"][
+                        "total_emp_mean_fitness"
+                    ][gen],
+                    "cart": {
+                        # max fitness obtained at each generation
+                        "max_fitness": tracker_state["training"]["cart"]["max_fitness"][
+                            gen
+                        ],
+                        "emp_mean_fitnesses": tracker_state["training"]["cart"][
+                            "emp_mean_fitnesses"
+                        ][gen],
+                    },
+                    "hc_100": {
+                        "max_fitness": tracker_state["training"]["hc_100"][
+                            "max_fitness"
+                        ][gen],
+                        "emp_mean_fitnesses": tracker_state["training"]["hc_100"][
+                            "emp_mean_fitnesses"
+                        ][gen],
+                    },
+                    "hc_1000": {
+                        "max_fitness": tracker_state["training"]["hc_1000"][
+                            "max_fitness"
+                        ][gen],
+                        "emp_mean_fitnesses": tracker_state["training"]["hc_1000"][
+                            "emp_mean_fitnesses"
+                        ][gen],
+                    },
+                }
+            }
+        )
+        # tree_util.map(lambda e: e[gen], tracker_state["training"])
+
+    def wandb_save_genome(
+        self,
+        genome: chex.Array,
+        wdb_run,
+        file_name: str = "mean_indiv",
+        now: bool = False,
+    ) -> None:
+        """Saves the current genome to the current wandb run folder
+        and uploads the file based on the chosen policy `now`.
+
+        Args:
+            genome (chex.Array): Genome to save as a pickled binary file.
+            wdb_run (_type_): Current Wandb Run object.
+            now (bool, optional):
+                if now is false, the upload will be delayed until the end of the run.
+                Defaults to False.
+        """
+        save_path = Path(wdb_run.dir) / "df_genomes" / file_name
+        save_path = save_path.with_suffix(".npy")
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(save_path, "wb") as f:
+            jnp.save(f, genome)
+
+        if now:
+            wdb_run.save(str(save_path), base_path=f"{wdb_run.dir}/", policy="now")

@@ -8,9 +8,10 @@ from jax import jit, vmap
 from gene.core.decoding import DirectDecoder
 from gene.core.models import LinearModel
 from gene.learning import learn_gymnax_task, learn_brax_task_untracked
+from gene.tracker import MetaTracker
 
 
-def meta_learn_nn(config: dict):
+def meta_learn_nn(config: dict, wandb_run):
     """Meta evolution of a neural network parametrized distance function
 
     - Direct encoding for meta-genotypes
@@ -73,6 +74,9 @@ def meta_learn_nn(config: dict):
         )
     )
 
+    tracker = MetaTracker(config, meta_decoder)
+    tracker_state = tracker.init()
+
     for meta_generation in range(config["evo"]["n_generations"]):
         print(f"[Meta gen n°{meta_generation:>5}]")
 
@@ -104,16 +108,47 @@ def meta_learn_nn(config: dict):
         )
         max_f_hc_1000 = jnp.max(f_hc_1000)
         # NOTE - 3. aggregate fitnesses and weight them
-        f_cp = f_cp / (max_f_cp if max_f_cp != 0 else 1.0)
-        f_hc_100 = f_hc_100 / (max_f_hc_100 if max_f_hc_100 != 0 else 1.0)
-        f_hc_1000 = f_hc_1000 / (max_f_hc_1000 if max_f_hc_1000 != 0 else 1.0)
+        norm_f_cp = f_cp / (max_f_cp if max_f_cp != 0 else 1.0)
+        norm_f_hc_100 = f_hc_100 / (max_f_hc_100 if max_f_hc_100 != 0 else 1.0)
+        norm_f_hc_1000 = f_hc_1000 / (max_f_hc_1000 if max_f_hc_1000 != 0 else 1.0)
 
-        true_fitness = f_cp + 10 * f_hc_100 + 10e1 * f_hc_1000
+        true_fitness = norm_f_cp + 10 * norm_f_hc_100 + 10e1 * norm_f_hc_1000
         fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
         print(f"{true_fitness=}")
 
         # NOTE - Tell
         meta_state = tell(x, fitness, meta_state)
+
+        # NOTE - Tracker
+        tracker_state = tracker.update(
+            tracker_state=tracker_state,
+            fitness_value={
+                "total_emp_mean_fitness": jnp.mean(true_fitness),
+                "cart": {
+                    "max_fitness": max_f_cp,
+                    "emp_mean_fitnesses": jnp.mean(f_cp),
+                },
+                "hc_100": {
+                    "max_fitness": max_f_hc_100,
+                    "emp_mean_fitnesses": jnp.mean(max_f_hc_100),
+                },
+                "hc_1000": {
+                    "max_fitness": max_f_hc_1000,
+                    "emp_mean_fitnesses": jnp.mean(max_f_hc_1000),
+                },
+            },
+            max_df=x[jnp.argmax(true_fitness)],
+            mean_df=meta_state.mean,
+            gen=meta_generation,
+        )
+        if wandb_run is not None:
+            tracker.wandb_log(tracker_state, wandb_run)
+            tracker.wandb_save_genome(
+                meta_state.mean,
+                wandb_run,
+                file_name=f"g{str(meta_generation).zfill(3)}_mean_df_indiv",
+                now=True,
+            )
 
     return meta_state.mean
 
