@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax import jit, vmap
 
 from gene.core.decoding import DirectDecoder
-from gene.core.models import LinearModel
+from gene.core.models import ReluLinearModel
 from gene.learning import learn_gymnax_task, learn_brax_task_untracked
 from gene.tracker import MetaTracker
 
@@ -38,7 +38,7 @@ def meta_learn_nn(config: dict, wandb_run):
     tell = jit(meta_strategy.tell)
 
     # Neural network distance network
-    nn_dst_model = LinearModel(config["net"]["layer_dimensions"][1:])
+    nn_dst_model = ReluLinearModel(config["net"]["layer_dimensions"][1:])
 
     vec_learn_cartpole = jit(
         vmap(
@@ -108,13 +108,15 @@ def meta_learn_nn(config: dict, wandb_run):
         )
         max_f_hc_1000 = jnp.max(f_hc_1000)
         # NOTE - 3. aggregate fitnesses and weight them
-        norm_f_cp = f_cp / (max_f_cp if max_f_cp != 0 else 1.0)
-        norm_f_hc_100 = f_hc_100 / (max_f_hc_100 if max_f_hc_100 != 0 else 1.0)
-        norm_f_hc_1000 = f_hc_1000 / (max_f_hc_1000 if max_f_hc_1000 != 0 else 1.0)
+        _norm_f_cp = f_cp / (max_f_cp if max_f_cp != 0 else 1.0)
+        _norm_f_hc_100 = f_hc_100 / (max_f_hc_100 if max_f_hc_100 != 0 else 1.0)
+        _norm_f_hc_1000 = f_hc_1000 / (max_f_hc_1000 if max_f_hc_1000 != 0 else 1.0)
 
-        true_fitness = norm_f_cp + 10 * norm_f_hc_100 + 10e1 * norm_f_hc_1000
+        # Fitness used to inform the strategy update (tell)
+        true_fitness = f_cp + f_hc_100 + f_hc_1000
+        # true_fitness = _norm_f_cp + _norm_f_hc_100 + _norm_f_hc_1000
+        # true_fitness = _norm_f_cp + 10 * _norm_f_hc_100 + 10e1 * _norm_f_hc_1000
         fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
-        print(f"{true_fitness=}")
 
         # NOTE - Tell
         meta_state = tell(x, fitness, meta_state)
@@ -124,17 +126,18 @@ def meta_learn_nn(config: dict, wandb_run):
             tracker_state=tracker_state,
             fitness_value={
                 "total_emp_mean_fitness": jnp.mean(true_fitness),
+                "total_max_fitness": jnp.max(true_fitness),
                 "cart": {
                     "max_fitness": max_f_cp,
                     "emp_mean_fitnesses": jnp.mean(f_cp),
                 },
                 "hc_100": {
                     "max_fitness": max_f_hc_100,
-                    "emp_mean_fitnesses": jnp.mean(max_f_hc_100),
+                    "emp_mean_fitnesses": jnp.mean(f_hc_100),
                 },
                 "hc_1000": {
                     "max_fitness": max_f_hc_1000,
-                    "emp_mean_fitnesses": jnp.mean(max_f_hc_1000),
+                    "emp_mean_fitnesses": jnp.mean(f_hc_1000),
                 },
             },
             max_df=x[jnp.argmax(true_fitness)],

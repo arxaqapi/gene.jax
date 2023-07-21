@@ -27,7 +27,7 @@ class TestModelInit(unittest.TestCase):
         # dummy data
         self.x_dummy = jrd.normal(rng_data, (self.BATCH_SIZE, 784))
 
-    def test_compatibility_LinearModel(self):
+    def test_compatibility_ReluLinearModelConf(self):
         # model & model_param init & forward pass
         model_c = ReluLinearModelConf(self.config)
         model_c_parameters = model_c.init(self.rng_init, self.x_dummy)
@@ -55,7 +55,7 @@ class TestModelInit(unittest.TestCase):
         # Check output is the same
         self.assertIsNone(chex.assert_trees_all_close(out_c, out))
 
-    def test_compatibility_BoundedLinearModel(self):
+    def test_compatibility_ReluTanhLinearModelConf(self):
         # model & model_param init & forward pass
         model_c = ReluTanhLinearModelConf(self.config)
         model_c_parameters = model_c.init(self.rng_init, self.x_dummy)
