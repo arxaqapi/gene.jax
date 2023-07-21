@@ -20,12 +20,15 @@ Naming:
     2. CGP based meta-evol
 """
 from gene.experiment import Experiment
+from gene.utils import fail_if_not_device, validate_json
 
 CONTINUOUS_CONTROL = "Continuous Control benchmarks"
 META_DF = "Meta df benchmarks"
 
 
 if __name__ == "__main__":
+    fail_if_not_device()
+
     seeds = list(range(5))
     brax_envs = {
         "humanoid": {
@@ -70,6 +73,7 @@ if __name__ == "__main__":
             "strategy_name": "Sep_CMA_ES",
             "n_generations": 500,
             "population_size": 256,
+            "n_evaluations": 1,
         },
         "net": {"layer_dimensions": []},
         "encoding": {"d": 3, "distance": "pL2", "type": "gene"},
@@ -101,6 +105,7 @@ if __name__ == "__main__":
                         )
                         # =============================================================
                         # NOTE - Start experiment
+                        validate_json(config)
 
                         exp = Experiment(config, project_name=CONTINUOUS_CONTROL)
                         # do not save intermediate individuals, only start and end
