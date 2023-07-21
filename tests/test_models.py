@@ -6,10 +6,10 @@ from jax import tree_util
 import chex
 
 from gene.core.models import (
-    LinearModelConf,
-    LinearModel,
-    BoundedLinearModel,
-    BoundedLinearModelConf,
+    ReluLinearModelConf,
+    ReluLinearModel,
+    ReluTanhLinearModelConf,
+    ReluTanhLinearModel,
     TanhLinearModel,
     TanhLinearModelConf,
     get_model,
@@ -29,12 +29,12 @@ class TestModelInit(unittest.TestCase):
 
     def test_compatibility_LinearModel(self):
         # model & model_param init & forward pass
-        model_c = LinearModelConf(self.config)
+        model_c = ReluLinearModelConf(self.config)
         model_c_parameters = model_c.init(self.rng_init, self.x_dummy)
         out_c = model_c.apply(model_c_parameters, self.x_dummy)
 
         # normal linear model
-        model = LinearModel(self.config["net"]["layer_dimensions"][1:])
+        model = ReluLinearModel(self.config["net"]["layer_dimensions"][1:])
         model_parameters = model.init(self.rng_init, self.x_dummy)
         out = model_c.apply(model_c_parameters, self.x_dummy)
 
@@ -57,12 +57,12 @@ class TestModelInit(unittest.TestCase):
 
     def test_compatibility_BoundedLinearModel(self):
         # model & model_param init & forward pass
-        model_c = BoundedLinearModelConf(self.config)
+        model_c = ReluTanhLinearModelConf(self.config)
         model_c_parameters = model_c.init(self.rng_init, self.x_dummy)
         out_c = model_c.apply(model_c_parameters, self.x_dummy)
 
         # normal linear model
-        model = BoundedLinearModel(self.config["net"]["layer_dimensions"][1:])
+        model = ReluTanhLinearModel(self.config["net"]["layer_dimensions"][1:])
         model_parameters = model.init(self.rng_init, self.x_dummy)
         out = model_c.apply(model_c_parameters, self.x_dummy)
 
@@ -113,15 +113,15 @@ class TestModelUtils(unittest.TestCase):
         self.config = {"net": {}}
 
     def test_get_model_base(self):
-        self.assertTrue(type(get_model(self.config)) is BoundedLinearModelConf)
+        self.assertTrue(type(get_model(self.config)) is ReluTanhLinearModelConf)
 
     def test_get_model_parametrized(self):
         # tests that get_model works as expected
         self.config["net"]["architecture"] = "relu_linear"
-        self.assertTrue(type(get_model(self.config)) is LinearModelConf)
+        self.assertTrue(type(get_model(self.config)) is ReluLinearModelConf)
 
         self.config["net"]["architecture"] = "relu_tanh_linear"
-        self.assertTrue(type(get_model(self.config)) is BoundedLinearModelConf)
+        self.assertTrue(type(get_model(self.config)) is ReluTanhLinearModelConf)
 
-        self.config["net"]["architecture"] = "tanh_linear" "tanh_linear"
+        self.config["net"]["architecture"] = "tanh_linear"
         self.assertTrue(type(get_model(self.config)) is TanhLinearModelConf)

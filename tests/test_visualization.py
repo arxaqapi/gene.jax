@@ -4,8 +4,7 @@ import os
 import jax.numpy as jnp
 
 from gene.visualize.visualize_brax import visualize_brax, render_brax
-from gene.core.models import BoundedLinearModelConf
-from gene.core.distances import Distance_functions
+from gene.core.models import ReluTanhLinearModelConf
 from gene.core.decoding import GENEDecoder
 
 
@@ -16,7 +15,7 @@ class TestVizBrax(unittest.TestCase):
             "net": {"layer_dimensions": [18, 128, 128, 6]},
             "task": {"environnment": "halfcheetah", "episode_length": 100},
         }
-        self.model = BoundedLinearModelConf(self.config)
+        self.model = ReluTanhLinearModelConf(self.config)
         self.df = Distance_functions[self.config["encoding"]["distance"]]()
         self.genome = jnp.zeros((GENEDecoder(self.config, self.df).encoding_size(),))
 
