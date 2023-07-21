@@ -3,7 +3,7 @@ from typing import Sequence
 import flax.linen as nn
 
 
-class LinearModel(nn.Module):
+class ReluLinearModel(nn.Module):
     features: Sequence[int]
 
     @nn.compact
@@ -15,7 +15,7 @@ class LinearModel(nn.Module):
         return x
 
 
-class LinearModelConf(nn.Module):
+class ReluLinearModelConf(nn.Module):
     config: dict
 
     def setup(self):
@@ -33,7 +33,7 @@ class LinearModelConf(nn.Module):
         return x
 
 
-class BoundedLinearModel(nn.Module):
+class ReluTanhLinearModel(nn.Module):
     features: Sequence[int]
 
     @nn.compact
@@ -46,7 +46,7 @@ class BoundedLinearModel(nn.Module):
         return x
 
 
-class BoundedLinearModelConf(nn.Module):
+class ReluTanhLinearModelConf(nn.Module):
     config: dict
 
     def setup(self):
@@ -96,8 +96,8 @@ class TanhLinearModelConf(nn.Module):
 
 
 Models = {
-    "linear": LinearModelConf,
-    "bounded_linear": BoundedLinearModelConf,
+    "relu_linear": ReluLinearModelConf,
+    "relu_tanh_linear": ReluTanhLinearModelConf,
     "tanh_linear": TanhLinearModelConf,
 }
 
@@ -112,4 +112,4 @@ def get_model(config: dict) -> nn.Module:
         nn.Module: Neural network architecture used for evaluation.
     """
     arch = config["net"].get("architecture")
-    return Models[arch if arch is not None else "bounded_linear"](config)
+    return Models[arch if arch is not None else "relu_tanh_linear"](config)
