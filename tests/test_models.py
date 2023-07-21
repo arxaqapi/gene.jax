@@ -117,11 +117,11 @@ class TestModelUtils(unittest.TestCase):
 
     def test_get_model_parametrized(self):
         # tests that get_model works as expected
-        self.config["net"]["architecture"] = "linear"
+        self.config["net"]["architecture"] = "relu_linear"
         self.assertTrue(type(get_model(self.config)) is LinearModelConf)
 
-        self.config["net"]["architecture"] = "bounded_linear"
+        self.config["net"]["architecture"] = "relu_tanh_linear"
         self.assertTrue(type(get_model(self.config)) is BoundedLinearModelConf)
 
-        self.config["net"]["architecture"] = "tanh_linear"
+        self.config["net"]["architecture"] = "tanh_linear" "tanh_linear"
         self.assertTrue(type(get_model(self.config)) is TanhLinearModelConf)
