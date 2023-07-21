@@ -69,7 +69,7 @@ class Tracker:
             "gen": 0,
         }
 
-    @partial(jit, static_argnums=(0, 5, 6))
+    @partial(jit, static_argnums=(0, 5, 7))
     def update(
         self,
         tracker_state: TrackerState,
