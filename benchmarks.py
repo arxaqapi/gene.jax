@@ -83,7 +83,7 @@ if __name__ == "__main__":
     }
 
     print(f"[Log - CCBench] - Running {n_total_experiments} experiments")
-    start_time = datetime.now().strftime('%Y.%m.%d_%H:%M')
+    start_time = datetime.now().strftime("%Y.%m.%d_%H:%M")
     i = 0
     for seed in seeds:
         config["seed"] = seed
