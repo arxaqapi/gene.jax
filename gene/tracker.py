@@ -29,8 +29,8 @@ class Tracker:
         self.individuals_dimension: int = decoder.encoding_size()
         self.top_k: int = top_k
 
-    @partial(jit, static_argnums=(0,))
-    def init(self) -> TrackerState:
+    @partial(jit, static_argnums=(0, 1))
+    def init(self, skip_mean_backup: bool = False) -> TrackerState:
         """Initializes the state of the tracker
 
         Returns:
@@ -50,12 +50,16 @@ class Tracker:
             },
             "backup": {
                 # All the mean individuals, (n_gen, indiv_size)
-                "sample_mean_ind": jnp.zeros(
+                "sample_mean_ind": None
+                if skip_mean_backup
+                else jnp.zeros(
                     (
                         self.config["evo"]["n_generations"],
                         self.individuals_dimension,
                     )
                 ),
+                "initial_mean_indiv": jnp.zeros((self.individuals_dimension,)),
+                "final_mean_indiv": jnp.zeros((self.individuals_dimension,)),
                 # genomes of the top k individulas,
                 # in descending order according to their fitness
                 "top_k_individuals": jnp.zeros(
@@ -65,7 +69,7 @@ class Tracker:
             "gen": 0,
         }
 
-    @partial(jit, static_argnums=(0, 5))
+    @partial(jit, static_argnums=(0, 5, 6))
     def update(
         self,
         tracker_state: TrackerState,
@@ -74,6 +78,7 @@ class Tracker:
         sample_mean: chex.Array,
         eval_f: Callable[[chex.Array, jrd.KeyArray], float],
         rng_eval: jrd.KeyArray,
+        skip_mean_backup: bool = False,
     ) -> TrackerState:
         """Update the tracker object with the metrics of the current generation"""
         i = tracker_state["gen"]
@@ -108,9 +113,10 @@ class Tracker:
         # NOTE: Update backup individuals
         tracker_state["backup"]["top_k_individuals"] = top_k_indiv
 
-        tracker_state["backup"]["sample_mean_ind"] = (
-            tracker_state["backup"]["sample_mean_ind"].at[i].set(sample_mean)
-        )
+        if not skip_mean_backup:
+            tracker_state["backup"]["sample_mean_ind"] = (
+                tracker_state["backup"]["sample_mean_ind"].at[i].set(sample_mean)
+            )
         # NOTE - Update center of population fitness
         mean_fitness = eval_f(sample_mean, rng_eval)
         tracker_state["eval"]["mean_fit"] = (
@@ -166,12 +172,23 @@ class Tracker:
         if now:
             wdb_run.save(str(save_path), base_path=f"{wdb_run.dir}/", policy="now")
 
+    # specific setters
+    def set_initial_mean(
+        self, tracker_state: TrackerState, indiv: Array
+    ) -> TrackerState:
+        tracker_state["backup"]["initial_mean_indiv"] = indiv
+        return tracker_state
+
+    def set_final_mean(self, tracker_state: TrackerState, indiv: Array) -> TrackerState:
+        tracker_state["backup"]["final_mean_indiv"] = indiv
+        return tracker_state
+
     # specific getters
     def get_initial_center_individual(self, tracker_state: TrackerState) -> Array:
-        return tracker_state["backup"]["sample_mean_ind"][0]
+        return tracker_state["backup"]["initial_mean_indiv"]
 
     def get_final_center_individual(self, tracker_state: TrackerState) -> Array:
-        return tracker_state["backup"]["sample_mean_ind"][-1]
+        return tracker_state["backup"]["final_mean_indiv"]
 
     def get_top_k_genomes(self, tracker_state) -> Array:
         return tracker_state["backup"]["top_k_individuals"]
@@ -219,6 +236,7 @@ class MetaTracker:
                 "total_emp_mean_fitness": jnp.zeros(
                     (self.config["evo"]["n_generations"])
                 ),
+                "total_max_fitness": jnp.zeros((self.config["evo"]["n_generations"])),
                 "cart": {
                     # max fitness obtained at each generation
                     "max_fitness": jnp.zeros((self.config["evo"]["n_generations"])),
@@ -271,6 +289,16 @@ class MetaTracker:
             .at[gen]
             .set(fitness_value["total_emp_mean_fitness"])
         )
+        # update max fitness if better than previous
+        if (
+            tracker_state["training"]["total_max_fitness"][gen - 1]
+            < fitness_value["total_max_fitness"]
+        ):
+            tracker_state["training"]["total_max_fitness"] = (
+                tracker_state["training"]["total_max_fitness"]
+                .at[gen]
+                .set(fitness_value["total_max_fitness"])
+            )
         # cartpole
         tracker_state["training"]["cart"]["max_fitness"] = (
             tracker_state["training"]["cart"]["max_fitness"]
@@ -326,6 +354,10 @@ class MetaTracker:
                     "total_emp_mean_fitness": tracker_state["training"][
                         "total_emp_mean_fitness"
                     ][gen],
+                    # TODO
+                    "total_max_fitness": tracker_state["training"]["total_max_fitness"][
+                        gen
+                    ],
                     "cart": {
                         # max fitness obtained at each generation
                         "max_fitness": tracker_state["training"]["cart"]["max_fitness"][

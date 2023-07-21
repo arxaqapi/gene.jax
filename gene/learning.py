@@ -61,7 +61,7 @@ def brax_eval_n_times(
 
 
 def learn_brax_task(
-    config: dict, df: DistanceFunction, wdb_run
+    config: dict, df: DistanceFunction, wdb_run, save_step: int = 2000
 ) -> tuple[Tracker, TrackerState]:
     """Run an es training loop specifically tailored for brax tasks.
 
@@ -98,11 +98,15 @@ def learn_brax_task(
     tell = jit(strategy.tell)
 
     tracker = Tracker(config, decoder)
-    tracker_state = tracker.init()
+    # if save_step > config["evo"]["n_generations"] then skip savng mean indiv
+    tracker_state = tracker.init(
+        skip_mean_backup=save_step >= config["evo"]["n_generations"]
+    )
 
     # NOTE - save first individual
     if wdb_run is not None:
-        tracker.wandb_save_genome(state.mean, wdb_run, "initial_best_indiv", now=True)
+        tracker.wandb_save_genome(state.mean, wdb_run, "initial_mean_indiv", now=True)
+        tracker_state = tracker.set_initial_mean(tracker_state, state.mean)
     for _generation in range(config["evo"]["n_generations"]):
         print(
             f"[Log] - Generation n° {_generation:>6}"
@@ -129,19 +133,23 @@ def learn_brax_task(
             sample_mean=state.mean,
             eval_f=partial_eval_f,
             rng_eval=rng_eval,
+            skip_mean_backup=save_step >= config["evo"]["n_generations"],
         )
         if wdb_run is not None:
             tracker.wandb_log(tracker_state, wdb_run)
-            # Saves only every 100 generation
-            if (_generation + 1) % 100 == 0:
+            # Saves only every 'save_step' generation
+            if (_generation + 1) % save_step == 0:
                 tracker.wandb_save_genome(
                     genome=state.mean,
                     wdb_run=wdb_run,
                     file_name=f"g{str(_generation).zfill(3)}_mean_indiv",
                     now=True,
                 )
-    # NOTE - Save best individuals at end of run
+    # NOTE - Save mean and best individuals at end of run
     if wdb_run is not None:
+        # Mean
+        tracker.wandb_save_genome(state.mean, wdb_run, "final_mean_indiv", now=True)
+        tracker_state = tracker.set_final_mean(tracker_state, state.mean)
         # Overall best individuals
         for i, top_k_indiv in enumerate(tracker_state["backup"]["top_k_individuals"]):
             tracker.wandb_save_genome(
@@ -210,6 +218,7 @@ def learn_brax_task_untracked(
         # NOTE - Tell
         state = tell(x, fitness, state)
 
+    # TODO - return best fitness
     return partial_eval_f(state.mean, rng_eval)
 
 

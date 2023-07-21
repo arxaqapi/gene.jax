@@ -17,22 +17,21 @@ class Experiment:
     the corresponding FLA, and the visualization of the result.
     """
 
-    def __init__(self, config: dict, project_name) -> None:
+    def __init__(self, config: dict, project_name, tags: list[str] = []) -> None:
         self.config = config
         self.project_name = project_name
+        self.tags = tags
 
-    def run(self, seed: int):
+    def run(self, seed: int, save_step: int = 2000):
         self.config["seed"] = seed
 
         wdb_run = wandb.init(
-            project=self.project_name, config=self.config, tags=["single"]
+            project=self.project_name, config=self.config, tags=self.tags
         )
 
         df = get_df(self.config)()
         tracker, tracker_state = learn_brax_task(
-            self.config,
-            df=df,
-            wdb_run=wdb_run,
+            self.config, df=df, wdb_run=wdb_run, save_step=save_step
         )
 
         mean_fitness = tracker_state["eval"]["mean_fit"]
