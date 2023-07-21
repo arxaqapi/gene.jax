@@ -83,6 +83,7 @@ if __name__ == "__main__":
     }
 
     print(f"[Log - CCBench] - Running {n_total_experiments} experiments")
+    start_time = datetime.now().strftime('%Y.%m.%d_%H:%M')
     i = 0
     for seed in seeds:
         config["seed"] = seed
@@ -111,7 +112,7 @@ if __name__ == "__main__":
                         exp = Experiment(
                             config,
                             project_name=CONTINUOUS_CONTROL,
-                            tags=[f"{datetime.now().strftime('%Y.%m.%d_%H:%M')}"],
+                            tags=[f"{start_time}"],
                         )
                         # do not save intermediate individuals, only start and end
                         exp.run(
