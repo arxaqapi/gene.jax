@@ -19,6 +19,7 @@ Naming:
     1. NN based meta-evol
     2. CGP based meta-evol
 """
+from datetime import datetime
 from gene.experiment import Experiment
 from gene.utils import fail_if_not_device, validate_json
 
@@ -107,9 +108,17 @@ if __name__ == "__main__":
                         # NOTE - Start experiment
                         validate_json(config)
 
-                        exp = Experiment(config, project_name=CONTINUOUS_CONTROL)
+                        exp = Experiment(
+                            config,
+                            project_name=CONTINUOUS_CONTROL,
+                            tags=[f"{datetime.now().strftime('%Y.%m.%d_%H:%M')}"],
+                        )
                         # do not save intermediate individuals, only start and end
-                        exp.run(seed, save_step=2000)
+                        exp.run(
+                            seed,
+                            name=f"{i}-{config['encoding']['type']}-full",
+                            save_step=2000,
+                        )
 
                         # =============================================================
                         i += 1

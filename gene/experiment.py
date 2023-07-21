@@ -22,11 +22,11 @@ class Experiment:
         self.project_name = project_name
         self.tags = tags
 
-    def run(self, seed: int, save_step: int = 2000):
+    def run(self, seed: int, name=None, save_step: int = 2000):
         self.config["seed"] = seed
 
         wdb_run = wandb.init(
-            project=self.project_name, config=self.config, tags=self.tags
+            project=self.project_name, name=name, config=self.config, tags=self.tags
         )
 
         df = get_df(self.config)()
