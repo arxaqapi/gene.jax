@@ -99,6 +99,13 @@ def plot_ll(
 
     # https://plotly.com/python-api-reference/generated/plotly.graph_objects.Figure.html
     fig = go.Figure(data=[go.Surface(x=X, y=Y, z=values)])
+    # Add contour plots
+    fig.update_traces(
+        contours_z=dict(
+            show=True, usecolormap=True, highlightcolor="limegreen", project_z=True
+        )
+    )
+
     fig.add_scatter3d(
         name="Initial genome", x=(0,), y=(0,), z=(initial_genome_fitness,), legendrank=1
     )
