@@ -7,7 +7,7 @@ from gene.tracker import Tracker
 from gene.learning import learn_brax_task
 from gene.visualize.visualize_brax import visualize_brax, render_brax
 from gene.visualize.la import run_fla_brax
-from gene.visualize.neurons import visualize_neurons_3d
+from gene.visualize.neurons import visualize_neurons_3d, visualize_neurons_2d
 from gene.core.distances import get_df
 from gene.core.models import get_model
 from gene.core.decoding import get_decoder
@@ -78,28 +78,36 @@ class Experiment:
         print("[Check] - Viz mean ok")
 
         # NOTE - visualize neurons positions in 3D space
-        neuron_pos_path = Path(wdb_run.dir) / "neurons_positions"
-        neuron_pos_path.mkdir(parents=True, exist_ok=True)
-        # start mean
-        visualize_neurons_3d(
-            tracker.get_initial_center_individual(tracker_state),
-            self.config,
-            title=neuron_pos_path / "initial_neuron_positions",
-        )
-        # final mean
-        visualize_neurons_3d(
-            tracker.get_final_center_individual(tracker_state),
-            self.config,
-            title=neuron_pos_path / "final_neuron_positions",
-        )
-        # best individuals
-        for k in range(tracker.top_k):
-            visualize_neurons_3d(
-                tracker.get_top_k_genomes(tracker_state)[k],
-                self.config,
-                title=neuron_pos_path / f"top_{k}_neuron_positions",
+        # get appropriate function
+        if self.config["encoding"]["d"] in [2, 3]:
+            visualize_neurons = (
+                visualize_neurons_2d
+                if self.config["encoding"]["d"] == 2
+                else visualize_neurons_3d
             )
-        print("[Check] - Viz neuron pos ok")
+
+            neuron_pos_path = Path(wdb_run.dir) / "neurons_positions"
+            neuron_pos_path.mkdir(parents=True, exist_ok=True)
+            # start mean
+            visualize_neurons(
+                tracker.get_initial_center_individual(tracker_state),
+                self.config,
+                title=neuron_pos_path / "initial_neuron_positions",
+            )
+            # final mean
+            visualize_neurons(
+                tracker.get_final_center_individual(tracker_state),
+                self.config,
+                title=neuron_pos_path / "final_neuron_positions",
+            )
+            # best individuals
+            for k in range(tracker.top_k):
+                visualize_neurons(
+                    tracker.get_top_k_genomes(tracker_state)[k],
+                    self.config,
+                    title=neuron_pos_path / f"top_{k}_neuron_positions",
+                )
+            print("[Check] - Viz neuron pos ok")
 
         wdb_run.finish()
         print("[Check] - run finished")
