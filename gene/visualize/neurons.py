@@ -1,3 +1,6 @@
+from pathlib import Path
+from typing import Union
+
 import jax.numpy as jnp
 from jax import Array
 import plotly.graph_objects as go
@@ -43,7 +46,7 @@ def visualize_neurons_2d(genome: Array, config: dict, title: str):
     fig.write_image(f"{title}.png")
 
 
-def visualize_neurons_3d(genome: Array, config: dict, title: str):
+def visualize_neurons_3d(genome: Array, config: dict, title: Union[str, Path]):
     """Takes a genotype, extracts all neuron position vectors and plots them in 3D space
     Saves the plot as `png` and `html` files
 
