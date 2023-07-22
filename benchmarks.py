@@ -5,7 +5,8 @@ Naming:
 - Continuous Control benchmarks
 - Meta df benchmarks
 
-1. Brax encoding benchmarks ~200 experiments
+1. Brax encoding benchmarks 
+   ~200 experiments ~ 15/16 h for 1 seed, so 15*5 = 75~80h ~ 3.3 jours
     1. For each seed
         1. for each env:
             1. for each policy_arch
@@ -117,7 +118,7 @@ if __name__ == "__main__":
                         # do not save intermediate individuals, only start and end
                         exp.run(
                             seed,
-                            name=f"{i}-{config['encoding']['type']}-full",
+                            name=f"{i}-{config['encoding']['type']}-{config['task']['environnment']}",
                             save_step=2000,
                         )
 

@@ -83,7 +83,7 @@ def visualize_neurons_3d(genome: Array, config: dict, title: Union[str, Path]):
         )
 
     fig.update_layout(
-        title=title,
+        title=title.stem if isinstance(title, Path) else title.split("/")[-1],
         scene_camera={
             "up": dict(x=0, y=0, z=1),
             "center": dict(x=0, y=0, z=0),
