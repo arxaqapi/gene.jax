@@ -191,6 +191,7 @@ class Tracker:
         return tracker_state["backup"]["final_mean_indiv"]
 
     def get_top_k_genomes(self, tracker_state) -> Array:
+        """Returns the k top individuals"""
         return tracker_state["backup"]["top_k_individuals"]
 
 
