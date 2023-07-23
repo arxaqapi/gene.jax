@@ -79,7 +79,7 @@ class Experiment:
 
         # NOTE - visualize neurons positions in 3D space
         # get appropriate function
-        if self.config["encoding"]["d"] in [2, 3]:
+        if self.config["encoding"]["d"] in [2, 3] and self.config["encoding"]["type"] == "gene":
             visualize_neurons = (
                 visualize_neurons_2d
                 if self.config["encoding"]["d"] == 2
