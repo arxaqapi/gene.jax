@@ -221,15 +221,14 @@ def learn_brax_task_untracked(
         state = tell(x, fitness, state)
 
         # NOTE - update best
-        generation_best_i = jnp.argmax(true_fitness)
-        generation_best_member_genome = x[generation_best_i]
-        generation_best_member_fit = true_fitness[generation_best_i]
-        generation_best_member = {
-            "individual": generation_best_member_genome,
-            "fitness": generation_best_member_fit,
+        all_members = jnp.vstack((x, overall_best_member["individual"]))
+        all_fitnesses = jnp.hstack((true_fitness, overall_best_member["fitness"]))
+        best_member_i = jnp.argmax(all_fitnesses)
+        # Overwrite best member
+        overall_best_member = {
+            "individual": all_members[best_member_i],
+            "fitness": all_fitnesses[best_member_i],
         }
-        if generation_best_member["fitness"] > overall_best_member["fitness"]:
-            overall_best_member = generation_best_member
 
     return overall_best_member["fitness"]
     # return partial_eval_f(state.mean, rng_eval)
@@ -304,15 +303,14 @@ def learn_gymnax_task(
         state = tell(x, fitness, state)
 
         # NOTE - update best
-        generation_best_i = jnp.argmax(true_fitness)
-        generation_best_member_genome = x[generation_best_i]
-        generation_best_member_fit = true_fitness[generation_best_i]
-        generation_best_member = {
-            "individual": generation_best_member_genome,
-            "fitness": generation_best_member_fit,
+        all_members = jnp.vstack((x, overall_best_member["individual"]))
+        all_fitnesses = jnp.hstack((true_fitness, overall_best_member["fitness"]))
+        best_member_i = jnp.argmax(all_fitnesses)
+        # Overwrite best member
+        overall_best_member = {
+            "individual": all_members[best_member_i],
+            "fitness": all_fitnesses[best_member_i],
         }
-        if generation_best_member["fitness"] > overall_best_member["fitness"]:
-            overall_best_member = generation_best_member
 
     return overall_best_member["fitness"]
     # return partial_eval_f(state.mean, rng_eval)
