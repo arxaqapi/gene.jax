@@ -55,7 +55,7 @@ class TestMetaReadyLearningFunctions(unittest.TestCase):
         rng = jrd.PRNGKey(0)
 
         out = learn_gymnax_task(
-            df_genotype=jnp.ones((self.meta_decoder.encoding_size(), )),
+            df_genotype=jnp.ones((self.meta_decoder.encoding_size(),)),
             rng=rng,
             meta_decoder=self.meta_decoder,
             df_model=self.nn_dst_model,
@@ -68,7 +68,7 @@ class TestMetaReadyLearningFunctions(unittest.TestCase):
         rng = jrd.PRNGKey(0)
 
         out = learn_brax_task_untracked(
-            df_genotype=jnp.ones((self.meta_decoder.encoding_size(), )),
+            df_genotype=jnp.ones((self.meta_decoder.encoding_size(),)),
             rng=rng,
             meta_decoder=self.meta_decoder,
             df_model=self.nn_dst_model,
