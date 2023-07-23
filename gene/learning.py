@@ -177,7 +177,7 @@ def learn_brax_task_untracked(
         wdb_run: wandb run object used to log
 
     Returns:
-        _type_: _description_
+        float: fitness of the overall best individual encountered
     """
     rng, rng_init = jrd.split(rng, 2)
 
@@ -204,6 +204,8 @@ def learn_brax_task_untracked(
     partial_eval_f = partial(evaluation_f, decoder=decoder, config=config, env=env)
     vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
 
+    overall_best_member = {"individual": state.mean, "fitness": 0}
+
     for _generation in range(config["evo"]["n_generations"]):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
@@ -218,8 +220,19 @@ def learn_brax_task_untracked(
         # NOTE - Tell
         state = tell(x, fitness, state)
 
-    # TODO - return best fitness
-    return partial_eval_f(state.mean, rng_eval)
+        # NOTE - update best
+        generation_best_i = jnp.argmax(true_fitness)
+        generation_best_member_genome = x[generation_best_i]
+        generation_best_member_fit = true_fitness[generation_best_i]
+        generation_best_member = {
+            "individual": generation_best_member_genome,
+            "fitness": generation_best_member_fit,
+        }
+        if generation_best_member["fitness"] > overall_best_member["fitness"]:
+            overall_best_member = generation_best_member
+
+    return overall_best_member["fitness"]
+    # return partial_eval_f(state.mean, rng_eval)
 
 
 # ============================================================
@@ -237,6 +250,7 @@ def gymnax_eval(
     return rollout_gymnax_task(model, model_parameters, rng, config)
 
 
+# TODO - rename to learn_gymnax_task_nn_df
 def learn_gymnax_task(
     df_genotype: Array,
     rng: jrd.KeyArray,
@@ -256,8 +270,7 @@ def learn_gymnax_task(
         config (dict): config file used to specify the current runs values.
 
     Returns:
-        float: Evaluated the sample mean of the distribution
-            and returns its `Return` as fitness.
+        float: fitness of the overall best individual encountered
     """
     rng, rng_init = jrd.split(rng, 2)
 
@@ -277,6 +290,8 @@ def learn_gymnax_task(
     partial_eval_f = partial(gymnax_eval, decoder=decoder, config=config)
     vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
 
+    overall_best_member = {"individual": state.mean, "fitness": 0}
+
     for _generation in range(config["evo"]["n_generations"]):
         # RNG key creation for downstream usage
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
@@ -288,4 +303,16 @@ def learn_gymnax_task(
         # NOTE - Tell: overwrites current strategy state with the new updated one
         state = tell(x, fitness, state)
 
-    return partial_eval_f(state.mean, rng_eval)
+        # NOTE - update best
+        generation_best_i = jnp.argmax(true_fitness)
+        generation_best_member_genome = x[generation_best_i]
+        generation_best_member_fit = true_fitness[generation_best_i]
+        generation_best_member = {
+            "individual": generation_best_member_genome,
+            "fitness": generation_best_member_fit,
+        }
+        if generation_best_member["fitness"] > overall_best_member["fitness"]:
+            overall_best_member = generation_best_member
+
+    return overall_best_member["fitness"]
+    # return partial_eval_f(state.mean, rng_eval)
