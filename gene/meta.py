@@ -10,7 +10,8 @@ from gene.core.models import ReluLinearModel
 from gene.learning import (
     learn_gymnax_task,
     learn_brax_task_untracked,
-    learn_gymnax_task_cgp_df,
+    learn_gymnax_task_cgp_df_mean,
+    # learn_gymnax_task_cgp_df_max,
 )
 from gene.tracker import MetaTracker
 
@@ -204,7 +205,7 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict):
     vec_learn_cartpole = jit(
         vmap(
             partial(
-                learn_gymnax_task_cgp_df,
+                learn_gymnax_task_cgp_df_mean,
                 config=meta_config["curriculum"]["cart"],
                 cgp_config=cgp_config,
             ),
