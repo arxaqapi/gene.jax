@@ -1,0 +1,89 @@
+{
+    "seed": 0,
+    "evo": {
+        "strategy_name": "Sep_CMA_ES",
+        "n_generations": 200,
+        "population_size": 16,
+        "n_evaluations": 1
+    },
+    "net": {
+        "layer_dimensions": [6, 32, 32, 1],
+        "architecture": "tanh_linear"
+    },
+    "encoding": {
+        "d": 3,
+        "distance": "",
+        "type": "direct"
+    },
+    "task": {
+        "maximize": true
+    },
+    "curriculum": {
+        "cart": {
+            "task": {
+                "environnment": "CartPole-v1",
+                "maximize": true,
+                "episode_length": 500
+            },
+            "evo": {
+                "strategy_name": "Sep_CMA_ES",
+                "n_generations": 50,
+                "population_size": 128,
+                "n_evaluations": 1
+            },
+            "net": {
+                "layer_dimensions": [4, 32, 2],
+                "architecture": "tanh_linear"
+            },
+            "encoding": {
+                "d": 3,
+                "distance": "nn",
+                "type": "gene"
+            }
+        },
+        "hc_100": {
+            "task": {
+                "environnment": "halfcheetah",
+                "maximize": true,
+                "episode_length": 100
+            },
+            "evo": {
+                "strategy_name": "Sep_CMA_ES",
+                "n_generations": 100,
+                "population_size": 16,
+                "n_evaluations": 1
+            },
+            "net": {
+                "layer_dimensions": [18, 16, 16, 6],
+                "architecture": "tanh_linear"
+            },
+            "encoding": {
+                "d": 3,
+                "distance": "nn",
+                "type": "gene"
+            }
+        },
+        "hc_1000": {
+            "task": {
+                "environnment": "halfcheetah",
+                "maximize": true,
+                "episode_length": 1000
+            },
+            "evo": {
+                "strategy_name": "Sep_CMA_ES",
+                "n_generations": 200,
+                "population_size": 32,
+                "n_evaluations": 1
+            },
+            "net": {
+                "layer_dimensions": [18, 16, 16, 6],
+                "architecture": "tanh_linear"
+            },
+            "encoding": {
+                "d": 3,
+                "distance": "nn",
+                "type": "gene"
+            }
+        }
+    }
+}
