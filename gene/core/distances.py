@@ -9,6 +9,7 @@ from jax import Array, jit, vmap
 from jax.tree_util import register_pytree_node_class
 
 from gene.core import decoding, models
+from cgpax.jax_encoding import genome_to_cgp_program
 
 
 @jit
@@ -211,10 +212,21 @@ class NNDistanceSimple(DistanceFunction):
         return cls(*aux_data)
 
 
+# TODO - Test me
 class CGPDistance(DistanceFunction):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, cgp_genome: Array, cgp_config: dict, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        raise NotImplementedError
+        self.program = genome_to_cgp_program(cgp_genome, cgp_config)
+        self.cgp_config = cgp_config
+
+    def distance(self, v1: Array, v2: Array) -> float:
+        """Use the cgp function to compute the distance between v1 and v2"""
+        # https://github.com/giorgia-nadizar/cgpax/blob/main/cgpax/jax_evaluation.py#L153
+        _, computed_distance = self.program(
+            jnp.concatenate((v1, v2)), jnp.zeros(self.cgp_config["buffer_size"])
+        )
+
+        return computed_distance
 
 
 Distance_functions = {"pL2": pL2Distance, "nn": NNDistance, "cgp": CGPDistance}
