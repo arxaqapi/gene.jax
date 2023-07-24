@@ -10,7 +10,7 @@ import flax.linen as nn
 from gene.tracker import Tracker, TrackerState
 from gene.core.models import Models
 from gene.core.decoding import Decoder, get_decoder
-from gene.core.distances import DistanceFunction, NNDistanceSimple
+from gene.core.distances import DistanceFunction, NNDistanceSimple, CGPDistance
 from gene.core.evaluation import get_braxv1_env, rollout_brax_task, rollout_gymnax_task
 
 
@@ -277,6 +277,61 @@ def learn_gymnax_task(
     # because objects cannot be given as input of vectorized functions
     df_phenotype = meta_decoder.decode(df_genotype)
     df = NNDistanceSimple(model_parameters=df_phenotype, model=df_model)
+    decoder = get_decoder(config)(config, df)
+
+    strategy = evosax.Strategies[config["evo"]["strategy_name"]](
+        popsize=config["evo"]["population_size"], num_dims=decoder.encoding_size()
+    )
+    state = strategy.initialize(rng_init)
+    ask = jit(strategy.ask)
+    tell = jit(strategy.tell)
+
+    partial_eval_f = partial(gymnax_eval, decoder=decoder, config=config)
+    vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
+
+    overall_best_member = {"individual": state.mean, "fitness": 0}
+
+    for _generation in range(config["evo"]["n_generations"]):
+        # RNG key creation for downstream usage
+        rng, rng_gen, rng_eval = jrd.split(rng, 3)
+        # NOTE - Ask
+        x, state = ask(rng_gen, state)
+        # NOTE - Evaluate
+        true_fitness = vectorized_eval_f(x, rng_eval)
+        fitness = -1.0 * true_fitness if config["task"]["maximize"] else true_fitness
+        # NOTE - Tell: overwrites current strategy state with the new updated one
+        state = tell(x, fitness, state)
+
+        # NOTE - update best
+        all_members = jnp.vstack((x, overall_best_member["individual"]))
+        all_fitnesses = jnp.hstack((true_fitness, overall_best_member["fitness"]))
+        best_member_i = jnp.argmax(all_fitnesses)
+        # Overwrite best member
+        overall_best_member = {
+            "individual": all_members[best_member_i],
+            "fitness": all_fitnesses[best_member_i],
+        }
+
+    return overall_best_member["fitness"]
+    # return partial_eval_f(state.mean, rng_eval)
+
+
+def learn_gymnax_task_cgp_df(
+    cgp_genome: Array,
+    rng: jrd.KeyArray,
+    config: dict,
+    cgp_config: dict,
+) -> float:
+    """Runs a gymnax learning loop using GENE encoding with a CGP
+    based distance function.
+    The distance function has to be decoded from its `cgp_genome`.
+
+    Returns:
+        float: fitness of the overall best individual encountered
+    """
+    rng, rng_init = jrd.split(rng, 2)
+
+    df = CGPDistance(cgp_genome, cgp_config)
     decoder = get_decoder(config)(config, df)
 
     strategy = evosax.Strategies[config["evo"]["strategy_name"]](

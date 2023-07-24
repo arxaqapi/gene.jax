@@ -7,8 +7,21 @@ from jax import jit, vmap
 
 from gene.core.decoding import DirectDecoder
 from gene.core.models import ReluLinearModel
-from gene.learning import learn_gymnax_task, learn_brax_task_untracked
+from gene.learning import (
+    learn_gymnax_task,
+    learn_brax_task_untracked,
+    learn_gymnax_task_cgp_df,
+)
 from gene.tracker import MetaTracker
+
+from cgpax.jax_individual import (
+    generate_population,
+    compute_cgp_genome_mask,
+    compute_cgp_mutation_prob_mask,
+    mutate_genome_n_times,
+)
+from cgpax.jax_selection import fp_selection
+from cgpax.utils import readable_cgp_program_from_genome
 
 
 def meta_learn_nn(config: dict, wandb_run):
@@ -113,8 +126,8 @@ def meta_learn_nn(config: dict, wandb_run):
         _norm_f_hc_1000 = f_hc_1000 / (max_f_hc_1000 if max_f_hc_1000 != 0 else 1.0)
 
         # Fitness used to inform the strategy update (tell)
-        true_fitness = f_cp + f_hc_100 + f_hc_1000
-        # true_fitness = _norm_f_cp + _norm_f_hc_100 + _norm_f_hc_1000
+        # true_fitness = f_cp + f_hc_100 + f_hc_1000
+        true_fitness = _norm_f_cp + _norm_f_hc_100 + _norm_f_hc_1000
         # true_fitness = _norm_f_cp + 10 * _norm_f_hc_100 + 10e1 * _norm_f_hc_1000
         fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
 
@@ -156,6 +169,101 @@ def meta_learn_nn(config: dict, wandb_run):
     return meta_state.mean
 
 
-# def meta_learn_cgp(config: dict):
-#     """Meta evolution of a cgp parametrized distance function"""
-#     raise NotImplementedError
+def meta_learn_cgp(meta_config: dict, cgp_config: dict):
+    """Meta evolution of a cgp parametrized distance function"""
+    assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
+
+    rng = jrd.PRNGKey(meta_config["seed"])
+
+    # Evaluation function based on CGP using CGP df
+    # Input size is the number of values for each neuron position vector
+    # Output size is 1, the distance between the two neurons
+    cgp_config["n_in_env"] = meta_config["encoding"]["d"] * 2
+    #  hard to create constants, so hardcode them in as input
+    cgp_config["n_constants"] = 1
+    cgp_config["n_in"] = cgp_config["n_in_env"] = cgp_config["n_constants"]
+    cgp_config["n_out"] = 1
+
+    cgp_config["buffer_size"] = cgp_config["n_in"] + cgp_config["n_nodes"]
+    cgp_config["genome_size"] = 3 * cgp_config["n_nodes"] + cgp_config["n_out"]
+    n_mutations_per_individual = int(
+        (cgp_config["n_individuals"] - cgp_config["elite_size"])
+        / cgp_config["elite_size"]
+    )
+    nan_replacement = cgp_config["nan_replacement"]
+
+    # preliminary evo steps
+    genome_mask = compute_cgp_genome_mask(
+        cgp_config, n_in=cgp_config["n_in"], n_out=cgp_config["n_out"]
+    )
+    mutation_mask = compute_cgp_mutation_prob_mask(
+        cgp_config, n_out=cgp_config["n_out"]
+    )
+
+    # evaluation
+    vec_learn_cartpole = jit(
+        vmap(
+            partial(
+                learn_gymnax_task_cgp_df,
+                config=meta_config["curriculum"]["cart"],
+                cgp_config=cgp_config,
+            ),
+            in_axes=(0, None),
+        )
+    )
+
+    partial_fp_selection = partial(fp_selection, n_elites=cgp_config["elite_size"])
+    jit_partial_fp_selection = jit(partial_fp_selection)
+    # mutation
+    partial_multiple_mutations = partial(
+        mutate_genome_n_times,
+        n_mutations=n_mutations_per_individual,
+        genome_mask=genome_mask,
+        mutation_mask=mutation_mask,
+    )
+    vmap_multiple_mutations = vmap(partial_multiple_mutations)
+    jit_vmap_multiple_mutations = jit(vmap_multiple_mutations)
+    # replace invalid fitness values
+    fitness_replacement = jit(partial(jnp.nan_to_num, nan=nan_replacement))
+
+    rng, rng_generation = jrd.split(rng, 2)
+    genomes = generate_population(
+        pop_size=cgp_config["n_individuals"],
+        genome_mask=genome_mask,
+        rnd_key=rng_generation,
+    )
+
+    for _meta_generation in range(meta_config["evo"]["n_generations"]):
+        rng, rng_eval = jrd.split(rng, 2)
+        # NOTE - evaluate population
+        fitness_values = vec_learn_cartpole(genomes, rng_eval)
+        fitness_values = fitness_replacement(fitness_values)
+        # fitness_values = -fitness_values  # we would need to minimize the error
+
+        # NOTE - select parents
+        rng, rng_fp = jrd.split(rng, 2)
+        # Choose selection mechanism
+        parents = jit_partial_fp_selection(genomes, fitness_values, rng_fp)
+
+        # NOTE - compute offspring
+        rng, rng_mutation = jrd.split(rng, 2)
+        # FIXME - fix this
+        mutate_keys = jrd.split(rng_mutation, len(parents))
+        new_genomes_matrix = jit_vmap_multiple_mutations(parents, mutate_keys)
+        new_genomes = jnp.reshape(
+            new_genomes_matrix, (-1, new_genomes_matrix.shape[-1])
+        )
+
+        # max index
+        best_genome = genomes.at[jnp.argmax(fitness_values)].get()
+        best_fitness = jnp.max(fitness_values)
+        best_program = readable_cgp_program_from_genome(best_genome, cgp_config)
+
+        # print progress
+        print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
+        print(best_program)
+
+        # NOTE - update population
+        genomes = jnp.concatenate((parents, new_genomes))
+
+    return None
