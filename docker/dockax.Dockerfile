@@ -10,7 +10,7 @@ RUN apt update && apt install --yes --no-install-recommends build-essential ca-c
     python3.9 python3.9-distutils python3.9-venv python3.9-dev \
     fish neovim git curl wget tmux \
     ffmpeg xvfb libglu1-mesa-dev freeglut3-dev mesa-common-dev \
-    golang graphviz
+    golang graphviz graphviz-dev
 
 # Install pprof
 RUN go install github.com/google/pprof@latest
@@ -39,7 +39,7 @@ RUN pip install scalene
 RUN pip install matplotlib evosax gymnax "gymnasium[atari, accept-rom-license]" \
     "black[jupyter]" ruff jax-smi wandb \
     plotly nbformat kaleido ipykernel \
-    scikit-learn pdoc
+    scikit-learn pdoc pygraphviz
 
 WORKDIR /home
 
