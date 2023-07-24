@@ -21,6 +21,8 @@ Naming:
     2. CGP based meta-evol
 """
 from datetime import datetime
+from itertools import product as it_product
+
 from gene.experiment import Experiment
 from gene.utils import fail_if_not_device, validate_json
 
@@ -61,13 +63,25 @@ if __name__ == "__main__":
     )
     encoding_types = ("direct", "gene")
 
-    n_total_experiments = (
+    experiment_settings = list(
+        it_product(
+            seeds,
+            brax_envs,
+            policy_architecture,
+            policy_layer_dimensions,
+            encoding_types,
+        )
+    )
+    n_total_experiments = len(experiment_settings)
+
+    n_total_experiments_emp = (
         len(brax_envs.keys())
         * len(seeds)
         * len(policy_layer_dimensions)
         * len(policy_architecture)
         * len(encoding_types)
     )
+    assert n_total_experiments == n_total_experiments_emp
 
     config = {
         "seed": 0,
@@ -85,44 +99,35 @@ if __name__ == "__main__":
 
     print(f"[Log - CCBench] - Running {n_total_experiments} experiments")
     start_time = datetime.now().strftime("%Y.%m.%d_%H:%M")
-    i = 0
-    for seed in seeds:
+    for i, (seed, env, arch, dimensions, encoding_type) in enumerate(
+        experiment_settings
+    ):
         config["seed"] = seed
+        config["task"]["environnment"] = env
+        config["net"]["architecture"] = arch
+        config["net"]["layer_dimensions"] = (
+            [brax_envs[env]["observation_space"]]
+            + dimensions
+            + [brax_envs[env]["action_space"]]
+        )
+        config["encoding"]["type"] = encoding_type
+        print(
+            f"[Log - CCBench][{i}] {seed=} | {env=} | {arch=} | {dimensions=} | {config['net']['layer_dimensions']=} | {encoding_type=}"
+        )
+        # =============================================================
+        # NOTE - Start experiment
+        validate_json(config)
 
-        for env in brax_envs.keys():
-            config["task"]["environnment"] = env
+        exp = Experiment(
+            config,
+            project_name=CONTINUOUS_CONTROL,
+            tags=[f"{start_time}"],
+        )
+        # do not save intermediate individuals, only start and end
+        exp.run(
+            seed,
+            name=f"{i}-{config['encoding']['type']}-{config['task']['environnment']}",
+            save_step=2000,
+        )
 
-            for arch in policy_architecture:
-                config["net"]["architecture"] = arch
-
-                for dimensions in policy_layer_dimensions:
-                    o_s = brax_envs[env]["observation_space"]
-                    a_s = brax_envs[env]["action_space"]
-                    config["net"]["layer_dimensions"] = [o_s] + dimensions + [a_s]
-
-                    for encoding_type in encoding_types:
-                        config["encoding"]["type"] = encoding_type
-
-                        print(
-                            f"[Log - CCBench][{i}] {seed=} | {env=} | {arch=} | {dimensions=} | {config['net']['layer_dimensions']=} | {encoding_type=}"
-                        )
-                        # =============================================================
-                        # NOTE - Start experiment
-                        validate_json(config)
-
-                        exp = Experiment(
-                            config,
-                            project_name=CONTINUOUS_CONTROL,
-                            tags=[f"{start_time}"],
-                        )
-                        # do not save intermediate individuals, only start and end
-                        exp.run(
-                            seed,
-                            name=f"{i}-{config['encoding']['type']}-{config['task']['environnment']}",
-                            save_step=2000,
-                        )
-
-                        # =============================================================
-                        i += 1
-
-    print(f"[Log - CCBench] - Finished running {i} experiments")
+    print(f"[Log - CCBench] - Finished running {n_total_experiments} experiments")
