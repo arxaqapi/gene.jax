@@ -37,7 +37,7 @@
             },
             "encoding": {
                 "d": 3,
-                "distance": "nn",
+                "distance": "cgp",
                 "type": "gene"
             }
         },
@@ -59,7 +59,7 @@
             },
             "encoding": {
                 "d": 3,
-                "distance": "nn",
+                "distance": "cgp",
                 "type": "gene"
             }
         },
@@ -81,7 +81,7 @@
             },
             "encoding": {
                 "d": 3,
-                "distance": "nn",
+                "distance": "cgp",
                 "type": "gene"
             }
         }

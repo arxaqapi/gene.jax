@@ -5,6 +5,7 @@ wandb*
 .netrc
 profiles
 *.npy
+cgpax
 
 ### Python
 ### https://github.com/github/gitignore/blob/main/Python.gitignore
