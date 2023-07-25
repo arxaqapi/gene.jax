@@ -111,6 +111,7 @@ def learn_brax_task(
 
     total_timer = Timer()
     evaluation_timer = Timer()
+    total_timer.start()
     for _generation in range(config["evo"]["n_generations"]):
         print(
             f"[Log] - Generation n° {_generation:>6}"
@@ -129,12 +130,11 @@ def learn_brax_task(
         fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
 
         evaluation_timer.stop()
-        evaluation_timer.reset()
-
         print(
-            f"[Log] - {str(total_timer)} "
+            f"[Log] - {str(evaluation_timer)} "
             + f"for {config['evo']['population_size']} parallel evaluations"
         )
+        evaluation_timer.reset()
 
         # NOTE - Tell
         state = tell(x, fitness, state)
@@ -159,6 +159,7 @@ def learn_brax_task(
                     file_name=f"g{str(_generation).zfill(3)}_mean_indiv",
                     now=True,
                 )
+    total_timer.stop()
     print(f"[Log] - Generation loop: {str(total_timer)}")
     # NOTE - Save mean and best individuals at end of run
     if wdb_run is not None:
