@@ -12,4 +12,6 @@ class TestTimer(unittest.TestCase):
         time.sleep(2)
 
         dt = timer.stop()
+
+        self.assertIsInstance(dt, float)
         self.assertIsNone(timer.reset())
