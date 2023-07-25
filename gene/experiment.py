@@ -64,7 +64,6 @@ class Experiment:
                 df=df,
             ),
         )
-        print("[Check] - Viz best ok")
         # last mean individual
         render_brax(
             viz_save_path / "learned_last_mean_individual",
@@ -75,7 +74,6 @@ class Experiment:
                 df=df,
             ),
         )
-        print("[Check] - Viz mean ok")
 
         # NOTE - visualize neurons positions in 3D space
         # get appropriate function
@@ -110,10 +108,8 @@ class Experiment:
                     self.config,
                     title=neuron_pos_path / f"top_{k}_neuron_positions",
                 )
-            print("[Check] - Viz neuron pos ok")
 
         wdb_run.finish()
-        print("[Check] - run finished")
 
         return mean_fitness, best_fitness
 
