@@ -8,5 +8,5 @@ if __name__ == "__main__":
     config = load_config("config/brax.json")
     validate_json(config)
 
-    exp = Experiment(config, "REMOVE ME")
+    exp = Experiment(config, "Continuous Control benchmarks")
     stats = exp.run_n(seeds=[0, 1])

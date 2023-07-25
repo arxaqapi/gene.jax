@@ -12,6 +12,7 @@ from gene.core.models import Models
 from gene.core.decoding import Decoder, get_decoder
 from gene.core.distances import DistanceFunction, NNDistanceSimple, CGPDistance
 from gene.core.evaluation import get_braxv1_env, rollout_brax_task, rollout_gymnax_task
+from gene.timer import Timer
 
 
 def brax_eval(genome: Array, rng: jrd.KeyArray, decoder: Decoder, config: dict, env):
@@ -107,6 +108,9 @@ def learn_brax_task(
     if wdb_run is not None:
         tracker.wandb_save_genome(state.mean, wdb_run, "initial_mean_indiv", now=True)
         tracker_state = tracker.set_initial_mean(tracker_state, state.mean)
+
+    total_timer = Timer()
+    evaluation_timer = Timer()
     for _generation in range(config["evo"]["n_generations"]):
         print(
             f"[Log] - Generation n° {_generation:>6}"
@@ -119,8 +123,18 @@ def learn_brax_task(
         x, state = ask(rng_gen, state)
 
         # NOTE - Eval
+        evaluation_timer.start()
+
         true_fitness = vectorized_eval_f(x, rng_eval)
         fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
+
+        evaluation_timer.stop()
+        evaluation_timer.reset()
+
+        print(
+            f"[Log] - {str(total_timer)} "
+            + f"for {config['evo']['population_size']} parallel evaluations"
+        )
 
         # NOTE - Tell
         state = tell(x, fitness, state)
@@ -145,6 +159,7 @@ def learn_brax_task(
                     file_name=f"g{str(_generation).zfill(3)}_mean_indiv",
                     now=True,
                 )
+    print(f"[Log] - Generation loop: {str(total_timer)}")
     # NOTE - Save mean and best individuals at end of run
     if wdb_run is not None:
         # Mean

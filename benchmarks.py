@@ -112,7 +112,9 @@ if __name__ == "__main__":
         )
         config["encoding"]["type"] = encoding_type
         print(
-            f"[Log - CCBench][{i}] {seed=} | {env=} | {arch=} | {dimensions=} | {config['net']['layer_dimensions']=} | {encoding_type=}"
+            f"[Log - CCBench][{i}] {seed=} |"
+            + f" {env=} | {arch=} | {dimensions=} |"
+            + f" {config['net']['layer_dimensions']=} | {encoding_type=}"
         )
         # =============================================================
         # NOTE - Start experiment
