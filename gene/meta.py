@@ -170,7 +170,7 @@ def meta_learn_nn(config: dict, wandb_run):
     return meta_state.mean
 
 
-def meta_learn_cgp(meta_config: dict, cgp_config: dict):
+def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run):
     """Meta evolution of a cgp parametrized distance function"""
     assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
 
@@ -182,7 +182,8 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict):
     cgp_config["n_in_env"] = meta_config["encoding"]["d"] * 2
     #  hard to create constants, so hardcode them in as input
     cgp_config["n_constants"] = 1
-    cgp_config["n_in"] = cgp_config["n_in_env"] = cgp_config["n_constants"]
+
+    cgp_config["n_in"] = cgp_config["n_in_env"] + cgp_config["n_constants"]
     cgp_config["n_out"] = 1
 
     cgp_config["buffer_size"] = cgp_config["n_in"] + cgp_config["n_nodes"]
@@ -263,6 +264,8 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict):
         # print progress
         print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
         print(best_program)
+
+        wandb_run.log({"best_fitness": best_fitness})
 
         # NOTE - update population
         genomes = jnp.concatenate((parents, new_genomes))
