@@ -8,6 +8,6 @@ if __name__ == "__main__":
     fail_if_not_device()
     config = load_config("config/nn_meta_df.json")
 
-    wandb_run = wandb.init(project="Meta df benchmarks", config=config)
+    wandb_run = wandb.init(project="Meta df benchmarks", config=config, tags=["nn"])
 
     meta_learn_nn(config, wandb_run)
