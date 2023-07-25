@@ -6,7 +6,7 @@ from jax import Array
 
 from gene.learning import (
     brax_eval_n_times,
-    learn_gymnax_task,
+    learn_gymnax_task_nn_df,
     learn_brax_task_untracked,
 )
 from gene.core.decoding import GENEDecoder, DirectDecoder
@@ -51,10 +51,10 @@ class TestMetaReadyLearningFunctions(unittest.TestCase):
         self.meta_decoder = DirectDecoder(self.config)
         self.nn_dst_model = ReluLinearModel(self.config["net"]["layer_dimensions"][1:])
 
-    def test_learn_gymnax_task(self):
+    def test_learn_gymnax_task_nn_df(self):
         rng = jrd.PRNGKey(0)
 
-        out = learn_gymnax_task(
+        out = learn_gymnax_task_nn_df(
             df_genotype=jnp.ones((self.meta_decoder.encoding_size(),)),
             rng=rng,
             meta_decoder=self.meta_decoder,

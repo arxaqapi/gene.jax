@@ -265,8 +265,56 @@ def gymnax_eval(
     return rollout_gymnax_task(model, model_parameters, rng, config)
 
 
-# TODO - rename to learn_gymnax_task_nn_df
 def learn_gymnax_task(
+    df: DistanceFunction, rng: jrd.KeyArray, config: dict, wandb_run
+) -> float:
+    """Runs a gymnax learning loop defined by a config file.
+    The distance function has to be decoded from its `df_genotype`.
+    """
+    rng, rng_init = jrd.split(rng, 2)
+
+    decoder = get_decoder(config)(config, df)
+
+    strategy = evosax.Strategies[config["evo"]["strategy_name"]](
+        popsize=config["evo"]["population_size"], num_dims=decoder.encoding_size()
+    )
+    state = strategy.initialize(rng_init)
+    ask = jit(strategy.ask)
+    tell = jit(strategy.tell)
+
+    partial_eval_f = partial(gymnax_eval, decoder=decoder, config=config)
+    vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
+
+    tracker = Tracker(config, decoder)
+    tracker_state = tracker.init(True)
+
+    for _generation in range(config["evo"]["n_generations"]):
+        # RNG key creation for downstream usage
+        rng, rng_gen, rng_eval = jrd.split(rng, 3)
+        # NOTE - Ask
+        x, state = ask(rng_gen, state)
+        # NOTE - Evaluate
+        true_fitness = vectorized_eval_f(x, rng_eval)
+        fitness = -1.0 * true_fitness if config["task"]["maximize"] else true_fitness
+        # NOTE - Tell: overwrites current strategy state with the new updated one
+        state = tell(x, fitness, state)
+
+        # NOTE - stats
+        tracker_state = tracker.update(
+            tracker_state=tracker_state,
+            individuals=x,
+            fitnesses=true_fitness,
+            sample_mean=state.mean,
+            eval_f=partial_eval_f,
+            rng_eval=rng_eval,
+            skip_mean_backup=True,
+        )
+        tracker.wandb_log(tracker_state, wandb_run)
+
+    return tracker.get_top_k_genomes(tracker_state)[0]
+
+
+def learn_gymnax_task_nn_df(
     df_genotype: Array,
     rng: jrd.KeyArray,
     meta_decoder: Decoder,

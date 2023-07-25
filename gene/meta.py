@@ -8,7 +8,7 @@ from jax import jit, vmap
 from gene.core.decoding import DirectDecoder
 from gene.core.models import ReluLinearModel
 from gene.learning import (
-    learn_gymnax_task,
+    learn_gymnax_task_nn_df,
     learn_brax_task_untracked,
     learn_gymnax_task_cgp_df_mean,
     # learn_gymnax_task_cgp_df_max,
@@ -57,7 +57,7 @@ def meta_learn_nn(config: dict, wandb_run):
     vec_learn_cartpole = jit(
         vmap(
             partial(
-                learn_gymnax_task,
+                learn_gymnax_task_nn_df,
                 meta_decoder=meta_decoder,
                 df_model=nn_dst_model,
                 config=config["curriculum"]["cart"],

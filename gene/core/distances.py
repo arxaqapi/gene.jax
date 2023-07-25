@@ -229,6 +229,21 @@ class CGPDistance(DistanceFunction):
         return computed_distance
 
 
+class LearnedDf(DistanceFunction):
+    def __init__(self) -> None:
+        super().__init__()
+
+    @partial(jit, static_argnums=(0))
+    def distance(self, v1: Array, v2: Array) -> float:
+        # def program(inputs, buffer):
+        #     buffer[[0]] = inputs
+        #     buffer[12] = exp(buffer[0])
+        #     outputs = buffer[[12]]
+        buffer = jnp.concatenate((v1, v2))
+        out = jnp.exp(buffer)[-1]
+        return out
+
+
 Distance_functions = {"pL2": pL2Distance, "nn": NNDistance, "cgp": CGPDistance}
 
 
