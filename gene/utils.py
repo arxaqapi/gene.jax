@@ -35,7 +35,7 @@ def fail_if_not_device(device: str = "gpu"):
         raise CorrectDeviceNotLoaded(f"Current is {default}")
 
 
-def validate_json(config: dict):
+def validate_json(config: dict) -> None:
     """Validates the json format of the passed configuration file.
     Only checks that all fields are present, and not their type.
 
@@ -72,3 +72,17 @@ def validate_json(config: dict):
                         f"{required_key_2} (nested level) is missing \
                         from the configuration file."
                     )
+
+
+def validate_meta_json(conig: dict) -> None:
+    """Validates the json format of the passed meta configuration file.
+    Only checks that all fields are present, and not their type.
+
+    Args:
+        config (dict): The configuration file to validate
+
+    Raises:
+        ConfigFileIncomplete: Is the configuration file is incomplete
+            this error will be raised in response
+    """
+    raise NotImplementedError
