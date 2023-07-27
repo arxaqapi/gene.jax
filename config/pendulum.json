@@ -1,23 +1,23 @@
 {
-    "seed": 0,
+    "seed": 7,
     "evo": {
-        "strategy_name": "Sep_CMA_ES",
+        "strategy_name": "CMA_ES",
         "n_generations": 100,
         "population_size": 32,
         "n_evaluations": 1
     },
     "net": {
-        "layer_dimensions": [4, 32, 2],
-        "architecture": "tanh_linear"
+        "layer_dimensions": [3, 32, 1],
+        "architecture": "relu_linear"
     },
     "encoding": {
         "d": 3,
-        "distance":"learned",
+        "distance":"pL2",
         "type": "gene"
     },
     "task": {
-        "environnment": "CartPole-v1",
+        "environnment": "Pendulum-v1",
         "maximize": true,
-        "episode_length": 500
+        "episode_length": 1200
     }
 }

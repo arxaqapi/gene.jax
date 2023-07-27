@@ -7,16 +7,16 @@
         "n_evaluations": 1
     },
     "net": {
-        "layer_dimensions": [4, 32, 2],
+        "layer_dimensions": [6, 32, 3],
         "architecture": "tanh_linear"
     },
     "encoding": {
         "d": 3,
-        "distance":"learned",
+        "distance":"pL2",
         "type": "gene"
     },
     "task": {
-        "environnment": "CartPole-v1",
+        "environnment": "Acrobot-v1",
         "maximize": true,
         "episode_length": 500
     }
