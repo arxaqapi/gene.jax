@@ -11,11 +11,12 @@ if __name__ == "__main__":
 
     meta_config = load_config("config/cgp_meta_df.json")
 
-    cgp_config = {
+    meta_config["cgp_config"] = {
         "seed": 0,
         "problem": "cgp_meta_df",
+        "solver": "cgp",
         "n_generations": 5000,
-        "n_individuals": 32,
+        "n_individuals": 16,
         "elite_size": 5,
         "p_mut_inputs": 0.1,
         "p_mut_functions": 0.1,
@@ -26,12 +27,16 @@ if __name__ == "__main__":
         "nan_replacement": 10e10,
     }
 
-    assert cgp_config["n_generations"] == meta_config["evo"]["n_generations"]
-    assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
-
-    meta_config["cgp_config"] = cgp_config
+    assert (
+        meta_config["cgp_config"]["n_generations"]
+        == meta_config["evo"]["n_generations"]
+    )
+    assert (
+        meta_config["cgp_config"]["n_individuals"]
+        == meta_config["evo"]["population_size"]
+    )
 
     wandb_run = wandb.init(
         project="Meta df benchmarks", config=meta_config, tags=["cgp"]
     )
-    meta_learn_cgp(meta_config, cgp_config, wandb_run)
+    meta_learn_cgp(meta_config, meta_config["cgp_config"], wandb_run)
