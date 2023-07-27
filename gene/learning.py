@@ -178,7 +178,70 @@ def learn_brax_task(
     return tracker, tracker_state
 
 
-def learn_brax_task_untracked(
+def learn_brax_task_cgp(
+    cgp_genome: Array,
+    rng: jrd.KeyArray,
+    config: dict,
+    cgp_config: dict,
+) -> float:
+    """Run an es training loop specifically tailored for brax tasks
+    using a cgp defined function.
+
+        Returns:
+        float: fitness of the overall best individual encountered
+    """
+    rng, rng_init = jrd.split(rng, 2)
+
+    df = CGPDistance(cgp_genome=cgp_genome, cgp_config=cgp_config)
+    decoder = get_decoder(config)(config, df)
+
+    strategy = evosax.Strategies[config["evo"]["strategy_name"]](
+        popsize=config["evo"]["population_size"],
+        num_dims=decoder.encoding_size(),
+    )
+    state = strategy.initialize(rng_init)
+    ask = jit(strategy.ask)
+    tell = jit(strategy.tell)
+
+    # Each individual is evaluated a single time or multiple times in parallel
+    evaluation_f = (
+        brax_eval_n_times if config["evo"]["n_evaluations"] > 1 else brax_eval
+    )
+
+    env = get_braxv1_env(config)
+    partial_eval_f = partial(evaluation_f, decoder=decoder, config=config, env=env)
+    vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
+
+    overall_best_member = {"individual": state.mean, "fitness": 0}
+
+    for _generation in range(config["evo"]["n_generations"]):
+        # RNG key creation for downstream usage
+        rng, rng_gen, rng_eval = jrd.split(rng, 3)
+
+        # NOTE - Ask
+        x, state = ask(rng_gen, state)
+
+        # NOTE - Eval
+        true_fitness = vectorized_eval_f(x, rng_eval)
+        fitness = -1 * true_fitness if config["task"]["maximize"] else true_fitness
+
+        # NOTE - Tell
+        state = tell(x, fitness, state)
+
+        # NOTE - update best
+        all_members = jnp.vstack((x, overall_best_member["individual"]))
+        all_fitnesses = jnp.hstack((true_fitness, overall_best_member["fitness"]))
+        best_member_i = jnp.argmax(all_fitnesses)
+        # Overwrite best member
+        overall_best_member = {
+            "individual": all_members[best_member_i],
+            "fitness": all_fitnesses[best_member_i],
+        }
+
+    return overall_best_member["fitness"]
+
+
+def learn_brax_task_untracked_nn_df(
     df_genotype: Array,
     rng: jrd.KeyArray,
     meta_decoder: Decoder,

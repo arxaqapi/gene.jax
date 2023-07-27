@@ -9,7 +9,8 @@ from gene.core.decoding import DirectDecoder
 from gene.core.models import ReluLinearModel
 from gene.learning import (
     learn_gymnax_task_nn_df,
-    learn_brax_task_untracked,
+    learn_brax_task_cgp,
+    learn_brax_task_untracked_nn_df,
     learn_gymnax_task_cgp_df_mean,
     # learn_gymnax_task_cgp_df_max,
 )
@@ -69,7 +70,7 @@ def meta_learn_nn(config: dict, wandb_run):
     vec_learn_hc_100 = jit(
         vmap(
             partial(
-                learn_brax_task_untracked,
+                learn_brax_task_untracked_nn_df,
                 meta_decoder=meta_decoder,
                 df_model=nn_dst_model,
                 config=config["curriculum"]["hc_100"],
@@ -80,7 +81,7 @@ def meta_learn_nn(config: dict, wandb_run):
     vec_learn_hc_1000 = jit(
         vmap(
             partial(
-                learn_brax_task_untracked,
+                learn_brax_task_untracked_nn_df,
                 meta_decoder=meta_decoder,
                 df_model=nn_dst_model,
                 config=config["curriculum"]["hc_1000"],
@@ -109,18 +110,10 @@ def meta_learn_nn(config: dict, wandb_run):
         f_cp = vec_learn_cartpole(x, rng_eval)
         max_f_cp = jnp.max(f_cp)
 
-        f_hc_100 = (
-            vec_learn_hc_100(x, rng_eval)
-            if max_f_cp > 400
-            else 0
-        )
+        f_hc_100 = vec_learn_hc_100(x, rng_eval) if max_f_cp > 400 else 0
         max_f_hc_100 = jnp.max(f_hc_100)
 
-        f_hc_1000 = (
-            vec_learn_hc_1000(x, rng_eval)
-            if max_f_hc_100 > 200
-            else 0
-        )
+        f_hc_1000 = vec_learn_hc_1000(x, rng_eval) if max_f_hc_100 > 200 else 0
         max_f_hc_1000 = jnp.max(f_hc_1000)
         # NOTE - 3. aggregate fitnesses and weight them
         _norm_f_cp = f_cp / (max_f_cp if max_f_cp != 0 else 1.0)
@@ -171,7 +164,6 @@ def meta_learn_nn(config: dict, wandb_run):
     return meta_state.mean
 
 
-# TODO - add complete curriculum
 def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     """Meta evolution of a cgp parametrized distance function"""
     assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
@@ -200,12 +192,22 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
         cgp_config, n_out=cgp_config["n_out"]
     )
 
-    # evaluation
-    vec_learn_cartpole = jit(
+    # evaluation curriculum fonctions
+    vec_learn_hc_100 = jit(
         vmap(
             partial(
-                learn_gymnax_task_cgp_df_mean,
-                config=meta_config["curriculum"]["cart"],
+                learn_brax_task_cgp,
+                config=meta_config["curriculum"]["hc_100"],
+                cgp_config=cgp_config,
+            ),
+            in_axes=(0, None),
+        )
+    )
+    vec_learn_hc_500 = jit(
+        vmap(
+            partial(
+                learn_brax_task_cgp,
+                config=meta_config["curriculum"]["hc_500"],
                 cgp_config=cgp_config,
             ),
             in_axes=(0, None),
@@ -234,11 +236,15 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     )
 
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
+        print(f"[Meta gen {_meta_generation}] - Start")
         rng, rng_eval = jrd.split(rng, 2)
-        # NOTE - evaluate population
-        fitness_values = vec_learn_cartpole(genomes, rng_eval)
+        # NOTE - evaluate population on curriculum of tasks
+        f_hc_100 = vec_learn_hc_100(genomes, rng_eval)
+        f_hc_500 = vec_learn_hc_500(genomes, rng_eval)
+        fitness_values = f_hc_100 + f_hc_500
+
+        # NAN replacement
         fitness_values = fitness_replacement(fitness_values)
-        # fitness_values = -fitness_values  # we would need to minimize the error
 
         # NOTE - select parents
         rng, rng_fp = jrd.split(rng, 2)
@@ -247,27 +253,46 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
 
         # NOTE - compute offspring
         rng, rng_mutation = jrd.split(rng, 2)
-        # FIXME - fix this
         rng_multiple_mutations = jrd.split(rng_mutation, len(parents))
-        new_genomes_matrix = jit_vmap_multiple_mutations(parents, rng_multiple_mutations)
+        new_genomes_matrix = jit_vmap_multiple_mutations(
+            parents, rng_multiple_mutations
+        )
         new_genomes = jnp.reshape(
             new_genomes_matrix, (-1, new_genomes_matrix.shape[-1])
         )
 
         # max index
-        best_genome = genomes.at[jnp.argmax(fitness_values)].get()
-        best_fitness = jnp.max(fitness_values)
+        best_genome_idx = jnp.argmax(fitness_values)
+        best_genome = genomes[best_genome_idx]
+        best_fitness = fitness_values[best_genome_idx]
         best_program = readable_cgp_program_from_genome(best_genome, cgp_config)
 
         # print progress
         print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
         print(best_program)
 
-        if wandb_run is not None:
-            wandb_run.log({"best_fitness": best_fitness})
-
         # NOTE - update population
         genomes = jnp.concatenate((parents, new_genomes))
+
+        # NOTE - log stats
+        if wandb_run is not None:
+            wandb_run.log(
+                {
+                    "training": {
+                        "total_emp_mean_fitness": fitness_values.mean(),
+                        "total_max_fitness": fitness_values.max(),
+                        "hc100": {
+                            "emp_mean_fit": f_hc_100.mean(),
+                            "max_fit": f_hc_100.max(),
+                        },
+                        "hc500": {
+                            "emp_mean_fit": f_hc_500.mean(),
+                            "max_fit": f_hc_500.max(),
+                        },
+                    },
+                }
+            )
+        print(f"[Meta gen {_meta_generation}] - End\n")
 
     return None
 
@@ -351,11 +376,7 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
         f_cartpole = vec_learn_cartpole(genomes, rng_eval)
         max_f_cartpole = jnp.max(f_cartpole)
 
-        f_acrobot = (
-            vec_learn_acrobot(genomes, rng_eval)
-            if max_f_cartpole > 400
-            else 0
-        )
+        f_acrobot = vec_learn_acrobot(genomes, rng_eval) if max_f_cartpole > 400 else 0
         max_f_acrobot = jnp.max(f_acrobot)
 
         fitness_values = f_cartpole + f_acrobot
@@ -370,7 +391,9 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
         # NOTE - compute offspring
         rng, rng_mutation = jrd.split(rng, 2)
         rng_multiple_mutations = jrd.split(rng_mutation, len(parents))
-        new_genomes_matrix = jit_vmap_multiple_mutations(parents, rng_multiple_mutations)
+        new_genomes_matrix = jit_vmap_multiple_mutations(
+            parents, rng_multiple_mutations
+        )
         new_genomes = jnp.reshape(
             new_genomes_matrix, (-1, new_genomes_matrix.shape[-1])
         )
