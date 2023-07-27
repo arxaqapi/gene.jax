@@ -194,6 +194,9 @@ class Tracker:
         """Returns the k top individuals"""
         return tracker_state["backup"]["top_k_individuals"]
 
+    def get_mean_fitnesses(self, tracker_state) -> Array:
+        return tracker_state["eval"]["mean_fit"]
+
 
 def batch_wandb_log(
     wdb_run, statistics, batch_size: int, prefix: str = "individual"
