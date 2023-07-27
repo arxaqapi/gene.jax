@@ -1,5 +1,5 @@
 DIMAGE:=dockax
-VERSION:=0.1.2
+VERSION:=0.1.3
 
 .PHONY:f format r run t test prof profile build sail sail-stafe c clean backup chowner notebook zipall unzipall
 
