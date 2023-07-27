@@ -23,6 +23,7 @@ from cgpax.jax_individual import (
 )
 from cgpax.jax_selection import fp_selection
 from cgpax.utils import readable_cgp_program_from_genome
+from cgpax.run_utils import __update_config_with_data__
 
 
 def meta_learn_nn(config: dict, wandb_run):
@@ -170,7 +171,7 @@ def meta_learn_nn(config: dict, wandb_run):
     return meta_state.mean
 
 
-def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run):
+def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     """Meta evolution of a cgp parametrized distance function"""
     assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
 
@@ -179,15 +180,11 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run):
     # Evaluation function based on CGP using CGP df
     # Input size is the number of values for each neuron position vector
     # Output size is 1, the distance between the two neurons
-    cgp_config["n_in_env"] = meta_config["encoding"]["d"] * 2
-    #  hard to create constants, so hardcode them in as input
-    cgp_config["n_constants"] = 1
-
-    cgp_config["n_in"] = cgp_config["n_in_env"] + cgp_config["n_constants"]
-    cgp_config["n_out"] = 1
-
-    cgp_config["buffer_size"] = cgp_config["n_in"] + cgp_config["n_nodes"]
-    cgp_config["genome_size"] = 3 * cgp_config["n_nodes"] + cgp_config["n_out"]
+    __update_config_with_data__(
+        cgp_config,
+        observation_space_size=meta_config["encoding"]["d"] * 2,
+        action_space_size=1,
+    )
     n_mutations_per_individual = int(
         (cgp_config["n_individuals"] - cgp_config["elite_size"])
         / cgp_config["elite_size"]
@@ -265,7 +262,8 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run):
         print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
         print(best_program)
 
-        wandb_run.log({"best_fitness": best_fitness})
+        if wandb_run is not None:
+            wandb_run.log({"best_fitness": best_fitness})
 
         # NOTE - update population
         genomes = jnp.concatenate((parents, new_genomes))
