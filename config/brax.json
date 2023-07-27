@@ -7,7 +7,7 @@
         "n_evaluations": 1
     },
     "net": {
-        "layer_dimensions": [17, 128, 128, 6],
+        "layer_dimensions": [18, 128, 128, 6],
         "architecture": "tanh_linear"
     },
     "encoding": {
@@ -16,7 +16,7 @@
         "type": "gene"
     },
     "task": {
-        "environnment": "walker2d",
+        "environnment": "halfcheetah",
         "maximize": true,
         "episode_length": 1000
     }

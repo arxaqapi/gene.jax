@@ -2,7 +2,7 @@
     "seed": 0,
     "evo": {
         "strategy_name": "Sep_CMA_ES",
-        "n_generations": 5000,
+        "n_generations": 100,
         "population_size": 16,
         "n_evaluations": 1
     },
@@ -28,12 +28,12 @@
             "evo": {
                 "strategy_name": "Sep_CMA_ES",
                 "n_generations": 50,
-                "population_size": 128,
+                "population_size": 64,
                 "n_evaluations": 1
             },
             "net": {
                 "layer_dimensions": [4, 32, 2],
-                "architecture": "tanh_linear"
+                "architecture": "relu_linear"
             },
             "encoding": {
                 "d": 3,
@@ -41,43 +41,21 @@
                 "type": "gene"
             }
         },
-        "hc_100": {
+        "acrobot": {
             "task": {
-                "environnment": "halfcheetah",
+                "environnment": "Acrobot-v1",
                 "maximize": true,
-                "episode_length": 100
+                "episode_length": 500
             },
             "evo": {
                 "strategy_name": "Sep_CMA_ES",
-                "n_generations": 100,
-                "population_size": 16,
+                "n_generations": 50,
+                "population_size": 64,
                 "n_evaluations": 1
             },
             "net": {
-                "layer_dimensions": [18, 16, 16, 6],
-                "architecture": "tanh_linear"
-            },
-            "encoding": {
-                "d": 3,
-                "distance": "cgp",
-                "type": "gene"
-            }
-        },
-        "hc_1000": {
-            "task": {
-                "environnment": "halfcheetah",
-                "maximize": true,
-                "episode_length": 1000
-            },
-            "evo": {
-                "strategy_name": "Sep_CMA_ES",
-                "n_generations": 200,
-                "population_size": 32,
-                "n_evaluations": 1
-            },
-            "net": {
-                "layer_dimensions": [18, 16, 16, 6],
-                "architecture": "tanh_linear"
+                "layer_dimensions": [6, 32, 3],
+                "architecture": "relu_linear"
             },
             "encoding": {
                 "d": 3,
@@ -85,5 +63,6 @@
                 "type": "gene"
             }
         }
+        
     }
 }
