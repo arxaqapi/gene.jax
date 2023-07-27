@@ -216,7 +216,12 @@ class NNDistanceSimple(DistanceFunction):
 class CGPDistance(DistanceFunction):
     def __init__(self, cgp_genome: Array, cgp_config: dict, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.program = genome_to_cgp_program(cgp_genome, cgp_config)
+        self.program = genome_to_cgp_program(
+            genome=cgp_genome,
+            config=cgp_config,
+            # output wrapper by default is tanh
+            outputs_wrapper=lambda e: e,
+        )
         self.cgp_config = cgp_config
 
     def distance(self, v1: Array, v2: Array) -> float:
@@ -240,11 +245,16 @@ class LearnedDf(DistanceFunction):
         #     buffer[12] = exp(buffer[0])
         #     outputs = buffer[[12]]
         buffer = jnp.concatenate((v1, v2))
-        out = jnp.exp(buffer)[-1]
+        out = jnp.exp(buffer[2])
         return out
 
 
-Distance_functions = {"pL2": pL2Distance, "nn": NNDistance, "cgp": CGPDistance}
+Distance_functions = {
+    "pL2": pL2Distance,
+    "nn": NNDistance,
+    "cgp": CGPDistance,
+    "learned": LearnedDf,
+}
 
 
 def get_df(config: dict) -> Type[DistanceFunction]:
