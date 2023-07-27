@@ -345,6 +345,7 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
     )
 
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
+        print(f"[Meta gen {_meta_generation}] - Start")
         rng, rng_eval = jrd.split(rng, 2)
         # NOTE - evaluate population on curriculum
         f_cartpole = vec_learn_cartpole(genomes, rng_eval)
@@ -354,7 +355,8 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
             vec_learn_acrobot(genomes, rng_eval)
             if max_f_cartpole > 400
             else 0
-        ) 
+        )
+        max_f_acrobot = jnp.max(f_acrobot)
 
         fitness_values = f_cartpole + f_acrobot
         # fix nan values
@@ -381,6 +383,8 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
 
         # print progress
         print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
+        print(f"\t{max_f_cartpole}")
+        print(f"\t{max_f_acrobot}")
         print(best_program)
 
         if wandb_run is not None:
@@ -388,5 +392,6 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
 
         # NOTE - update population
         genomes = jnp.concatenate((parents, new_genomes))
+        print(f"[Meta gen {_meta_generation}] - End\n")
 
     return None
