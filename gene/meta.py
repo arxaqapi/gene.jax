@@ -1,4 +1,5 @@
 from functools import partial
+from pathlib import Path
 
 import evosax
 import jax.random as jrd
@@ -25,6 +26,7 @@ from cgpax.jax_individual import (
 from cgpax.jax_selection import fp_selection
 from cgpax.utils import readable_cgp_program_from_genome
 from cgpax.run_utils import __update_config_with_data__
+from cgpax.analysis.genome_analysis import __save_graph__, __write_readable_program__
 
 
 def meta_learn_nn(config: dict, wandb_run):
@@ -168,7 +170,7 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     """Meta evolution of a cgp parametrized distance function"""
     assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
 
-    rng = jrd.PRNGKey(meta_config["seed"])
+    rng: jrd.KeyArray = jrd.PRNGKey(meta_config["seed"])
 
     # Evaluation function based on CGP using CGP df
     # Input size is the number of values for each neuron position vector
@@ -193,25 +195,23 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     )
 
     # evaluation curriculum fonctions
-    vec_learn_hc_100 = jit(
-        vmap(
-            partial(
-                learn_brax_task_cgp,
-                config=meta_config["curriculum"]["hc_100"],
-                cgp_config=cgp_config,
-            ),
-            in_axes=(0, None),
-        )
+    # NOTE - remove JIT
+    vec_learn_hc_100 = vmap(
+        partial(
+            learn_brax_task_cgp,
+            config=meta_config["curriculum"]["hc_100"],
+            cgp_config=cgp_config,
+        ),
+        in_axes=(0, None),
     )
-    vec_learn_hc_500 = jit(
-        vmap(
-            partial(
-                learn_brax_task_cgp,
-                config=meta_config["curriculum"]["hc_500"],
-                cgp_config=cgp_config,
-            ),
-            in_axes=(0, None),
-        )
+    # NOTE - remove JIT
+    vec_learn_hc_500 = vmap(
+        partial(
+            learn_brax_task_cgp,
+            config=meta_config["curriculum"]["hc_500"],
+            cgp_config=cgp_config,
+        ),
+        in_axes=(0, None),
     )
 
     partial_fp_selection = partial(fp_selection, n_elites=cgp_config["elite_size"])
@@ -240,7 +240,9 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
         rng, rng_eval = jrd.split(rng, 2)
         # NOTE - evaluate population on curriculum of tasks
         f_hc_100 = vec_learn_hc_100(genomes, rng_eval)
+        print(f"[Meta gen {_meta_generation}] - eval hc 100 done")
         f_hc_500 = vec_learn_hc_500(genomes, rng_eval)
+        print(f"[Meta gen {_meta_generation}] - eval hc 500 done")
         fitness_values = f_hc_100 + f_hc_500
 
         # NAN replacement
@@ -293,6 +295,23 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
                 }
             )
         print(f"[Meta gen {_meta_generation}] - End\n")
+        # Save best genome as graph and readable program
+        programm_save_path = Path(wandb_run.dir) / "programs"
+        programm_save_path.parent.mkdir(parents=True, exist_ok=True)
+        __save_graph__(
+            genome=best_genome,
+            config=cgp_config,
+            file=str(programm_save_path / f"gen_{_meta_generation}_best_graph.png"),
+            input_color="green",
+            output_color="red",
+        )
+        __write_readable_program__(
+            genome=best_genome,
+            config=cgp_config,
+            target_file=str(
+                programm_save_path / f"gen_{_meta_generation}_best_programm.txt"
+            ),
+        )
 
     return None
 

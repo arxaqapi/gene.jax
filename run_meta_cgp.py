@@ -21,7 +21,7 @@ if __name__ == "__main__":
         "p_mut_inputs": 0.1,
         "p_mut_functions": 0.1,
         "p_mut_outputs": 0.3,
-        "n_nodes": 24,
+        "n_nodes": 16,
         "n_functions": len(available_functions),
         "nan_replacement": 10e10,
     }
