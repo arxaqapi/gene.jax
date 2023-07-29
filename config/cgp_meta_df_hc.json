@@ -1,9 +1,8 @@
 {
     "seed": 0,
     "evo": {
-        "strategy_name": "Sep_CMA_ES",
         "n_generations": 5000,
-        "population_size": 64,
+        "population_size": 16,
         "n_evaluations": 1
     },
     "net": {
@@ -27,9 +26,9 @@
                 "episode_length": 100
             },
             "evo": {
-                "strategy_name": "Sep_CMA_ES",
+                "strategy_name": "DES",
                 "n_generations": 500,
-                "population_size": 32,
+                "population_size": 16,
                 "n_evaluations": 1
             },
             "net": {
@@ -49,9 +48,9 @@
                 "episode_length": 500
             },
             "evo": {
-                "strategy_name": "Sep_CMA_ES",
+                "strategy_name": "DES",
                 "n_generations": 500,
-                "population_size": 64,
+                "population_size": 16,
                 "n_evaluations": 1
             },
             "net": {
