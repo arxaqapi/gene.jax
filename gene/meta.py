@@ -297,7 +297,7 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
         print(f"[Meta gen {_meta_generation}] - End\n")
         # Save best genome as graph and readable program
         programm_save_path = Path(wandb_run.dir) / "programs"
-        programm_save_path.parent.mkdir(parents=True, exist_ok=True)
+        programm_save_path.mkdir(parents=True, exist_ok=True)
         __save_graph__(
             genome=best_genome,
             config=cgp_config,
