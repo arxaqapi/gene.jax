@@ -15,6 +15,7 @@ if __name__ == "__main__":
         "seed": 0,
         "problem": "cgp_meta_df",
         "solver": "cgp",
+        "mutation": "standard",
         "n_generations": meta_config["evo"]["n_generations"],
         "n_individuals": meta_config["evo"]["population_size"],
         "elite_size": 5,
@@ -23,17 +24,9 @@ if __name__ == "__main__":
         "p_mut_outputs": 0.3,
         "n_nodes": 16,
         "n_functions": len(available_functions),
-        "nan_replacement": 10e10,
+        "nan_replacement": 0.0,
     }
 
-    assert (
-        meta_config["cgp_config"]["n_generations"]
-        == meta_config["evo"]["n_generations"]
-    )
-    assert (
-        meta_config["cgp_config"]["n_individuals"]
-        == meta_config["evo"]["population_size"]
-    )
 
     wandb_run = wandb.init(
         project="Meta df benchmarks", config=meta_config, tags=["cgp", "meta_df_hc"]
