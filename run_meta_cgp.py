@@ -1,6 +1,6 @@
 import wandb
 
-from gene.meta import meta_learn_cgp
+from gene.meta import meta_learn_cgp, meta_learn_cgp_extended
 from gene.utils import load_config, fail_if_not_device
 
 from cgpax.jax_functions import available_functions
@@ -10,9 +10,10 @@ if __name__ == "__main__":
     fail_if_not_device()
 
     meta_config = load_config("config/cgp_meta_df_hc.json")
+    # meta_config = load_config("config/cgp_meta_df_extended.json")
 
     meta_config["cgp_config"] = {
-        "seed": 0,
+        "seed": 6080,
         "problem": "cgp_meta_df",
         "solver": "cgp",
         "mutation": "standard",
@@ -22,13 +23,17 @@ if __name__ == "__main__":
         "p_mut_inputs": 0.1,
         "p_mut_functions": 0.1,
         "p_mut_outputs": 0.3,
-        "n_nodes": 16,
+        "n_nodes": 32,
         "n_functions": len(available_functions),
         "nan_replacement": 0.0,
     }
 
 
     wandb_run = wandb.init(
-        project="Meta df benchmarks", config=meta_config, tags=["cgp", "meta_df_hc"]
+        project="Meta df benchmarks",
+        config=meta_config,
+        tags=["cgp", "meta_df_hc"],
+        name=f"long-exp"
     )
     meta_learn_cgp(meta_config, meta_config["cgp_config"], wandb_run)
+    # meta_learn_cgp_extended(meta_config, meta_config["cgp_config"], wandb_run)
