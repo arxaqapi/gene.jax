@@ -101,7 +101,7 @@ def meta_learn_nn(config: dict, wandb_run):
 
     for meta_generation in range(config["evo"]["n_generations"]):
         print(f"[Meta gen n°{meta_generation:>5}]")
-
+        # FIXME - diff eval keys
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
         # NOTE - Ask
         x, meta_state = ask(rng_gen, meta_state)
@@ -240,11 +240,11 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     wandb_run.config.update(meta_config, allow_val_change=True)
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen {_meta_generation}] - Start")
-        rng, rng_eval = jrd.split(rng, 2)
+        rng, rng_eval_hc100, rng_eval_hc500 = jrd.split(rng, 3)
         # NOTE - evaluate population on curriculum of tasks
-        f_hc_100 = vec_learn_hc_100(genomes, rng_eval)
+        f_hc_100 = vec_learn_hc_100(genomes, rng_eval_hc100)
         print(f"[Meta gen {_meta_generation}] - eval hc 100 done")
-        f_hc_500 = vec_learn_hc_500(genomes, rng_eval)
+        f_hc_500 = vec_learn_hc_500(genomes, rng_eval_hc500)
         print(f"[Meta gen {_meta_generation}] - eval hc 500 done")
         fitness_values = f_hc_100 + f_hc_500
 
