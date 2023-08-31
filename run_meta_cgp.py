@@ -32,7 +32,7 @@ if __name__ == "__main__":
         project="Meta df benchmarks",
         config=meta_config,
         tags=["cgp", "meta_df_hc"],
-        name=f"long-exp",
+        name="long-exp",
     )
     meta_learn_cgp(meta_config, meta_config["cgp_config"], wandb_run)
     # meta_learn_cgp_extended(meta_config, meta_config["cgp_config"], wandb_run)

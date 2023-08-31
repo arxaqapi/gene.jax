@@ -101,8 +101,7 @@ def meta_learn_nn(config: dict, wandb_run):
 
     for meta_generation in range(config["evo"]["n_generations"]):
         print(f"[Meta gen n°{meta_generation:>5}]")
-        # FIXME - diff eval keys
-        rng, rng_gen, rng_eval = jrd.split(rng, 3)
+        rng, rng_gen, rng_eval_cp, rng_eval_hc_100, rng_eval_hc_1000 = jrd.split(rng, 5)
         # NOTE - Ask
         x, meta_state = ask(rng_gen, meta_state)
 
@@ -113,13 +112,13 @@ def meta_learn_nn(config: dict, wandb_run):
         # NOTE - 2. Complete training and evaluation on a curriculum of tasks
         # All distance functions (x) are evaluated by running a complete policy learning
         # loop using GENE with a nn distance function, the sample mean is then evaluated
-        f_cp = vec_learn_cartpole(x, rng_eval)
+        f_cp = vec_learn_cartpole(x, rng_eval_cp)
         max_f_cp = jnp.max(f_cp)
 
-        f_hc_100 = vec_learn_hc_100(x, rng_eval) if max_f_cp > 400 else 0
+        f_hc_100 = vec_learn_hc_100(x, rng_eval_hc_100) if max_f_cp > 400 else 0
         max_f_hc_100 = jnp.max(f_hc_100)
 
-        f_hc_1000 = vec_learn_hc_1000(x, rng_eval) if max_f_hc_100 > 200 else 0
+        f_hc_1000 = vec_learn_hc_1000(x, rng_eval_hc_1000) if max_f_hc_100 > 200 else 0
         max_f_hc_1000 = jnp.max(f_hc_1000)
         # NOTE - 3. aggregate fitnesses and weight them
         _norm_f_cp = f_cp / (max_f_cp if max_f_cp != 0 else 1.0)
@@ -421,13 +420,13 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
     wandb_run.config.update(meta_config, allow_val_change=True)
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen {_meta_generation}] - Start")
-        rng, rng_eval = jrd.split(rng, 2)
+        rng, rng_eval_hc_100, rng_eval_hc_500, rng_w2d_1000 = jrd.split(rng, 4)
         # NOTE - evaluate population on curriculum of tasks
-        f_hc_100 = vec_learn_hc_100(genomes, rng_eval)
+        f_hc_100 = vec_learn_hc_100(genomes, rng_eval_hc_100)
         print(f"[Meta gen {_meta_generation}] - eval hc 100 done")
-        f_hc_500 = vec_learn_hc_500(genomes, rng_eval)
+        f_hc_500 = vec_learn_hc_500(genomes, rng_eval_hc_500)
         print(f"[Meta gen {_meta_generation}] - eval hc 500 done")
-        f_w2d_1000 = vec_learn_w2d_1000(genomes, rng_eval)
+        f_w2d_1000 = vec_learn_w2d_1000(genomes, rng_w2d_1000)
         print(f"[Meta gen {_meta_generation}] - eval w2d 1000 done")
 
         fitness_values = f_hc_100 + f_hc_500 + f_w2d_1000
@@ -605,12 +604,14 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
 
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen {_meta_generation}] - Start")
-        rng, rng_eval = jrd.split(rng, 2)
+        rng, rng_cartpole, rng_acrobot = jrd.split(rng, 3)
         # NOTE - evaluate population on curriculum
-        f_cartpole = vec_learn_cartpole(genomes, rng_eval)
+        f_cartpole = vec_learn_cartpole(genomes, rng_cartpole)
         max_f_cartpole = jnp.max(f_cartpole)
 
-        f_acrobot = vec_learn_acrobot(genomes, rng_eval) if max_f_cartpole > 400 else 0
+        f_acrobot = (
+            vec_learn_acrobot(genomes, rng_acrobot) if max_f_cartpole > 400 else 0
+        )
         max_f_acrobot = jnp.max(f_acrobot)
 
         fitness_values = f_cartpole + f_acrobot
