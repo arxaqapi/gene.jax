@@ -682,7 +682,9 @@ def evaluate_network_properties(cgp_genome, rng_eval: jrd.KeyArray, meta_config:
     cgp_df = CGPDistance(cgp_genome, meta_config["cgp_config"])
     decoder = GENEDecoder(task_config, cgp_df)
     # NOTE - 2. Gen policy_genome
-    dummy_network_genome = jrd.uniform(rng_eval, shape=(decoder.encoding_size(),))
+    dummy_network_genome = jrd.uniform(
+        rng_eval, shape=(decoder.encoding_size(),), minval=-1.0, maxval=1.0
+    )
     # NOTE - 3. Use GENEDecoder to decode the dummy policy genome into model params
     model = get_model(task_config)
     model_parameters = decoder.decode(dummy_network_genome)
@@ -769,14 +771,15 @@ def meta_learn_cgp_corrected(
         wandb_run.config.update(meta_config, allow_val_change=True)
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen {_meta_generation}] - Start")
-        rng, rng_eval_hc500, *rng_eval_model_prop = jrd.split(
-            rng, 2 + meta_config["evo"]["population_size"]
+        rng, rng_eval_hc500, rng_eval_net_prop = jrd.split(rng, 3)
+        rng_eval_net_prop = jrd.split(
+            rng_eval_net_prop, meta_config["evo"]["population_size"]
         )
 
         # SECTION - evaluate population on neural network properties enforcing functions
         # and curriculum of tasks
         f_expr, f_w_distr, f_inp = vec_evaluate_network_properties(
-            genomes, rng_eval_model_prop
+            genomes, rng_eval_net_prop
         )
         f_net_prop = f_expr + f_w_distr + f_inp
 
