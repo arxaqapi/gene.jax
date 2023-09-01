@@ -1,6 +1,8 @@
 import wandb
 
-from gene.meta import meta_learn_cgp, meta_learn_cgp_extended
+# from gene.meta import meta_learn_cgp
+# from gene.meta import meta_learn_cgp_extended
+from gene.meta import meta_learn_cgp_corrected
 from gene.utils import load_config, fail_if_not_device
 
 from cgpax.jax_functions import available_functions
@@ -34,5 +36,6 @@ if __name__ == "__main__":
         tags=["cgp", "meta_df_hc"],
         name="long-exp",
     )
-    meta_learn_cgp(meta_config, meta_config["cgp_config"], wandb_run)
+    # meta_learn_cgp(meta_config, meta_config["cgp_config"], wandb_run)
     # meta_learn_cgp_extended(meta_config, meta_config["cgp_config"], wandb_run)
+    meta_learn_cgp_corrected(meta_config, meta_config["cgp_config"], wandb_run)
