@@ -3,23 +3,28 @@ Neural network properties evaluation
 """
 import flax.linen as nn
 from flax import traverse_util
+import numpy as np
 import jax.numpy as jnp
 import jax.random as jrd
 
 
 def expressivity_ratio(model_parameters: nn.FrozenDict):
     """Ratio of unique parameters in the network.
-    Number of unique parameters over the total number of parameters"""
+    Number of unique parameters over the total number of parameters
+
+    - Close to 0: not a lot of unique params
+    - Close to 1: lots of unique params
+    """
     flat_model_param = traverse_util.flatten_dict(model_parameters, sep=".")
 
     unique = set()
     total_size = 0
-    for _, val in flat_model_param.items():
-        total_size += val.size
+    for _, layer_params in flat_model_param.items():
+        total_size += layer_params.size
 
-        uniques = jnp.unique(val)
-        for unique_value in uniques:
-            unique.add(float(unique_value))
+        for param in np.nditer(layer_params):
+            unique.add(float(param))
+
     assert total_size > 0
     return len(unique) / total_size
 
