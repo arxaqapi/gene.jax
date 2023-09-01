@@ -3,7 +3,6 @@ Neural network properties evaluation
 """
 import flax.linen as nn
 from flax import traverse_util
-import numpy as np
 import jax.numpy as jnp
 import jax.random as jrd
 
@@ -33,7 +32,9 @@ def initialization_term(model_parameters: nn.FrozenDict):
     """Distance de la moyenne de la distribution des paramètres avec 0
     et écart-type de la distribution."""
     flat_model_param = traverse_util.flatten_dict(model_parameters, sep=".")
-    param_vector = jnp.concatenate([jnp.ravel(params) for params in flat_model_param.values()])
+    param_vector = jnp.concatenate(
+        [jnp.ravel(params) for params in flat_model_param.values()]
+    )
 
     mean = jnp.mean(param_vector)
     std = jnp.std(param_vector)
