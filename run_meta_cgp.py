@@ -33,8 +33,8 @@ if __name__ == "__main__":
     wandb_run = wandb.init(
         project="Meta df benchmarks",
         config=meta_config,
-        tags=["cgp", "meta_df_hc"],
-        name="long-exp",
+        tags=["cgp", "meta_df_hc", "corrected_f"],
+        name="meta-cgp-corrected-df",
     )
     # meta_learn_cgp(meta_config, meta_config["cgp_config"], wandb_run)
     # meta_learn_cgp_extended(meta_config, meta_config["cgp_config"], wandb_run)

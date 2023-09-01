@@ -22,8 +22,8 @@ def expressivity_ratio(model_parameters: nn.FrozenDict):
     for _, layer_params in flat_model_param.items():
         total_size += layer_params.size
 
-        for param in np.nditer(layer_params):
-            unique.add(float(param))
+        for param in jnp.ravel(layer_params):
+            unique.add(param.astype(float))
 
     assert total_size > 0
     return len(unique) / total_size
@@ -33,10 +33,10 @@ def initialization_term(model_parameters: nn.FrozenDict):
     """Distance de la moyenne de la distribution des paramètres avec 0
     et écart-type de la distribution."""
     flat_model_param = traverse_util.flatten_dict(model_parameters, sep=".")
-    flat_params = jnp.concatenate(list(flat_model_param.values()))
+    param_vector = jnp.concatenate([jnp.ravel(params) for params in flat_model_param.values()])
 
-    mean = jnp.mean(flat_params)
-    std = jnp.std(flat_params)
+    mean = jnp.mean(param_vector)
+    std = jnp.std(param_vector)
 
     return mean, std
 
