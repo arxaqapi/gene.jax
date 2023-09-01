@@ -6,13 +6,20 @@ import jax.random as jrd
 import jax.numpy as jnp
 from jax import jit, vmap
 
-from gene.core.decoding import DirectDecoder
-from gene.core.models import ReluLinearModel
+from gene.core.decoding import DirectDecoder, GENEDecoder
+from gene.core.models import ReluLinearModel, get_model
+from gene.core.distances import CGPDistance
 from gene.learning import (
     learn_gymnax_task_nn_df,
     learn_brax_task_cgp,
     learn_brax_task_untracked_nn_df,
     learn_gymnax_task_cgp_df_mean,
+    learn_brax_task_cgp_d0_50,
+)
+from gene.nn_properties import (
+    expressivity_ratio,
+    initialization_term,
+    input_distribution_restoration,
 )
 from gene.tracker import MetaTracker
 
@@ -650,6 +657,234 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
 
         # NOTE - update population
         genomes = jnp.concatenate((parents, new_genomes))
+        print(f"[Meta gen {_meta_generation}] - End\n")
+
+    return None
+
+
+def evaluate_network_properties(cgp_genome, rng_eval: jrd.KeyArray, meta_config: dict):
+    """This function evaluates the propoerties of a single policy network.
+    The genome is the genome of the distance function
+
+    Args:
+        genome (_type_): _description_
+        cgp_config (dict): _description_
+    """
+    # First config of the curriculum tasks
+    task_config = next(iter(meta_config["curriculum"].values()))
+    assert "net" in task_config
+    assert "layer_dimensions" in task_config["net"]
+    assert "architecture" in task_config["net"]
+    assert "encoding" in task_config
+    assert "d" in task_config["encoding"]
+
+    # NOTE - 1. Use cgp_genome to form a DF and a GENEDecoder
+    cgp_df = CGPDistance(cgp_genome, meta_config["cgp_config"])
+    decoder = GENEDecoder(task_config, cgp_df)
+    # NOTE - 2. Gen policy_genome
+    dummy_network_genome = jrd.uniform(rng_eval, shape=(decoder.encoding_size(),))
+    # NOTE - 3. Use GENEDecoder to decode the dummy policy genome into model params
+    model = get_model(task_config)
+    model_parameters = decoder.decode(dummy_network_genome)
+    # NOTE - 4. Evaluate the policy networks parameters properties
+    f_expr = expressivity_ratio(model_parameters)
+    mean, std = initialization_term(model_parameters)
+    f_w_distr = -mean - jnp.square(std - 0.05)
+    (_, _), (out_mu, _) = input_distribution_restoration(model, model_parameters)
+    f_inp = -out_mu
+
+    return f_expr, f_w_distr, f_inp
+
+
+def meta_learn_cgp_corrected(
+    meta_config: dict, cgp_config: dict, wandb_run=None, beta: float = 0.5
+):
+    """Meta evolution of a cgp parametrized distance function,
+    using a corrected fitness function forcing the policy neural networks to
+    enforce some basic properties."""
+    assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
+
+    rng: jrd.KeyArray = jrd.PRNGKey(meta_config["seed"])
+
+    # Evaluation function based on CGP using CGP df
+    # Input size is the number of values for each neuron position vector
+    # Output size is 1, the distance between the two neurons
+    __update_config_with_data__(
+        cgp_config,
+        observation_space_size=meta_config["encoding"]["d"] * 2,
+        action_space_size=1,
+    )
+    nan_replacement = cgp_config["nan_replacement"]
+
+    # preliminary evo steps
+    genome_mask, mutation_mask = __compute_masks__(cgp_config)
+
+    # evaluation curriculum fonctions
+    vec_learn_hc_500 = vmap(
+        partial(
+            learn_brax_task_cgp,
+            config=meta_config["curriculum"]["hc_500"],
+            cgp_config=cgp_config,
+        ),
+        in_axes=(0, None),
+    )
+    vec_learn_brax_task_cgp_d0_50 = vmap(
+        partial(
+            learn_brax_task_cgp_d0_50,
+            config=meta_config["curriculum"]["hc_500"],
+            cgp_config=cgp_config,
+        ),
+        in_axes=(0, None),
+    )
+
+    partial_fp_selection = partial(fp_selection, n_elites=cgp_config["elite_size"])
+    jit_partial_fp_selection = jit(partial_fp_selection)
+    # mutation
+    genome_transformation_function = __compute_genome_transformation_function__(
+        cgp_config
+    )
+    batch_mutate_genomes = __compile_mutation__(
+        cgp_config,
+        genome_mask,
+        mutation_mask,
+        genome_transformation_function=genome_transformation_function,
+    )
+
+    # replace invalid fitness values
+    fitness_nan_replacement = jit(partial(jnp.nan_to_num, nan=nan_replacement))
+
+    rng, rng_generation = jrd.split(rng, 2)
+    genomes = generate_population(
+        pop_size=cgp_config["n_individuals"],
+        genome_mask=genome_mask,
+        rnd_key=rng_generation,
+        genome_transformation_function=genome_transformation_function,
+    )
+    # NOTE - NN prop enforce
+    vec_evaluate_network_properties = vmap(
+        partial(evaluate_network_properties, meta_config=meta_config), in_axes=(0, 0)
+    )
+
+    if wandb_run is not None:
+        wandb_run.config.update(meta_config, allow_val_change=True)
+    for _meta_generation in range(meta_config["evo"]["n_generations"]):
+        print(f"[Meta gen {_meta_generation}] - Start")
+        rng, rng_eval_hc500, *rng_eval_model_prop = jrd.split(
+            rng, 2 + meta_config["evo"]["population_size"]
+        )
+
+        # SECTION - evaluate population on neural network properties enforcing functions
+        # and curriculum of tasks
+        f_expr, f_w_distr, f_inp = vec_evaluate_network_properties(
+            genomes, rng_eval_model_prop
+        )
+        f_net_prop = f_expr + f_w_distr + f_inp
+
+        # NOTE - best member fitness value (max)
+        f_hc_500_max = vec_learn_hc_500(genomes, rng_eval_hc500)
+        f_hc_500_d0_50 = vec_learn_brax_task_cgp_d0_50(genomes, rng_eval_hc500)
+
+        fitness_values = beta * (f_net_prop) + (1 - beta) * (
+            f_hc_500_max + f_hc_500_d0_50
+        )
+        assert fitness_values is not None
+        # !SECTION
+
+        # NAN replacement
+        fitness_values = fitness_nan_replacement(fitness_values)
+
+        # NOTE - select parents
+        rng, rng_fp = jrd.split(rng, 2)
+        # Choose selection mechanism
+        parents = jit_partial_fp_selection(genomes, fitness_values, rng_fp)
+
+        # NOTE - compute offspring
+        rng, rng_mutation = jrd.split(rng, 2)
+        rng_multiple_mutations = jrd.split(rng_mutation, len(parents))
+        new_genomes_matrix = batch_mutate_genomes(parents, rng_multiple_mutations)
+        new_genomes = jnp.reshape(
+            new_genomes_matrix, (-1, new_genomes_matrix.shape[-1])
+        )
+
+        # max index
+        best_genome_idx = jnp.argmax(fitness_values)
+        best_genome = genomes[best_genome_idx]
+        best_fitness = fitness_values[best_genome_idx]
+        best_program = readable_cgp_program_from_genome(best_genome, cgp_config)
+
+        # print progress
+        print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
+        print(best_program)
+
+        # NOTE - update population
+        genomes = jnp.concatenate((parents, new_genomes))
+
+        # NOTE - log stats
+        if wandb_run is not None:
+            wandb_run.log(
+                {
+                    "training": {
+                        "total_emp_mean_fitness": fitness_values.mean(),
+                        "total_max_fitness": fitness_values.max(),
+                        "hc500": {
+                            "emp_mean_fit": f_hc_500_max.mean(),
+                            "max_fit": f_hc_500_max.max(),
+                        },
+                        "hc500_d0_50": {
+                            "emp_mean_fit": f_hc_500_d0_50.mean(),
+                            "max": f_hc_500_d0_50.max(),
+                        },
+                        "net_prop": {
+                            "f_expressivity": f_expr.mean(),
+                            "f_weight_distribution": f_w_distr.mean(),
+                            "f_input_restoration": f_inp.mean(),
+                        },
+                    },
+                }
+            )
+            # Save best genome as graph and readable program
+            programm_save_path = Path(wandb_run.dir) / "programs"
+            programm_save_path.mkdir(parents=True, exist_ok=True)
+            graph_save_path = str(
+                programm_save_path / f"gen_{_meta_generation}_best_graph.png"
+            )
+            readable_programm_save_path = str(
+                programm_save_path / f"gen_{_meta_generation}_best_programm.txt"
+            )
+            __save_graph__(
+                genome=best_genome,
+                config=cgp_config,
+                file=graph_save_path,
+                input_color="green",
+                output_color="red",
+            )
+            __write_readable_program__(
+                genome=best_genome,
+                config=cgp_config,
+                target_file=readable_programm_save_path,
+            )
+            # Save best
+            save_path = (
+                Path(wandb_run.dir)
+                / "df_genomes"
+                / f"mg_{_meta_generation}_best_genome.npy"
+            )
+            save_path = save_path.with_suffix(".npy")
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(save_path, "wb") as f:
+                jnp.save(f, best_genome)
+
+            wandb_run.save(
+                str(graph_save_path), base_path=f"{wandb_run.dir}/", policy="now"
+            )
+            wandb_run.save(
+                str(readable_programm_save_path),
+                base_path=f"{wandb_run.dir}/",
+                policy="now",
+            )
+            wandb_run.save(str(save_path), base_path=f"{wandb_run.dir}/", policy="now")
+
         print(f"[Meta gen {_meta_generation}] - End\n")
 
     return None
