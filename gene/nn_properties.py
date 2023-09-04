@@ -28,7 +28,7 @@ def expressivity_ratio(model_parameters: nn.FrozenDict):
     return len(unique) / total_size
 
 
-def initialization_term(model_parameters: nn.FrozenDict):
+def weights_distribution(model_parameters: nn.FrozenDict):
     """Distance de la moyenne de la distribution des paramètres avec 0
     et écart-type de la distribution."""
     flat_model_param = traverse_util.flatten_dict(model_parameters, sep=".")
