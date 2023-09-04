@@ -91,4 +91,4 @@ def validate_meta_json(conig: dict) -> None:
 def min_max_scaler(x):
     "Brings value to the [0, 1] range"
     x_min = x.min()
-    return (x - x_min) / (x.max() - x_min)
+    return (x - x_min) / ((x.max() - x_min) + 1e-6)
