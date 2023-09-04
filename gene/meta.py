@@ -270,8 +270,8 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
         if wandb_run is not None:
             to_log = {
                 "training": {
-                    "total_emp_mean_fitness": jnp.mean(true_fitness),
-                    "total_max_fitness": jnp.max(true_fitness),
+                    "total_emp_mean_fitness": true_fitness.mean(),
+                    "total_max_fitness": true_fitness.max(),
                     "net_prop": {
                         "f_expressivity": f_expr.mean(),
                         "f_weight_distribution": f_w_distr.mean(),
