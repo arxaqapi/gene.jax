@@ -19,7 +19,7 @@ from gene.learning import (
 )
 from gene.nn_properties import (
     expressivity_ratio,
-    initialization_term,
+    weights_distribution,
     input_distribution_restoration,
 )
 from gene.utils import min_max_scaler
@@ -200,8 +200,9 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
     # Neural network distance network
     nn_dst_model = ReluLinearModel(meta_config["net"]["layer_dimensions"][1:])
 
-    vec_learn_hc_500 = jit(
-        vmap(
+    if beta < 1:
+        # NOTE - JIT removed
+        vec_learn_hc_500 = vmap(
             partial(
                 learn_brax_task_untracked_nn_df,
                 meta_decoder=meta_decoder,
@@ -210,10 +211,7 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
             ),
             in_axes=(0, None),
         )
-    )
-
-    vec_learn_brax_task_untracked_nn_df_d0_50 = jit(
-        vmap(
+        vec_learn_brax_task_untracked_nn_df_d0_50 = vmap(
             partial(
                 learn_brax_task_untracked_nn_df_d0_50,
                 meta_decoder=meta_decoder,
@@ -222,17 +220,18 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
             ),
             in_axes=(0, None),
         )
-    )
 
     vec_evaluate_network_properties_nn_dist = jit(
         vmap(
-            partial(evaluate_network_properties_nn_dist, meta_config=meta_config),
+            partial(
+                evaluate_network_properties_n_times,
+                meta_config=meta_config,
+                df_type="nn",
+                n=32,
+            ),
             in_axes=(0, 0),
         )
     )
-
-    tracker = MetaTracker(meta_config, meta_decoder)
-    tracker_state = tracker.init()
 
     for meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen n°{meta_generation:>5}]")
@@ -243,10 +242,15 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
         # NOTE - Ask
         x, meta_state = ask(rng_gen, meta_state)
 
-        # NOTE - Evaluation curriculum
-        f_hc_500 = vec_learn_hc_500(x, rng_eval_hc_500)
-        f_hc_500_d0_50 = vec_learn_brax_task_untracked_nn_df_d0_50(x, rng_eval_hc_500)
-        f_policy_eval = min_max_scaler(f_hc_500) + min_max_scaler(f_hc_500_d0_50)
+        if beta < 1:
+            # NOTE - Evaluation curriculum
+            f_hc_500 = vec_learn_hc_500(x, rng_eval_hc_500)
+            f_hc_500_d0_50 = vec_learn_brax_task_untracked_nn_df_d0_50(
+                x, rng_eval_hc_500
+            )
+            f_policy_eval = min_max_scaler(f_hc_500) + min_max_scaler(f_hc_500_d0_50)
+        else:
+            f_policy_eval = 0
 
         f_expr, f_w_distr, f_inp = vec_evaluate_network_properties_nn_dist(
             x, rng_eval_net_prop
@@ -263,37 +267,41 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
         meta_state = tell(x, fitness, meta_state)
 
         # NOTE - Tracker
-        tracker_state = tracker.update(
-            tracker_state=tracker_state,
-            fitness_value={
-                "total_emp_mean_fitness": jnp.mean(true_fitness),
-                "total_max_fitness": jnp.max(true_fitness),
-                "hc_500": {
+        if wandb_run is not None:
+            to_log = {
+                "training": {
+                    "total_emp_mean_fitness": jnp.mean(true_fitness),
+                    "total_max_fitness": jnp.max(true_fitness),
+                    "net_prop": {
+                        "f_expressivity": f_expr.mean(),
+                        "f_weight_distribution": f_w_distr.mean(),
+                        "f_input_restoration": f_inp.mean(),
+                    },
+                },
+            }
+            if beta < 1:
+                to_log["training"]["hc_500"] = {
                     "max_fitness": f_hc_500.max(),
                     "emp_mean_fitnesses": f_hc_500.mean(),
-                },
-                "hc500_d0_50": {
+                }
+                to_log["training"]["hc500_d0_50"] = {
                     "emp_mean_fit": f_hc_500_d0_50.mean(),
                     "max": f_hc_500_d0_50.max(),
-                },
-                "net_prop": {
-                    "f_expressivity": f_expr.mean(),
-                    "f_weight_distribution": f_w_distr.mean(),
-                    "f_input_restoration": f_inp.mean(),
-                },
-            },
-            max_df=x[jnp.argmax(true_fitness)],
-            mean_df=meta_state.mean,
-            gen=meta_generation,
-        )
-        if wandb_run is not None:
-            tracker.wandb_log(tracker_state, wandb_run)
-            tracker.wandb_save_genome(
-                meta_state.mean,
-                wandb_run,
-                file_name=f"g{str(meta_generation).zfill(3)}_mean_df_indiv",
-                now=True,
+                }
+            wandb_run.log(to_log)
+            # Save best
+            best_genome = x[jnp.argmax(true_fitness)]
+            save_path = (
+                Path(wandb_run.dir)
+                / "df_genomes"
+                / f"mg_{meta_generation}_best_genome.npy"
             )
+            save_path = save_path.with_suffix(".npy")
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(save_path, "wb") as f:
+                jnp.save(f, best_genome)
+            wandb_run.save(str(save_path), base_path=f"{wandb_run.dir}/", policy="now")
 
     return meta_state.mean
 
@@ -789,82 +797,6 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
     return None
 
 
-def evaluate_network_properties_nn_dist(
-    distance_genome, rng_eval: jrd.KeyArray, meta_config: dict
-):
-    """This function evaluates the propoerties of a single policy network.
-    The genome is the genome of the distance function
-
-    Args:
-        genome (_type_): _description_
-        cgp_config (dict): _description_
-    """
-    # First config of the curriculum tasks
-    task_config = next(iter(meta_config["curriculum"].values()))
-    assert "net" in task_config
-    assert "layer_dimensions" in task_config["net"]
-    assert "architecture" in task_config["net"]
-    assert "encoding" in task_config
-    assert "d" in task_config["encoding"]
-
-    # NOTE - 1. Use nn_genome to form a DF and a GENEDecoder
-    cgp_df = NNDistance(
-        distance_genome, meta_config, meta_config["net"]["layer_dimensions"]
-    )
-    decoder = GENEDecoder(task_config, cgp_df)
-    # NOTE - 2. Gen policy_genome
-    dummy_network_genome = jrd.uniform(
-        rng_eval, shape=(decoder.encoding_size(),), minval=-1.0, maxval=1.0
-    )
-    # NOTE - 3. Use GENEDecoder to decode the dummy policy genome into model params
-    model = get_model(task_config)
-    model_parameters = decoder.decode(dummy_network_genome)
-    # NOTE - 4. Evaluate the policy networks parameters properties
-    f_expr = expressivity_ratio(model_parameters)
-    mean, std = initialization_term(model_parameters)
-    f_w_distr = -mean - jnp.square(std - 0.5)
-    (_, _), (out_mu, _) = input_distribution_restoration(model, model_parameters)
-    f_inp = -out_mu
-
-    return f_expr, f_w_distr, f_inp
-
-
-def evaluate_network_properties(cgp_genome, rng_eval: jrd.KeyArray, meta_config: dict):
-    """This function evaluates the propoerties of a single policy network.
-    The genome is the genome of the distance function
-
-    Args:
-        genome (_type_): _description_
-        cgp_config (dict): _description_
-    """
-    # First config of the curriculum tasks
-    task_config = next(iter(meta_config["curriculum"].values()))
-    assert "net" in task_config
-    assert "layer_dimensions" in task_config["net"]
-    assert "architecture" in task_config["net"]
-    assert "encoding" in task_config
-    assert "d" in task_config["encoding"]
-
-    # NOTE - 1. Use cgp_genome to form a DF and a GENEDecoder
-    cgp_df = CGPDistance(cgp_genome, meta_config["cgp_config"])
-    decoder = GENEDecoder(task_config, cgp_df)
-    # NOTE - 2. Gen policy_genome
-    dummy_network_genome = jrd.uniform(
-        rng_eval, shape=(decoder.encoding_size(),), minval=-1.0, maxval=1.0
-    )
-    # NOTE - 3. Use GENEDecoder to decode the dummy policy genome into model params
-    model = get_model(task_config)
-    model_parameters = decoder.decode(dummy_network_genome)
-    # NOTE - 4. Evaluate the policy networks parameters properties
-    f_expr = expressivity_ratio(model_parameters)
-    mean, std = initialization_term(model_parameters)
-    f_w_distr = -mean - jnp.square(std - 0.5)
-    (_, _), (out_mu, _) = input_distribution_restoration(model, model_parameters)
-    f_inp = -out_mu
-
-    return f_expr, f_w_distr, f_inp
-
-
 def meta_learn_cgp_corrected(
     meta_config: dict, cgp_config: dict, wandb_run=None, beta: float = 0.5
 ):
@@ -932,7 +864,7 @@ def meta_learn_cgp_corrected(
     # NOTE - NN prop enforce
     vec_evaluate_network_properties = jit(
         vmap(
-            partial(evaluate_network_properties, meta_config=meta_config),
+            partial(evaluate_network_properties_cgp_dist, meta_config=meta_config),
             in_axes=(0, 0),
         )
     )
@@ -1064,3 +996,97 @@ def meta_learn_cgp_corrected(
         print(f"[Meta gen {_meta_generation}] - End\n")
 
     return None
+
+
+# ================================================
+# ================   Utils   =====================
+# ================================================
+
+
+def _network_properties(distance_function, rng_eval: jrd.KeyArray, meta_config: dict):
+    # First config of the curriculum tasks
+    task_config = next(iter(meta_config["curriculum"].values()))
+    assert "net" in task_config
+    assert "layer_dimensions" in task_config["net"]
+    assert "architecture" in task_config["net"]
+    assert "encoding" in task_config
+    assert "d" in task_config["encoding"]
+
+    # NOTE - 1. Use DF to form a GENEDecoder
+    decoder = GENEDecoder(task_config, distance_function)
+
+    # NOTE - 2. Gen policy_genome
+    dummy_network_genome = jrd.uniform(
+        rng_eval, shape=(decoder.encoding_size(),), minval=-1.0, maxval=1.0
+    )
+    # NOTE - 3. Use GENEDecoder to decode the dummy policy genome into model params
+    model = get_model(task_config)
+    model_parameters = decoder.decode(dummy_network_genome)
+    # NOTE - 4. Evaluate the policy networks parameters properties
+    f_expr = expressivity_ratio(model_parameters)
+
+    mean, std = weights_distribution(model_parameters)
+    f_w_distr = -jnp.abs(mean) - jnp.square(std - 0.5)
+
+    (_, _), (out_mu, _) = input_distribution_restoration(model, model_parameters)
+    f_inp = -jnp.abs(out_mu)
+
+    return f_expr, f_w_distr, f_inp
+
+
+def evaluate_network_properties_nn_dist(
+    distance_genome, rng_eval: jrd.KeyArray, meta_config: dict
+):
+    """This function evaluates the properties of a single policy network.
+    The genome is the genome of the distance function
+    """
+    # NOTE - Use the genome to form a DF
+    cgp_df = NNDistance(
+        distance_genome, meta_config, meta_config["net"]["layer_dimensions"]
+    )
+    return _network_properties(cgp_df, rng_eval, meta_config)
+
+
+def evaluate_network_properties_cgp_dist(
+    cgp_genome, rng_eval: jrd.KeyArray, meta_config: dict
+):
+    """This function evaluates the properties of a single policy network.
+    The genome is the genome of the distance function
+    """
+    # NOTE - Use cgp_genome to form a DF
+    cgp_df = CGPDistance(cgp_genome, meta_config["cgp_config"])
+    return _network_properties(cgp_df, rng_eval, meta_config)
+
+
+def evaluate_network_properties_n_times(
+    df_genome,
+    rng_eval: jrd.KeyArray,
+    meta_config: dict,
+    df_type: str = "nn",
+    n: int = 32,
+):
+    if df_type == "nn":
+        eval_f = vmap(
+            partial(
+                evaluate_network_properties_nn_dist,
+                meta_config=meta_config,
+            ),
+            in_axes=(None, 0),
+        )
+    if df_type == "cgp":
+        eval_f = vmap(
+            partial(
+                evaluate_network_properties_cgp_dist,
+                meta_config=meta_config,
+            ),
+            in_axes=(None, 0),
+        )
+
+    keys = jrd.split(rng_eval, n)
+    f_expr, f_w_distr, f_inp = eval_f(df_genome, keys)
+
+    return (
+        f_expr.mean(),
+        f_w_distr.mean(),
+        f_inp.mean(),
+    )
