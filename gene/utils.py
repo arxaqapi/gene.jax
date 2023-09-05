@@ -74,7 +74,7 @@ def validate_json(config: dict) -> None:
                     )
 
 
-def validate_meta_json(conig: dict) -> None:
+def validate_meta_json(config: dict) -> None:
     """Validates the json format of the passed meta configuration file.
     Only checks that all fields are present, and not their type.
 

@@ -144,7 +144,7 @@ class Experiment:
 def meta_comparison_experiment(config: dict, project_name: str = "CC bench comparison"):
     """Loads a learned DF and uses it to do policy search on various
     tasks and compare with pL2 and direct encoding."""
-    assert config["encoding"]["type "] == "gene"
+    assert config["encoding"]["type"] == "gene"
 
     timestamp = int(time.time())
     api = wandb.Api()

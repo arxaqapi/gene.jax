@@ -98,6 +98,8 @@ class DirectDecoder(Decoder):
             )
 
             model_parameters[f"Dense_{i}"] = {
+                # "kernel": jnp.squeeze(weight_matrix),
+                # "bias": jnp.squeeze(biases),
                 "kernel": weight_matrix,
                 "bias": biases,
             }
@@ -171,6 +173,8 @@ class GENEDecoder(Decoder):
             model_parameters[f"Dense_{i}"] = {
                 "kernel": jnp.squeeze(weight_matrix),
                 "bias": jnp.squeeze(biases),
+                # "kernel": weight_matrix,
+                # "bias": biases,
             }
         return nn.FrozenDict({"params": model_parameters})
 
