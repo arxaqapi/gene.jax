@@ -36,6 +36,6 @@ if __name__ == "__main__":
         tags=["cgp", "meta_df_hc", "corrected_f"],
         name="meta-cgp-corrected-df",
     )
-    # meta_learn_cgp(meta_config, meta_config["cgp_config"], wandb_run)
-    # meta_learn_cgp_extended(meta_config, meta_config["cgp_config"], wandb_run)
-    meta_learn_cgp_corrected(meta_config, meta_config["cgp_config"], wandb_run)
+    # meta_learn_cgp(meta_config, wandb_run)
+    # meta_learn_cgp_extended(meta_config, wandb_run)
+    meta_learn_cgp_corrected(meta_config, wandb_run)

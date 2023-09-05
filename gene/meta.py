@@ -311,9 +311,12 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
 # ================================================
 
 
-def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
+def meta_learn_cgp(meta_config: dict, wandb_run=None):
     """Meta evolution of a cgp parametrized distance function"""
-    assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
+    assert (
+        meta_config["cgp_config"]["n_individuals"]
+        == meta_config["evo"]["population_size"]
+    )
 
     rng: jrd.KeyArray = jrd.PRNGKey(meta_config["seed"])
 
@@ -321,7 +324,7 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     # Input size is the number of values for each neuron position vector
     # Output size is 1, the distance between the two neurons
     __update_config_with_data__(
-        cgp_config,
+        meta_config["cgp_config"],
         observation_space_size=meta_config["encoding"]["d"] * 2,
         action_space_size=1,
     )
@@ -329,10 +332,10 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     #     (cgp_config["n_individuals"] - cgp_config["elite_size"])
     #     / cgp_config["elite_size"]
     # )
-    nan_replacement = cgp_config["nan_replacement"]
+    nan_replacement = meta_config["cgp_config"]["nan_replacement"]
 
     # preliminary evo steps
-    genome_mask, mutation_mask = __compute_masks__(cgp_config)
+    genome_mask, mutation_mask = __compute_masks__(meta_config["cgp_config"])
 
     # evaluation curriculum fonctions
     # NOTE - removed JIT
@@ -340,7 +343,7 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
         partial(
             learn_brax_task_cgp,
             config=meta_config["curriculum"]["hc_100"],
-            cgp_config=cgp_config,
+            cgp_config=meta_config["cgp_config"],
         ),
         in_axes=(0, None),
     )
@@ -349,19 +352,21 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
         partial(
             learn_brax_task_cgp,
             config=meta_config["curriculum"]["hc_500"],
-            cgp_config=cgp_config,
+            cgp_config=meta_config["cgp_config"],
         ),
         in_axes=(0, None),
     )
 
-    partial_fp_selection = partial(fp_selection, n_elites=cgp_config["elite_size"])
+    partial_fp_selection = partial(
+        fp_selection, n_elites=meta_config["cgp_config"]["elite_size"]
+    )
     jit_partial_fp_selection = jit(partial_fp_selection)
     # mutation
     genome_transformation_function = __compute_genome_transformation_function__(
-        cgp_config
+        meta_config["cgp_config"]
     )
     batch_mutate_genomes = __compile_mutation__(
-        cgp_config,
+        meta_config["cgp_config"],
         genome_mask,
         mutation_mask,
         genome_transformation_function=genome_transformation_function,
@@ -372,7 +377,7 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
 
     rng, rng_generation = jrd.split(rng, 2)
     genomes = generate_population(
-        pop_size=cgp_config["n_individuals"],
+        pop_size=meta_config["cgp_config"]["n_individuals"],
         genome_mask=genome_mask,
         rnd_key=rng_generation,
         genome_transformation_function=genome_transformation_function,
@@ -409,7 +414,9 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
         best_genome_idx = jnp.argmax(fitness_values)
         best_genome = genomes[best_genome_idx]
         best_fitness = fitness_values[best_genome_idx]
-        best_program = readable_cgp_program_from_genome(best_genome, cgp_config)
+        best_program = readable_cgp_program_from_genome(
+            best_genome, meta_config["cgp_config"]
+        )
 
         # print progress
         print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
@@ -447,14 +454,14 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
             )
             __save_graph__(
                 genome=best_genome,
-                config=cgp_config,
+                config=meta_config["cgp_config"],
                 file=graph_save_path,
                 input_color="green",
                 output_color="red",
             )
             __write_readable_program__(
                 genome=best_genome,
-                config=cgp_config,
+                config=meta_config["cgp_config"],
                 target_file=readable_programm_save_path,
             )
             # Save best
@@ -484,9 +491,12 @@ def meta_learn_cgp(meta_config: dict, cgp_config: dict, wandb_run=None):
     return None
 
 
-def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None):
+def meta_learn_cgp_extended(meta_config: dict, wandb_run=None):
     """Meta evolution of a cgp parametrized distance function"""
-    assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
+    assert (
+        meta_config["cgp_config"]["n_individuals"]
+        == meta_config["evo"]["population_size"]
+    )
 
     rng: jrd.KeyArray = jrd.PRNGKey(meta_config["seed"])
 
@@ -494,18 +504,19 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
     # Input size is the number of values for each neuron position vector
     # Output size is 1, the distance between the two neurons
     __update_config_with_data__(
-        cgp_config,
+        meta_config["cgp_config"],
         observation_space_size=meta_config["encoding"]["d"] * 2,
         action_space_size=1,
     )
     # n_mutations_per_individual = int(
-    #     (cgp_config["n_individuals"] - cgp_config["elite_size"])
-    #     / cgp_config["elite_size"]
+    #     (meta_config["cgp_config"]["n_individuals"] 
+    #     - meta_config["cgp_config"]["elite_size"])
+    #     / meta_config["cgp_config"]["elite_size"]
     # )
-    nan_replacement = cgp_config["nan_replacement"]
+    nan_replacement = meta_config["cgp_config"]["nan_replacement"]
 
     # preliminary evo steps
-    genome_mask, mutation_mask = __compute_masks__(cgp_config)
+    genome_mask, mutation_mask = __compute_masks__(meta_config["cgp_config"])
 
     # evaluation curriculum fonctions
     # NOTE - removed JIT
@@ -513,7 +524,7 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
         partial(
             learn_brax_task_cgp,
             config=meta_config["curriculum"]["hc_100"],
-            cgp_config=cgp_config,
+            cgp_config=meta_config["cgp_config"],
         ),
         in_axes=(0, None),
     )
@@ -522,7 +533,7 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
         partial(
             learn_brax_task_cgp,
             config=meta_config["curriculum"]["hc_500"],
-            cgp_config=cgp_config,
+            cgp_config=meta_config["cgp_config"],
         ),
         in_axes=(0, None),
     )
@@ -530,19 +541,21 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
         partial(
             learn_brax_task_cgp,
             config=meta_config["curriculum"]["w2d_1000"],
-            cgp_config=cgp_config,
+            cgp_config=meta_config["cgp_config"],
         ),
         in_axes=(0, None),
     )
 
-    partial_fp_selection = partial(fp_selection, n_elites=cgp_config["elite_size"])
+    partial_fp_selection = partial(
+        fp_selection, n_elites=meta_config["cgp_config"]["elite_size"]
+    )
     jit_partial_fp_selection = jit(partial_fp_selection)
     # mutation
     genome_transformation_function = __compute_genome_transformation_function__(
-        cgp_config
+        meta_config["cgp_config"]
     )
     batch_mutate_genomes = __compile_mutation__(
-        cgp_config,
+        meta_config["cgp_config"],
         genome_mask,
         mutation_mask,
         genome_transformation_function=genome_transformation_function,
@@ -553,7 +566,7 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
 
     rng, rng_generation = jrd.split(rng, 2)
     genomes = generate_population(
-        pop_size=cgp_config["n_individuals"],
+        pop_size=meta_config["cgp_config"]["n_individuals"],
         genome_mask=genome_mask,
         rnd_key=rng_generation,
         genome_transformation_function=genome_transformation_function,
@@ -593,7 +606,9 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
         best_genome_idx = jnp.argmax(fitness_values)
         best_genome = genomes[best_genome_idx]
         best_fitness = fitness_values[best_genome_idx]
-        best_program = readable_cgp_program_from_genome(best_genome, cgp_config)
+        best_program = readable_cgp_program_from_genome(
+            best_genome, meta_config["cgp_config"]
+        )
 
         # print progress
         print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
@@ -635,14 +650,14 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
             )
             __save_graph__(
                 genome=best_genome,
-                config=cgp_config,
+                config=meta_config["cgp_config"],
                 file=graph_save_path,
                 input_color="green",
                 output_color="red",
             )
             __write_readable_program__(
                 genome=best_genome,
-                config=cgp_config,
+                config=meta_config["cgp_config"],
                 target_file=readable_programm_save_path,
             )
             # Save best
@@ -672,7 +687,7 @@ def meta_learn_cgp_extended(meta_config: dict, cgp_config: dict, wandb_run=None)
     return None
 
 
-def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
+def meta_learn_cgp_simple(meta_config: dict, wandb_run=None):
     """Gymnax-only environnments meta-learning (cartpole, Acrobot) for a
     cgp parametrized distance function
     """
@@ -682,22 +697,27 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
     # Input size is the number of values for each neuron position vector
     # Output size is 1, the distance between the two neurons
     __update_config_with_data__(
-        cgp_config,
+        meta_config["cgp_config"],
         observation_space_size=meta_config["encoding"]["d"] * 2,
         action_space_size=1,
     )
     n_mutations_per_individual = int(
-        (cgp_config["n_individuals"] - cgp_config["elite_size"])
-        / cgp_config["elite_size"]
+        (
+            meta_config["cgp_config"]["n_individuals"]
+            - meta_config["cgp_config"]["elite_size"]
+        )
+        / meta_config["cgp_config"]["elite_size"]
     )
-    nan_replacement = cgp_config["nan_replacement"]
+    nan_replacement = meta_config["cgp_config"]["nan_replacement"]
 
     # preliminary evo steps
     genome_mask = compute_cgp_genome_mask(
-        cgp_config, n_in=cgp_config["n_in"], n_out=cgp_config["n_out"]
+        meta_config["cgp_config"],
+        n_in=meta_config["cgp_config"]["n_in"],
+        n_out=meta_config["cgp_config"]["n_out"],
     )
     mutation_mask = compute_cgp_mutation_prob_mask(
-        cgp_config, n_out=cgp_config["n_out"]
+        meta_config["cgp_config"], n_out=meta_config["cgp_config"]["n_out"]
     )
 
     # evaluation
@@ -706,7 +726,7 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
             partial(
                 learn_gymnax_task_cgp_df_mean,
                 config=meta_config["curriculum"]["cart"],
-                cgp_config=cgp_config,
+                cgp_config=meta_config["cgp_config"],
             ),
             in_axes=(0, None),
         )
@@ -716,14 +736,16 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
             partial(
                 learn_gymnax_task_cgp_df_mean,
                 config=meta_config["curriculum"]["acrobot"],
-                cgp_config=cgp_config,
+                cgp_config=meta_config["cgp_config"],
             ),
             in_axes=(0, None),
         )
     )
 
     # fp select
-    partial_fp_selection = partial(fp_selection, n_elites=cgp_config["elite_size"])
+    partial_fp_selection = partial(
+        fp_selection, n_elites=meta_config["cgp_config"]["elite_size"]
+    )
     jit_partial_fp_selection = jit(partial_fp_selection)
     # mutation
     partial_multiple_mutations = partial(
@@ -739,7 +761,7 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
 
     rng, rng_generation = jrd.split(rng, 2)
     genomes = generate_population(
-        pop_size=cgp_config["n_individuals"],
+        pop_size=meta_config["cgp_config"]["n_individuals"],
         genome_mask=genome_mask,
         rnd_key=rng_generation,
     )
@@ -779,7 +801,9 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
         best_genome_idx = jnp.argmax(fitness_values)
         best_genome = genomes[best_genome_idx]
         best_fitness = fitness_values[best_genome_idx]
-        best_program = readable_cgp_program_from_genome(best_genome, cgp_config)
+        best_program = readable_cgp_program_from_genome(
+            best_genome, meta_config["cgp_config"]
+        )
 
         # print progress
         print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
@@ -797,13 +821,14 @@ def meta_learn_cgp_simple(meta_config: dict, cgp_config: dict, wandb_run=None):
     return None
 
 
-def meta_learn_cgp_corrected(
-    meta_config: dict, cgp_config: dict, wandb_run=None, beta: float = 0.5
-):
+def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.5):
     """Meta evolution of a cgp parametrized distance function,
     using a corrected fitness function forcing the policy neural networks to
     enforce some basic properties."""
-    assert cgp_config["n_individuals"] == meta_config["evo"]["population_size"]
+    assert (
+        meta_config["cgp_config"]["n_individuals"]
+        == meta_config["evo"]["population_size"]
+    )
 
     rng: jrd.KeyArray = jrd.PRNGKey(meta_config["seed"])
 
@@ -811,21 +836,21 @@ def meta_learn_cgp_corrected(
     # Input size is the number of values for each neuron position vector
     # Output size is 1, the distance between the two neurons
     __update_config_with_data__(
-        cgp_config,
+        meta_config["cgp_config"],
         observation_space_size=meta_config["encoding"]["d"] * 2,
         action_space_size=1,
     )
-    nan_replacement = cgp_config["nan_replacement"]
+    nan_replacement = meta_config["cgp_config"]["nan_replacement"]
 
     # preliminary evo steps
-    genome_mask, mutation_mask = __compute_masks__(cgp_config)
+    genome_mask, mutation_mask = __compute_masks__(meta_config["cgp_config"])
 
     # evaluation curriculum fonctions
     vec_learn_hc_500 = vmap(
         partial(
             learn_brax_task_cgp,
             config=meta_config["curriculum"]["hc_500"],
-            cgp_config=cgp_config,
+            cgp_config=meta_config["cgp_config"],
         ),
         in_axes=(0, None),
     )
@@ -833,19 +858,21 @@ def meta_learn_cgp_corrected(
         partial(
             learn_brax_task_cgp_d0_50,
             config=meta_config["curriculum"]["hc_500"],
-            cgp_config=cgp_config,
+            cgp_config=meta_config["cgp_config"],
         ),
         in_axes=(0, None),
     )
 
-    partial_fp_selection = partial(fp_selection, n_elites=cgp_config["elite_size"])
+    partial_fp_selection = partial(
+        fp_selection, n_elites=meta_config["cgp_config"]["elite_size"]
+    )
     jit_partial_fp_selection = jit(partial_fp_selection)
     # mutation
     genome_transformation_function = __compute_genome_transformation_function__(
-        cgp_config
+        meta_config["cgp_config"]
     )
     batch_mutate_genomes = __compile_mutation__(
-        cgp_config,
+        meta_config["cgp_config"],
         genome_mask,
         mutation_mask,
         genome_transformation_function=genome_transformation_function,
@@ -856,7 +883,7 @@ def meta_learn_cgp_corrected(
 
     rng, rng_generation = jrd.split(rng, 2)
     genomes = generate_population(
-        pop_size=cgp_config["n_individuals"],
+        pop_size=meta_config["cgp_config"]["n_individuals"],
         genome_mask=genome_mask,
         rnd_key=rng_generation,
         genome_transformation_function=genome_transformation_function,
@@ -918,7 +945,9 @@ def meta_learn_cgp_corrected(
         best_genome_idx = jnp.argmax(fitness_values)
         best_genome = genomes[best_genome_idx]
         best_fitness = fitness_values[best_genome_idx]
-        best_program = readable_cgp_program_from_genome(best_genome, cgp_config)
+        best_program = readable_cgp_program_from_genome(
+            best_genome, meta_config["cgp_config"]
+        )
 
         # print progress
         print(f"[Meta gen {_meta_generation}] - best fitness: {best_fitness}")
@@ -961,14 +990,14 @@ def meta_learn_cgp_corrected(
             )
             __save_graph__(
                 genome=best_genome,
-                config=cgp_config,
+                config=meta_config["cgp_config"],
                 file=graph_save_path,
                 input_color="green",
                 output_color="red",
             )
             __write_readable_program__(
                 genome=best_genome,
-                config=cgp_config,
+                config=meta_config["cgp_config"],
                 target_file=readable_programm_save_path,
             )
             # Save best
