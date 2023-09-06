@@ -70,6 +70,15 @@ class DistanceFunction:
         return self._f
 
 
+class L2Distance(DistanceFunction):
+    def __init__(self) -> None:
+        super().__init__()
+
+    @partial(jit, static_argnums=(0))
+    def distance(self, v1: Array, v2: Array) -> float:
+        return _L2_dist(v1, v2)
+
+
 class pL2Distance(DistanceFunction):
     def __init__(self) -> None:
         super().__init__()
@@ -250,6 +259,8 @@ class LearnedDf(DistanceFunction):
 
 
 Distance_functions = {
+    "L2": L2Distance,
+    "l2": L2Distance,
     "pL2": pL2Distance,
     "nn": NNDistance,
     "cgp": CGPDistance,
