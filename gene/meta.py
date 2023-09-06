@@ -25,12 +25,7 @@ from gene.nn_properties import (
 from gene.utils import min_max_scaler
 from gene.tracker import MetaTracker
 
-from cgpax.jax_individual import (
-    generate_population,
-    compute_cgp_genome_mask,
-    compute_cgp_mutation_prob_mask,
-    mutate_genome_n_times,
-)
+from cgpax.jax_individual import generate_population
 from cgpax.jax_selection import fp_selection
 from cgpax.utils import readable_cgp_program_from_genome
 from cgpax.run_utils import (
@@ -39,7 +34,7 @@ from cgpax.run_utils import (
     __compile_mutation__,
     __compute_genome_transformation_function__,
     __compile_parents_selection__,
-    __compile_survival_selection__
+    __compile_survival_selection__,
 )
 from cgpax.analysis.genome_analysis import __save_graph__, __write_readable_program__
 
@@ -823,6 +818,41 @@ def meta_learn_cgp_simple(meta_config: dict, wandb_run=None):
     return None
 
 
+def create_l2_indiv(meta_config: dict):
+    # NOTE - replace some indiv with l2 indiv
+    # - padd zeroes until n_nodes reached for each of those
+    # - concat [x, y, f, out]
+    # - Can append to the population (check, better replace&)
+    x_genes = jnp.array([0, 1, 2, 9, 10, 11, 12, 15, 16])
+    y_genes = jnp.array([3, 4, 5, 9, 10, 11, 13, 14, 0])
+    f_genes = jnp.array([1, 1, 1, 2, 2, 2, 0, 0, 11])
+    out = jnp.array([17])
+
+    padded_x_genes = jnp.pad(
+        x_genes,
+        (0, meta_config["cgp_config"]["n_nodes"] - x_genes.shape[0]),
+        mode="constant",
+        constant_values=0,
+    )
+    padded_y_genes = jnp.pad(
+        y_genes,
+        (0, meta_config["cgp_config"]["n_nodes"] - y_genes.shape[0]),
+        mode="constant",
+        constant_values=0,
+    )
+    padded_f_genes = jnp.pad(
+        f_genes,
+        (0, meta_config["cgp_config"]["n_nodes"] - f_genes.shape[0]),
+        mode="constant",
+        constant_values=0,
+    )
+    new_base_indiv = jnp.concatenate(
+        (padded_x_genes, padded_y_genes, padded_f_genes, out)
+    )
+    return new_base_indiv
+
+
+# FIXME
 def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.5):
     """Meta evolution of a cgp parametrized distance function,
     using a corrected fitness function forcing the policy neural networks to
@@ -892,6 +922,8 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         rnd_key=rng_generation,
         genome_transformation_function=genome_transformation_function,
     )
+    _l2_indiv = create_l2_indiv(meta_config)
+    assert _l2_indiv.shape[0] == genomes.shape[-1]
     # NOTE - NN prop enforce
     vec_evaluate_network_properties = jit(
         vmap(
