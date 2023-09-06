@@ -38,6 +38,8 @@ from cgpax.run_utils import (
     __compute_masks__,
     __compile_mutation__,
     __compute_genome_transformation_function__,
+    __compile_parents_selection__,
+    __compile_survival_selection__
 )
 from cgpax.analysis.genome_analysis import __save_graph__, __write_readable_program__
 
@@ -863,10 +865,12 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         in_axes=(0, None),
     )
 
-    partial_fp_selection = partial(
-        fp_selection, n_elites=meta_config["cgp_config"]["elite_size"]
+    jit_parents_selection = __compile_parents_selection__(
+        meta_config["cgp_config"],
     )
-    jit_partial_fp_selection = jit(partial_fp_selection)
+
+    jit_select_survivals = __compile_survival_selection__(meta_config["cgp_config"])
+
     # mutation
     genome_transformation_function = __compute_genome_transformation_function__(
         meta_config["cgp_config"]
@@ -900,9 +904,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         wandb_run.config.update(meta_config, allow_val_change=True)
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen {_meta_generation}] - Start")
-        rng, rng_eval_hc500, rng_eval_net_prop = jrd.split(rng, 3)
-        # FIXME -
-        raise NotImplementedError("error in genome size, goes from 32 to 10")
+        rng, rng_eval_hc500, rng_eval_net_prop, rng_survival = jrd.split(rng, 4)
         rng_eval_net_prop = jrd.split(
             key=rng_eval_net_prop, num=meta_config["evo"]["population_size"]
         )
@@ -931,7 +933,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         # NOTE - select parents
         rng, rng_fp = jrd.split(rng, 2)
         # Choose selection mechanism
-        parents = jit_partial_fp_selection(genomes, fitness_values, rng_fp)
+        parents = jit_parents_selection(genomes, fitness_values, rng_fp)
 
         # NOTE - compute offspring
         rng, rng_mutation = jrd.split(rng, 2)
@@ -954,7 +956,8 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         print(best_program)
 
         # NOTE - update population
-        genomes = jnp.concatenate((parents, new_genomes))
+        survivals = jit_select_survivals(genomes, fitness_values, rng_survival)
+        genomes = jnp.concatenate((survivals, new_genomes))
 
         # NOTE - log stats
         if wandb_run is not None:

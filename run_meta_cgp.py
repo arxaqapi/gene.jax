@@ -21,13 +21,19 @@ if __name__ == "__main__":
         "mutation": "standard",
         "n_generations": meta_config["evo"]["n_generations"],
         "n_individuals": meta_config["evo"]["population_size"],
-        "elite_size": 5,
         "p_mut_inputs": 0.1,
         "p_mut_functions": 0.1,
         "p_mut_outputs": 0.3,
         "n_nodes": 32,
         "n_functions": len(available_functions),
         "nan_replacement": 0.0,
+        "survival": "truncation",
+        "selection": {
+            "type": "tournament",
+            # NOTE - Make this a multiple of the pop size (to check)
+            "elite_size": 4,
+            "tour_size": 2
+        },
     }
 
     wandb_run = wandb.init(
