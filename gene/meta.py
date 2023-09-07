@@ -26,7 +26,6 @@ from gene.utils import min_max_scaler
 from gene.tracker import MetaTracker
 
 from cgpax.jax_individual import generate_population
-from cgpax.jax_selection import fp_selection
 from cgpax.utils import readable_cgp_program_from_genome
 from cgpax.run_utils import (
     __update_config_with_data__,
