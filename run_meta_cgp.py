@@ -15,24 +15,24 @@ if __name__ == "__main__":
     # meta_config = load_config("config/cgp_meta_df_extended.json")
 
     meta_config["cgp_config"] = {
-        "seed": 6080,
+        "seed": 3663398,
         "problem": "cgp_meta_df",
         "solver": "cgp",
         "mutation": "standard",
         "n_generations": meta_config["evo"]["n_generations"],
         "n_individuals": meta_config["evo"]["population_size"],
-        "p_mut_inputs": 0.1,
-        "p_mut_functions": 0.1,
+        "p_mut_inputs": 0.15,
+        "p_mut_functions": 0.15,
         "p_mut_outputs": 0.3,
-        "n_nodes": 32,
+        "n_nodes": 64,
         "n_functions": len(available_functions),
         "nan_replacement": 0.0,
         "survival": "truncation",
         "selection": {
             "type": "tournament",
             # NOTE - Make this a multiple of the pop size (to check)
-            "elite_size": 4,
-            "tour_size": 2
+            "elite_size": 8,
+            "tour_size": 7,
         },
     }
 
@@ -44,4 +44,4 @@ if __name__ == "__main__":
     )
     # meta_learn_cgp(meta_config, wandb_run)
     # meta_learn_cgp_extended(meta_config, wandb_run)
-    meta_learn_cgp_corrected(meta_config, wandb_run)
+    meta_learn_cgp_corrected(meta_config, wandb_run, beta=0.4)

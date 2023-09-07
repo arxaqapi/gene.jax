@@ -823,10 +823,10 @@ def create_l2_indiv(meta_config: dict):
     # - padd zeroes until n_nodes reached for each of those
     # - concat [x, y, f, out]
     # - Can append to the population (check, better replace&)
-    x_genes = jnp.array([0, 1, 2, 9, 10, 11, 12, 15, 16])
-    y_genes = jnp.array([3, 4, 5, 9, 10, 11, 13, 14, 0])
-    f_genes = jnp.array([1, 1, 1, 2, 2, 2, 0, 0, 11])
-    out = jnp.array([17])
+    x_genes = jnp.array([0, 1, 2, 9, 10, 11, 12, 15, 16] + [17, 18, 19, 20, 21])
+    y_genes = jnp.array([3, 4, 5, 9, 10, 11, 13, 14, 0] + [6, 6, 6, 6, 6])
+    f_genes = jnp.array([1, 1, 1, 2, 2, 2, 0, 0, 11] + [1, 1, 1, 1, 1])
+    out = jnp.array([22])
 
     padded_x_genes = jnp.pad(
         x_genes,
@@ -852,7 +852,6 @@ def create_l2_indiv(meta_config: dict):
     return new_base_indiv
 
 
-# FIXME
 def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.5):
     """Meta evolution of a cgp parametrized distance function,
     using a corrected fitness function forcing the policy neural networks to
@@ -877,23 +876,33 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     # preliminary evo steps
     genome_mask, mutation_mask = __compute_masks__(meta_config["cgp_config"])
 
-    # evaluation curriculum fonctions
-    vec_learn_hc_500 = vmap(
-        partial(
-            learn_brax_task_cgp,
-            config=meta_config["curriculum"]["hc_500"],
-            cgp_config=meta_config["cgp_config"],
-        ),
-        in_axes=(0, None),
+    # NOTE - Evaluation steps
+    # NOTE - NN prop enforce
+    vec_evaluate_network_properties = jit(
+        vmap(
+            partial(evaluate_network_properties_cgp_dist, meta_config=meta_config),
+            in_axes=(0, 0),
+        )
     )
-    vec_learn_brax_task_cgp_d0_50 = vmap(
-        partial(
-            learn_brax_task_cgp_d0_50,
-            config=meta_config["curriculum"]["hc_500"],
-            cgp_config=meta_config["cgp_config"],
-        ),
-        in_axes=(0, None),
-    )
+    # NOTE - Policy evaluation
+    if beta < 1:
+        # evaluation curriculum fonctions
+        vec_learn_hc_500 = vmap(
+            partial(
+                learn_brax_task_cgp,
+                config=meta_config["curriculum"]["hc_500"],
+                cgp_config=meta_config["cgp_config"],
+            ),
+            in_axes=(0, None),
+        )
+        vec_learn_brax_task_cgp_d0_50 = vmap(
+            partial(
+                learn_brax_task_cgp_d0_50,
+                config=meta_config["curriculum"]["hc_500"],
+                cgp_config=meta_config["cgp_config"],
+            ),
+            in_axes=(0, None),
+        )
 
     jit_parents_selection = __compile_parents_selection__(
         meta_config["cgp_config"],
@@ -924,13 +933,14 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     )
     _l2_indiv = create_l2_indiv(meta_config)
     assert _l2_indiv.shape[0] == genomes.shape[-1]
-    # NOTE - NN prop enforce
-    vec_evaluate_network_properties = jit(
-        vmap(
-            partial(evaluate_network_properties_cgp_dist, meta_config=meta_config),
-            in_axes=(0, 0),
-        )
-    )
+    rng, rng_gen = jrd.split(rng, 2)
+    for idx in jrd.randint(
+        rng_gen,
+        shape=(int(meta_config["cgp_config"]["n_individuals"] / 8),),
+        minval=0,
+        maxval=meta_config["cgp_config"]["n_individuals"],
+    ):
+        genomes = genomes.at[idx].set(_l2_indiv)
 
     if wandb_run is not None:
         wandb_run.config.update(meta_config, allow_val_change=True)
@@ -946,16 +956,22 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         f_expr, f_w_distr, f_inp = vec_evaluate_network_properties(
             genomes, rng_eval_net_prop
         )
-        f_net_prop = f_expr + f_w_distr + f_inp
-
-        # NOTE - best member fitness value (max)
-        f_hc_500_max = vec_learn_hc_500(genomes, rng_eval_hc500)
-        f_hc_500_d0_50 = vec_learn_brax_task_cgp_d0_50(genomes, rng_eval_hc500)
-
-        # FIXME - NORMALIZE FITNESSES
-        fitness_values = beta * (f_net_prop) + (1 - beta) * (
-            f_hc_500_max + f_hc_500_d0_50
+        f_net_prop = (
+            min_max_scaler(f_expr) + min_max_scaler(f_w_distr) + min_max_scaler(f_inp)
         )
+
+        if beta < 1:
+            # NOTE - Policy evaluation
+            f_hc_500_max = vec_learn_hc_500(genomes, rng_eval_hc500)
+            f_hc_500_d0_50 = vec_learn_brax_task_cgp_d0_50(genomes, rng_eval_hc500)
+
+            f_policy_eval = min_max_scaler(f_hc_500_max) + min_max_scaler(
+                f_hc_500_d0_50
+            )
+        else:
+            f_policy_eval = 0.0
+
+        fitness_values = beta * f_net_prop + (1 - beta) * f_policy_eval
         assert fitness_values is not None
         # !SECTION
 
@@ -993,27 +1009,27 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
 
         # NOTE - log stats
         if wandb_run is not None:
-            wandb_run.log(
-                {
-                    "training": {
-                        "total_emp_mean_fitness": fitness_values.mean(),
-                        "total_max_fitness": fitness_values.max(),
-                        "hc500": {
-                            "emp_mean_fit": f_hc_500_max.mean(),
-                            "max_fit": f_hc_500_max.max(),
-                        },
-                        "hc500_d0_50": {
-                            "emp_mean_fit": f_hc_500_d0_50.mean(),
-                            "max": f_hc_500_d0_50.max(),
-                        },
-                        "net_prop": {
-                            "f_expressivity": f_expr.mean(),
-                            "f_weight_distribution": f_w_distr.mean(),
-                            "f_input_restoration": f_inp.mean(),
-                        },
+            to_log = {
+                "training": {
+                    "total_emp_mean_fitness": fitness_values.mean(),
+                    "total_max_fitness": fitness_values.max(),
+                    "net_prop": {
+                        "f_expressivity": f_expr.mean(),
+                        "f_weight_distribution": f_w_distr.mean(),
+                        "f_input_restoration": f_inp.mean(),
                     },
+                },
+            }
+            if beta < 1:
+                to_log["training"]["hc500"] = {
+                    "emp_mean_fit": f_hc_500_max.mean(),
+                    "max_fit": f_hc_500_max.max(),
                 }
-            )
+                to_log["training"]["hc500_d0_50"] = {
+                    "emp_mean_fit": f_hc_500_d0_50.mean(),
+                    "max": f_hc_500_d0_50.max(),
+                }
+            wandb_run.log(to_log)
             # Save best genome as graph and readable program
             programm_save_path = Path(wandb_run.dir) / "programs"
             programm_save_path.mkdir(parents=True, exist_ok=True)

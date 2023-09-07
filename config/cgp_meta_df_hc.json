@@ -2,7 +2,7 @@
     "seed": 0,
     "evo": {
         "n_generations": 10000,
-        "population_size": 32,
+        "population_size": 64,
         "n_evaluations": 1
     },
     "net": {
