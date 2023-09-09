@@ -299,7 +299,7 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
                 jnp.save(f, best_genome)
             wandb_run.save(str(save_path), base_path=f"{wandb_run.dir}/", policy="now")
 
-    return meta_state.mean
+    return meta_state.mean, best_genome
 
 
 # ================================================
