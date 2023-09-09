@@ -32,7 +32,7 @@ if __name__ == "__main__":
             project=DEVNULL,
             name="CC-Comp-meta",
             config=meta_nn_config,
-            tags=[expe_time],
+            tags=[f"{expe_time}"],
         ),
         beta=1,
     )
@@ -41,6 +41,7 @@ if __name__ == "__main__":
     base_config = deepcopy(meta_nn_config["curriculum"]["hc_500"])
     base_config["task"]["episode_length"] = 1000
     base_config["evo"]["population_size"] = 256
+    base_config["seed"] = 56789
 
     # NOTE - 2. Use distance function to train a policy
     nn_df_config = deepcopy(base_config)
@@ -54,7 +55,7 @@ if __name__ == "__main__":
             project=DEVNULL,
             name="CC-Comp-learned-nn",
             config=nn_df_config,
-            tags=[expe_time],
+            tags=[f"{expe_time}"],
         ),
         distance_function=NNDistance(
             distance_genome=best_df_genome,
@@ -65,7 +66,7 @@ if __name__ == "__main__":
                 }
             },
         ),
-    )
+    ).run()
 
     # NOTE - 3.1. GENE w. pL2
     conf_gene_pl2 = deepcopy(base_config)
@@ -80,13 +81,13 @@ if __name__ == "__main__":
             project=DEVNULL,
             name="CC-Comp-pL2",
             config=conf_gene_pl2,
-            tags=[expe_time],
+            tags=[f"{expe_time}"],
         ),
-    )
+    ).run()
 
     # NOTE - 3.1. GENE w. L2
     conf_gene_l2 = deepcopy(base_config)
-    conf_gene_l2["encoding"]["distance"] = "pL2"
+    conf_gene_l2["encoding"]["distance"] = "L2"
     conf_gene_l2["encoding"]["type"] = "gene"
     conf_gene_l2["group"] = "L2"
     validate_json(conf_gene_l2)
@@ -97,13 +98,14 @@ if __name__ == "__main__":
             project=DEVNULL,
             name="CC-Comp-L2",
             config=conf_gene_l2,
-            tags=[expe_time],
+            tags=[f"{expe_time}"],
         ),
-    )
+    ).run()
 
     # NOTE - 3.1. Direct
     conf_direct = deepcopy(base_config)
     conf_direct["encoding"]["type"] = "direct"
+    conf_direct["encoding"]["distance"] = "pL2"
     conf_direct["group"] = "direct"
     validate_json(conf_direct)
 
@@ -113,6 +115,6 @@ if __name__ == "__main__":
             project=DEVNULL,
             name="CC-Comp-direct",
             config=conf_direct,
-            tags=[expe_time],
+            tags=[f"{expe_time}"],
         ),
-    )
+    ).run()
