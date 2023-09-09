@@ -24,7 +24,9 @@ from datetime import datetime
 from itertools import product as it_product
 
 from gene.experiment import Experiment
+from gene.core.distances import get_df
 from gene.utils import fail_if_not_device, validate_json
+import wandb
 
 CONTINUOUS_CONTROL = "Continuous Control benchmarks"
 META_DF = "Meta df benchmarks"
@@ -120,15 +122,19 @@ if __name__ == "__main__":
         # NOTE - Start experiment
         validate_json(config)
 
-        exp = Experiment(
-            config,
-            project_name=CONTINUOUS_CONTROL,
+        wandb_run = wandb.init(
+            project=CONTINUOUS_CONTROL,
+            name=f"{i}-{config['encoding']['type']}-{config['task']['environnment']}",
+            config=config,
             tags=[f"{start_time}"],
         )
-        # do not save intermediate individuals, only start and end
+
+        exp = Experiment(
+            config=config, wandb_run=wandb_run, distance_function=get_df(config)()
+        )
+        # do not save intermediate individuals, only start and end (save_step)
         exp.run(
-            seed,
-            name=f"{i}-{config['encoding']['type']}-{config['task']['environnment']}",
+            seed=seed,
             save_step=2000,
         )
 
