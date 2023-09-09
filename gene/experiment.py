@@ -1,16 +1,13 @@
 from pathlib import Path
-import time
-
+from typing import Union
 
 import jax.numpy as jnp
-import wandb
 
-from gene.tracker import Tracker
 from gene.learning import learn_brax_task
 from gene.visualize.visualize_brax import visualize_brax, render_brax
 from gene.visualize.la import run_fla_brax
 from gene.visualize.neurons import visualize_neurons_3d, visualize_neurons_2d
-from gene.core.distances import get_df, DistanceFunction, NNDistance
+from gene.core.distances import get_df, DistanceFunction
 from gene.core.models import get_model
 from gene.core.decoding import get_decoder
 
@@ -20,21 +17,24 @@ class Experiment:
     the corresponding FLA, and the visualization of the result.
     """
 
-    def __init__(self, config: dict, project_name, tags: list[str] = []) -> None:
+    def __init__(
+        self,
+        config: dict,
+        wandb_run,
+        distance_function: Union[DistanceFunction, None] = None,
+    ) -> None:
         self.config = config
-        self.project_name = project_name
-        self.tags = tags
-
-    def run(self, seed: int, name=None, save_step: int = 2000):
-        self.config["seed"] = seed
-
-        wdb_run = wandb.init(
-            project=self.project_name, name=name, config=self.config, tags=self.tags
+        self.wandb_run = wandb_run
+        self.df = (
+            get_df(self.config)() if distance_function is None else distance_function
         )
 
-        df = get_df(self.config)()
+    def run(self, seed: Union[int, None] = None, save_step: int = 2000):
+        if seed is not None:
+            self.config["seed"] = seed
+
         tracker, tracker_state = learn_brax_task(
-            self.config, df=df, wdb_run=wdb_run, save_step=save_step
+            self.config, df=self.df, wdb_run=self.wandb_run, save_step=save_step
         )
 
         mean_fitness = tracker_state["eval"]["mean_fit"]
@@ -49,12 +49,12 @@ class Experiment:
             config=self.config,
             initial_genome=tracker.get_initial_center_individual(tracker_state),
             final_genome=tracker.get_final_center_individual(tracker_state),
-            decoder=get_decoder(self.config)(self.config, df),
-            wdb_run=wdb_run,
+            decoder=get_decoder(self.config)(self.config, self.df),
+            wdb_run=self.wandb_run,
         )
 
         # NOTE - visualize the learned brax genome (best and sample_mean)
-        viz_save_path = Path(wdb_run.dir) / "viz"
+        viz_save_path = Path(self.wandb_run.dir) / "viz"
         viz_save_path.mkdir(parents=True, exist_ok=True)
         # best overall individual (get_top_k_genomes)
         render_brax(
@@ -63,7 +63,7 @@ class Experiment:
                 config=self.config,
                 genome=tracker.get_top_k_genomes(tracker_state)[0],
                 model=get_model(self.config),
-                df=df,
+                df=self.df,
             ),
         )
         # last mean individual
@@ -73,7 +73,7 @@ class Experiment:
                 config=self.config,
                 genome=tracker.get_final_center_individual(tracker_state),
                 model=get_model(self.config),
-                df=df,
+                df=self.df,
             ),
         )
 
@@ -89,7 +89,7 @@ class Experiment:
                 else visualize_neurons_3d
             )
 
-            neuron_pos_path = Path(wdb_run.dir) / "neurons_positions"
+            neuron_pos_path = Path(self.wandb_run.dir) / "neurons_positions"
             neuron_pos_path.mkdir(parents=True, exist_ok=True)
             # start mean
             visualize_neurons(
@@ -111,11 +111,11 @@ class Experiment:
                     title=neuron_pos_path / f"top_{k}_neuron_positions",
                 )
 
-        wdb_run.finish()
+        self.wandb_run.finish()
 
         return mean_fitness, best_fitness
 
-    def run_n(self, seeds: list[int]) -> list[Tracker]:
+    def run_n(self, seeds: list[int]):
         """Run n experiments, conditioned by the number of seeds provided,
         and returns all statistics.
 
@@ -139,58 +139,3 @@ class Experiment:
         }
 
         return stats
-
-
-def meta_comparison_experiment(config: dict, project_name: str = "CC bench comparison"):
-    """Loads a learned DF and uses it to do policy search on various
-    tasks and compare with pL2 and direct encoding."""
-    assert config["encoding"]["type"] == "gene"
-
-    timestamp = int(time.time())
-    api = wandb.Api()
-    run = api.run("arxaqapi/Meta df benchmarks/xt8byi35")
-    learned_config = run.config
-    with open(
-        run.file("df_genomes/mg_1899_best_genome.npy").download(replace=True).name, "rb"
-    ) as f:
-        df_genome = jnp.load(f)
-
-    learned_df: DistanceFunction | None = NNDistance(
-        df_genome, learned_config, learned_config["net"]["layer_dimensions"]
-    )
-
-    wdb_run_learned = wandb.init(
-        project=project_name,
-        name="CC-Bench-comp-learned",
-        config=config,
-        tags=["learned-df", f"{timestamp}"],
-    )
-
-    learn_brax_task(config=config, df=learned_df, wdb_run=wdb_run_learned)
-    wdb_run_learned.finish()
-
-    # NOTE - Compare to pL2
-    config["encoding"]["distance"] = "pL2"
-
-    wdb_run_pL2 = wandb.init(
-        project=project_name,
-        name="CC-Bench-comp-pL2",
-        config=config,
-        tags=["pL2", f"{timestamp}"],
-    )
-    # get df
-    pL2 = get_df(config)()
-    learn_brax_task(config=config, df=pL2, wdb_run=wdb_run_pL2)
-    wdb_run_pL2.finish()
-
-    # NOTE - Compare to direct encoding
-    config["encoding"]["type"] = "direct"
-
-    wdb_run_direct = wandb.init(
-        project=project_name,
-        name="CC-Bench-comp-direct",
-        config=config,
-        tags=["direct", f"{timestamp}"],
-    )
-    learn_brax_task(config=config, df=get_df(config)(), wdb_run=wdb_run_direct)
-    wdb_run_direct.finish()
