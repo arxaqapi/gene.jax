@@ -6,6 +6,7 @@ wandb*
 profiles
 *.npy
 cgpax
+*.zip
 
 ### Python
 ### https://github.com/github/gitignore/blob/main/Python.gitignore
