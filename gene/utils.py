@@ -65,7 +65,7 @@ def validate_json(config: dict) -> None:
                 f"{required_key} (base level) is missing from the configuration file."
             )
         # Level 2 required keys, for nested dict only
-        if type(base_template[required_key]) is dict:
+        if isinstance(base_template[required_key], dict):
             for required_key_2 in base_template[required_key].keys():
                 if required_key_2 not in config[required_key].keys():
                     raise ConfigFileIncomplete(
