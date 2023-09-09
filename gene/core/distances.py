@@ -114,7 +114,7 @@ class NNDistance(DistanceFunction):
         self.nn_layers_dims = nn_layers_dims
 
         self.model_parameters = decoding.DirectDecoder(config).decode(distance_genome)
-        self.model: nn.Module = models.ReluLinearModel(nn_layers_dims[1:])
+        self.model: nn.Module = models.get_model(self.config)
 
     @partial(jit, static_argnums=(0))
     def distance(self, v1: Array, v2: Array) -> float:
