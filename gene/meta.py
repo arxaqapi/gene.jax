@@ -1142,7 +1142,7 @@ def evaluate_network_properties_n_times(
             ),
             in_axes=(None, 0),
         )
-    if df_type == "cgp":
+    elif df_type == "cgp":
         eval_f = vmap(
             partial(
                 evaluate_network_properties_cgp_dist,
@@ -1150,12 +1150,14 @@ def evaluate_network_properties_n_times(
             ),
             in_axes=(None, 0),
         )
+    else:
+        raise NotImplementedError
 
     keys = jrd.split(rng_eval, n)
     f_expr, f_w_distr, f_inp = eval_f(df_genome, keys)
 
     return (
-        f_expr.mean(),
-        f_w_distr.mean(),
-        f_inp.mean(),
+        jnp.mean(f_expr),
+        jnp.mean(f_w_distr),
+        jnp.mean(f_inp),
     )
