@@ -62,7 +62,11 @@ def brax_eval_n_times(
 
 
 def learn_brax_task(
-    config: dict, df: DistanceFunction, wdb_run, save_step: int = 2000
+    config: dict,
+    df: DistanceFunction,
+    wdb_run,
+    save_step: int = 2000,
+    es_param_dict: dict = {},
 ) -> tuple[Tracker, TrackerState]:
     """Run an es training loop specifically tailored for brax tasks.
 
@@ -82,8 +86,10 @@ def learn_brax_task(
     strategy = evosax.Strategies[config["evo"]["strategy_name"]](
         popsize=config["evo"]["population_size"],
         num_dims=decoder.encoding_size(),
+        **es_param_dict,
     )
-    state = strategy.initialize(rng_init)
+    es_params = strategy.default_params
+    state = strategy.initialize(rng_init, es_params)
 
     env = get_braxv1_env(config)
 
@@ -121,7 +127,7 @@ def learn_brax_task(
         rng, rng_gen, rng_eval = jrd.split(rng, 3)
 
         # NOTE - Ask
-        x, state = ask(rng_gen, state)
+        x, state = ask(rng_gen, state, es_params)
 
         # NOTE - Eval
         evaluation_timer.start()
@@ -137,7 +143,7 @@ def learn_brax_task(
         evaluation_timer.reset()
 
         # NOTE - Tell
-        state = tell(x, fitness, state)
+        state = tell(x, fitness, state, es_params)
 
         # NOTE - Track metrics
         tracker_state = tracker.update(
