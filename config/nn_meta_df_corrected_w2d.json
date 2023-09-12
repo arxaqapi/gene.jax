@@ -1,0 +1,45 @@
+{
+    "seed": 0,
+    "evo": {
+        "strategy_name": "Sep_CMA_ES",
+        "n_generations": 5000,
+        "population_size": 32,
+        "n_evaluations": 1
+    },
+    "net": {
+        "layer_dimensions": [6, 32, 32, 1],
+        "architecture": "tanh_linear"
+    },
+    "encoding": {
+        "d": 3,
+        "distance": "",
+        "type": "direct"
+    },
+    "task": {
+        "maximize": true
+    },
+    "curriculum": {
+        "hc_500": {
+            "task": {
+                "environnment": "walker2d",
+                "maximize": true,
+                "episode_length": 500
+            },
+            "evo": {
+                "strategy_name": "DES",
+                "n_generations": 500,
+                "population_size": 32,
+                "n_evaluations": 1
+            },
+            "net": {
+                "layer_dimensions": [17, 32, 32, 32, 32, 6],
+                "architecture": "relu_tanh_linear"
+            },
+            "encoding": {
+                "d": 3,
+                "distance": "nn",
+                "type": "gene"
+            }
+        }
+    }
+}
