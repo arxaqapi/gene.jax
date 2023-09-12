@@ -48,12 +48,48 @@ def rollout_gymnax_task(
 
 
 def get_braxv1_env(config: dict):
-    from brax.v1 import envs as envs_v1
     from brax.v1.envs.wrappers import EpisodeWrapper as EpisodeWrapper_v1
+    from brax.v1.envs import acrobot
+    from brax.v1.envs import ant
+    from brax.v1.envs import fast
+    from brax.v1.envs import fetch
+    from brax.v1.envs import grasp
+    from brax.v1.envs import half_cheetah
+    from brax.v1.envs import hopper
+    from brax.v1.envs import humanoid
+    from brax.v1.envs import humanoid_standup
+    from brax.v1.envs import inverted_double_pendulum
+    from brax.v1.envs import inverted_pendulum
+    from brax.v1.envs import pusher
+    from brax.v1.envs import reacher
+    from brax.v1.envs import reacherangle
+    from brax.v1.envs import swimmer
+    from brax.v1.envs import ur5e
+    from brax.v1.envs import walker2d
 
-    env = envs_v1.get_environment(env_name=config["task"]["environnment"])
+    _envs_v1 = {
+        "acrobot": acrobot.Acrobot,
+        "ant": ant.Ant,
+        "fast": fast.Fast,
+        "fetch": fetch.Fetch,
+        "grasp": grasp.Grasp,
+        "halfcheetah": half_cheetah.Halfcheetah,
+        "hopper": hopper.Hopper,
+        "humanoid": humanoid.Humanoid,
+        "humanoidstandup": humanoid_standup.HumanoidStandup,
+        "inverted_pendulum": inverted_pendulum.InvertedPendulum,
+        "inverted_double_pendulum": inverted_double_pendulum.InvertedDoublePendulum,
+        "pusher": pusher.Pusher,
+        "reacher": reacher.Reacher,
+        "reacherangle": reacherangle.ReacherAngle,
+        "swimmer": swimmer.Swimmer,
+        "ur5e": ur5e.Ur5e,
+        "walker2d": walker2d.Walker2d,
+    }
     return EpisodeWrapper_v1(
-        env, episode_length=config["task"]["episode_length"], action_repeat=1
+        _envs_v1[config["task"]["environnment"]](),
+        episode_length=config["task"]["episode_length"],
+        action_repeat=1,
     )
 
 
