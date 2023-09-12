@@ -10,14 +10,11 @@ import time
 import wandb
 from copy import deepcopy
 
-from gene.utils import fail_if_not_device, load_config, validate_json
-from gene.experiment import Experiment
+from gene.utils import fail_if_not_device, load_config
+from gene.experiment import comparison_experiment
 from gene.meta import meta_learn_nn_corrected
-from gene.core.distances import NNDistance
-
 
 DEVNULL = "devnull"
-
 
 if __name__ == "__main__":
     fail_if_not_device()
@@ -26,6 +23,8 @@ if __name__ == "__main__":
 
     # NOTE - 1. Meta nn
     meta_nn_config = load_config("config/nn_meta_df_corrected.json")
+    # meta_nn_config = load_config("config/nn_meta_df_corrected_w2d.json")
+    meta_nn_config["group"] = "meta"
     with wandb.init(
         project=DEVNULL,
         name="CC-Comp-meta",
@@ -38,88 +37,9 @@ if __name__ == "__main__":
             beta=1,
         )
 
-    for seed in [56789, 98712, 1230]:
-        # NOTE - config setup
-        base_config = deepcopy(meta_nn_config["curriculum"]["hc_500"])
-        base_config["task"]["episode_length"] = 1000
-        base_config["evo"]["population_size"] = 256
-        base_config["seed"] = seed
-
-        # NOTE - 2. Use distance function to train a policy
-        nn_df_config = deepcopy(base_config)
-        nn_df_config["encoding"]["distance"] = ""
-        nn_df_config["group"] = "learned"
-        validate_json(nn_df_config)
-        with wandb.init(
-            project=DEVNULL,
-            name="CC-Comp-learned-nn",
-            config=nn_df_config,
-            tags=[f"{expe_time}"],
-        ) as wdb_nn_df:
-            Experiment(
-                nn_df_config,
-                wdb_nn_df,
-                distance_function=NNDistance(
-                    distance_genome=best_df_genome,
-                    config={
-                        "net": {
-                            "layer_dimensions": [6, 32, 32, 1],
-                            "architecture": "tanh_linear",
-                        }
-                    },
-                ),
-            ).run()
-
-        # NOTE - 3.1. GENE w. pL2
-        conf_gene_pl2 = deepcopy(base_config)
-        conf_gene_pl2["encoding"]["distance"] = "pL2"
-        conf_gene_pl2["encoding"]["type"] = "gene"
-        conf_gene_pl2["group"] = "pL2"
-        validate_json(conf_gene_pl2)
-
-        with wandb.init(
-            project=DEVNULL,
-            name="CC-Comp-pL2",
-            config=conf_gene_pl2,
-            tags=[f"{expe_time}"],
-        ) as wdb_gene_pl2:
-            Experiment(
-                conf_gene_pl2,
-                wdb_gene_pl2,
-            ).run()
-
-        # NOTE - 3.1. GENE w. L2
-        conf_gene_l2 = deepcopy(base_config)
-        conf_gene_l2["encoding"]["distance"] = "L2"
-        conf_gene_l2["encoding"]["type"] = "gene"
-        conf_gene_l2["group"] = "L2"
-        validate_json(conf_gene_l2)
-
-        with wandb.init(
-            project=DEVNULL,
-            name="CC-Comp-L2",
-            config=conf_gene_l2,
-            tags=[f"{expe_time}"],
-        ) as wdb_gene_l2:
-            Experiment(
-                conf_gene_l2,
-                wdb_gene_l2,
-            ).run()
-
-        # NOTE - 3.1. Direct
-        conf_direct = deepcopy(base_config)
-        conf_direct["encoding"]["type"] = "direct"
-        conf_direct["encoding"]["distance"] = "pL2"
-        conf_direct["group"] = "direct"
-        validate_json(conf_direct)
-
-        with wandb.init(
-            project=DEVNULL,
-            name="CC-Comp-direct",
-            config=conf_direct,
-            tags=[f"{expe_time}"],
-        ) as wdb_direct:
-            Experiment(
-                conf_direct,
-                wdb_direct,
-            ).run()
+    comparison_experiment(
+        config=deepcopy(next(iter(meta_nn_config["curriculum"].values()))),
+        nn_df_genome=best_df_genome,
+        project=DEVNULL,
+        expe_time=expe_time,
+    )
