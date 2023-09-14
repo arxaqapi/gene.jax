@@ -1,5 +1,5 @@
 {
-    "seed": 0,
+    "seed": 10,
     "evo": {
         "strategy_name": "Sep_CMA_ES",
         "n_generations": 5000,
@@ -23,17 +23,17 @@
             "task": {
                 "environnment": "walker2d",
                 "maximize": true,
-                "episode_length": 500
+                "episode_length": 1000
             },
             "evo": {
                 "strategy_name": "DES",
-                "n_generations": 500,
+                "n_generations": 1500,
                 "population_size": 32,
                 "n_evaluations": 1
             },
             "net": {
-                "layer_dimensions": [17, 32, 32, 32, 32, 6],
-                "architecture": "relu_tanh_linear"
+                "layer_dimensions": [17, 64, 64, 6],
+                "architecture": "tanh_linear"
             },
             "encoding": {
                 "d": 3,
