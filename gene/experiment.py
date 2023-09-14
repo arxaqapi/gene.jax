@@ -269,5 +269,9 @@ def get_env_sizes(env_name: str):
             "observation_space": 18,
             "action_space": 6,
         },
+        "inverted_double_pendulum": {
+            "observation_space": 11,
+            "action_space": 1,
+        },
     }
     return brax_envs[env_name]

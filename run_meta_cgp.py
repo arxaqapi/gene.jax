@@ -1,7 +1,5 @@
 import wandb
 
-# from gene.meta import meta_learn_cgp
-# from gene.meta import meta_learn_cgp_extended
 from gene.meta import meta_learn_cgp_corrected
 from gene.utils import load_config, fail_if_not_device
 
@@ -11,8 +9,7 @@ from cgpax.jax_functions import available_functions
 if __name__ == "__main__":
     fail_if_not_device()
 
-    meta_config = load_config("config/cgp_meta_df_hc.json")
-    # meta_config = load_config("config/cgp_meta_df_extended.json")
+    meta_config = load_config("config/cgp_meta_df_corrected.json")
 
     meta_config["cgp_config"] = {
         "seed": 3663398,
@@ -42,6 +39,4 @@ if __name__ == "__main__":
         tags=["cgp", "meta_df_hc", "corrected_f"],
         name="meta-cgp-corrected-df",
     )
-    # meta_learn_cgp(meta_config, wandb_run)
-    # meta_learn_cgp_extended(meta_config, wandb_run)
-    meta_learn_cgp_corrected(meta_config, wandb_run, beta=0.4)
+    meta_learn_cgp_corrected(meta_config, wandb_run, beta=1.0)

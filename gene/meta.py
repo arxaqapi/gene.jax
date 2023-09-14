@@ -905,7 +905,12 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     # NOTE - Evaluation steps: NN prop enforce & Policy evaluation
     vec_evaluate_network_properties = jit(
         vmap(
-            partial(evaluate_network_properties_cgp_dist, meta_config=meta_config),
+            partial(
+                evaluate_network_properties_n_times,
+                meta_config=meta_config,
+                df_type="cgp",
+                n=32,
+            ),
             in_axes=(0, 0),
         )
     )
@@ -943,6 +948,9 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         f_expr, f_w_distr, f_inp = vec_evaluate_network_properties(
             genomes, rng_eval_net_prop
         )
+        f_expr = fitness_nan_replacement(f_expr)
+        f_w_distr = fitness_nan_replacement(f_w_distr)
+        f_inp = fitness_nan_replacement(f_inp)
         f_net_prop = (
             min_max_scaler(f_expr) + min_max_scaler(f_w_distr) + min_max_scaler(f_inp)
         )
