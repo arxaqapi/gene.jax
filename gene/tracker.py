@@ -128,22 +128,24 @@ class Tracker:
 
         return tracker_state
 
-    def wandb_log(self, tracker_state: TrackerState, wdb_run) -> None:
+    def wandb_log(self, tracker_state: TrackerState, wdb_run, extra: dict = {}) -> None:
         gen = tracker_state["gen"] - 1
 
-        wdb_run.log(
-            {
-                "training": {
-                    "top_k_fit": {
-                        f"top_{t}_fit": float(
-                            tracker_state["training"]["top_k_fit"][gen][t]
-                        )
-                        for t in range(self.top_k)
-                    },
+        to_log = {
+            "training": {
+                "top_k_fit": {
+                    f"top_{t}_fit": float(
+                        tracker_state["training"]["top_k_fit"][gen][t]
+                    )
+                    for t in range(self.top_k)
                 },
-                "eval": {"mean_fit": tracker_state["eval"]["mean_fit"][gen]},
-            }
-        )
+            },
+            "eval": {"mean_fit": tracker_state["eval"]["mean_fit"][gen]},
+        }
+        for k, v in extra.items():
+            to_log["training"][k] = v
+
+        wdb_run.log(to_log)
 
     def wandb_save_genome(
         self,
