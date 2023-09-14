@@ -154,7 +154,6 @@ def learn_brax_task(
 
         # ANCHOR - Policy network Looks Good Props
         f_expr, f_w_distr, f_inp = vec_eval_model_prop(x)
-        print(f_expr, f_w_distr, f_inp)
 
         # NOTE - Tell
         state = tell(x, fitness, state, es_params)
