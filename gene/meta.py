@@ -8,7 +8,7 @@ from jax import jit, vmap
 
 from gene.core.decoding import DirectDecoder
 from gene.core.models import ReluLinearModel
-from gene.core.evaluation import evaluate_network_properties_n_times
+from gene.core.evaluation import evaluate_rand_network_properties_n_times
 from gene.learning import (
     learn_gymnax_task_nn_df,
     learn_brax_task_cgp,
@@ -215,7 +215,7 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
     vec_evaluate_network_properties_nn_dist = jit(
         vmap(
             partial(
-                evaluate_network_properties_n_times,
+                evaluate_rand_network_properties_n_times,
                 meta_config=meta_config,
                 df_type="nn",
                 n=32,
@@ -906,7 +906,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     vec_evaluate_network_properties = jit(
         vmap(
             partial(
-                evaluate_network_properties_n_times,
+                evaluate_rand_network_properties_n_times,
                 meta_config=meta_config,
                 df_type="cgp",
                 n=32,
