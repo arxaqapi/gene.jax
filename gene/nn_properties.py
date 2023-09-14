@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import jax.random as jrd
 
 
-def expressivity_ratio(model_parameters: nn.FrozenDict):
+def expressivity_ratio(model_parameters: nn.FrozenDict, decimals: float = 5):
     """Ratio of unique parameters in the network.
     Number of unique parameters over the total number of parameters
 
@@ -22,7 +22,8 @@ def expressivity_ratio(model_parameters: nn.FrozenDict):
         total_size += layer_params.size
 
         for param in jnp.ravel(layer_params):
-            unique.add(param.astype(float))
+            rounded_param = jnp.round(param, decimals).astype(float)
+            unique.add(rounded_param)
 
     assert total_size > 0
     return len(unique) / total_size
