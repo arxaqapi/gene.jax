@@ -8,16 +8,21 @@ import evosax
 import flax.linen as nn
 
 from gene.tracker import Tracker, TrackerState
-from gene.core.models import Models
+from gene.core.models import Models, get_model
 from gene.core.decoding import Decoder, get_decoder
 from gene.core.distances import DistanceFunction, NNDistanceSimple, CGPDistance
-from gene.core.evaluation import get_braxv1_env, rollout_brax_task, rollout_gymnax_task
+from gene.core.evaluation import (
+    get_braxv1_env,
+    rollout_brax_task,
+    rollout_gymnax_task,
+    eval_model_prop,
+)
 from gene.timer import Timer
 
 
 def brax_eval(genome: Array, rng: jrd.KeyArray, decoder: Decoder, config: dict, env):
     model_parameters = decoder.decode(genome)
-    model = Models[config["net"]["architecture"]](config)
+    model = get_model(config)
 
     fitness = rollout_brax_task(
         config=config,
@@ -101,6 +106,11 @@ def learn_brax_task(
     partial_eval_f = partial(evaluation_f, decoder=decoder, config=config, env=env)
     vectorized_eval_f = jit(vmap(partial_eval_f, in_axes=(0, None)))
 
+    partial_eval_model_prop = partial(
+        eval_model_prop, decoder=decoder, model=get_model(config)
+    )
+    vec_eval_model_prop = jit(vmap(partial_eval_model_prop, in_axes=(0,)))
+
     ask = jit(strategy.ask)
     tell = jit(strategy.tell)
 
@@ -142,6 +152,10 @@ def learn_brax_task(
         )
         evaluation_timer.reset()
 
+        # ANCHOR - Policy network Looks Good Props
+        f_expr, f_w_distr, f_inp = vec_eval_model_prop(x)
+        print(f_expr, f_w_distr, f_inp)
+
         # NOTE - Tell
         state = tell(x, fitness, state, es_params)
 
@@ -156,7 +170,17 @@ def learn_brax_task(
             skip_mean_backup=save_step >= config["evo"]["n_generations"],
         )
         if wdb_run is not None:
-            tracker.wandb_log(tracker_state, wdb_run)
+            tracker.wandb_log(
+                tracker_state,
+                wdb_run,
+                {
+                    "net_prop": {
+                        "f_expressivity": f_expr.mean(),
+                        "f_weight_distribution": f_w_distr.mean(),
+                        "f_input_restoration": f_inp.mean(),
+                    }
+                },
+            )
             # Saves only every 'save_step' generation
             if (_generation + 1) % save_step == 0:
                 tracker.wandb_save_genome(
