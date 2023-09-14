@@ -6,9 +6,9 @@ import jax.random as jrd
 import jax.numpy as jnp
 from jax import jit, vmap
 
-from gene.core.decoding import DirectDecoder, GENEDecoder
-from gene.core.models import ReluLinearModel, get_model
-from gene.core.distances import CGPDistance, NNDistance
+from gene.core.decoding import DirectDecoder
+from gene.core.models import ReluLinearModel
+from gene.core.evaluation import evaluate_network_properties_n_times
 from gene.learning import (
     learn_gymnax_task_nn_df,
     learn_brax_task_cgp,
@@ -16,11 +16,6 @@ from gene.learning import (
     learn_brax_task_untracked_nn_df_d0_50,
     # learn_gymnax_task_cgp_df_mean,
     learn_brax_task_cgp_d0_50,
-)
-from gene.nn_properties import (
-    expressivity_ratio,
-    weights_distribution,
-    input_distribution_restoration,
 )
 from gene.utils import min_max_scaler
 from gene.tracker import MetaTracker
@@ -1065,99 +1060,3 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
             wandb_run.save(str(save_path), base_path=f"{wandb_run.dir}/", policy="now")
 
         print(f"[Meta gen {_meta_generation}] - End\n")
-
-
-# ================================================
-# ================   Utils   =====================
-# ================================================
-
-
-def _network_properties(distance_function, rng_eval: jrd.KeyArray, meta_config: dict):
-    # First config of the curriculum tasks
-    task_config = next(iter(meta_config["curriculum"].values()))
-    assert "net" in task_config
-    assert "layer_dimensions" in task_config["net"]
-    assert "architecture" in task_config["net"]
-    assert "encoding" in task_config
-    assert "d" in task_config["encoding"]
-
-    # NOTE - 1. Use DF to form a GENEDecoder
-    decoder = GENEDecoder(task_config, distance_function)
-
-    # NOTE - 2. Gen policy_genome
-    dummy_network_genome = jrd.uniform(
-        rng_eval, shape=(decoder.encoding_size(),), minval=-1.0, maxval=1.0
-    )
-    # NOTE - 3. Use GENEDecoder to decode the dummy policy genome into model params
-    model = get_model(task_config)
-    model_parameters = decoder.decode(dummy_network_genome)
-    # NOTE - 4. Evaluate the policy networks parameters properties
-    f_expr = expressivity_ratio(model_parameters)
-
-    mean, std = weights_distribution(model_parameters)
-    f_w_distr = -jnp.abs(mean) - jnp.square(std - 0.5)
-
-    (_, _), (out_mu, _) = input_distribution_restoration(model, model_parameters)
-    f_inp = -jnp.abs(out_mu)
-
-    return f_expr, f_w_distr, f_inp
-
-
-def evaluate_network_properties_nn_dist(
-    distance_genome, rng_eval: jrd.KeyArray, meta_config: dict
-):
-    """This function evaluates the properties of a single policy network.
-    The genome is the genome of the distance function
-    """
-    # NOTE - Use the genome to form a DF
-    cgp_df = NNDistance(
-        distance_genome, meta_config, meta_config["net"]["layer_dimensions"]
-    )
-    return _network_properties(cgp_df, rng_eval, meta_config)
-
-
-def evaluate_network_properties_cgp_dist(
-    cgp_genome, rng_eval: jrd.KeyArray, meta_config: dict
-):
-    """This function evaluates the properties of a single policy network.
-    The genome is the genome of the distance function
-    """
-    # NOTE - Use cgp_genome to form a DF
-    cgp_df = CGPDistance(cgp_genome, meta_config["cgp_config"])
-    return _network_properties(cgp_df, rng_eval, meta_config)
-
-
-def evaluate_network_properties_n_times(
-    df_genome,
-    rng_eval: jrd.KeyArray,
-    meta_config: dict,
-    df_type: str = "nn",
-    n: int = 32,
-):
-    if df_type == "nn":
-        eval_f = vmap(
-            partial(
-                evaluate_network_properties_nn_dist,
-                meta_config=meta_config,
-            ),
-            in_axes=(None, 0),
-        )
-    elif df_type == "cgp":
-        eval_f = vmap(
-            partial(
-                evaluate_network_properties_cgp_dist,
-                meta_config=meta_config,
-            ),
-            in_axes=(None, 0),
-        )
-    else:
-        raise NotImplementedError
-
-    keys = jrd.split(rng_eval, n)
-    f_expr, f_w_distr, f_inp = eval_f(df_genome, keys)
-
-    return (
-        jnp.mean(f_expr),
-        jnp.mean(f_w_distr),
-        jnp.mean(f_inp),
-    )
