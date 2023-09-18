@@ -245,33 +245,3 @@ def comparison_experiment(
                 conf_direct,
                 wdb_direct,
             ).run()
-
-
-def get_env_sizes(env_name: str):
-    brax_envs = {
-        "humanoid": {
-            "observation_space": 240,
-            "action_space": 8,
-        },
-        "walker2d": {
-            "observation_space": 17,
-            "action_space": 6,
-        },
-        "hopper": {
-            "observation_space": 11,
-            "action_space": 3,
-        },
-        "ant": {
-            "observation_space": 87 - 20,
-            "action_space": 8,
-        },
-        "halfcheetah": {
-            "observation_space": 18,
-            "action_space": 6,
-        },
-        "inverted_double_pendulum": {
-            "observation_space": 11,
-            "action_space": 1,
-        },
-    }
-    return brax_envs[env_name]
