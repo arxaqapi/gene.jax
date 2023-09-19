@@ -98,7 +98,6 @@ def min_max_scaler(x):
     return (x - x_min) / ((x.max() - x_min) + 1e-6)
 
 
-
 def _get_env_sizes(env_name: str):
     brax_envs = {
         "humanoid": {
@@ -133,7 +132,9 @@ def fix_config_file(config, env_name: Union[str, None] = None):
     env_name = env_name if env_name is not None else config["task"]["environnment"]
     new_config = deepcopy(config)
 
-    new_config["net"]["layer_dimensions"][0] = _get_env_sizes(env_name)["observation_space"]
+    new_config["net"]["layer_dimensions"][0] = _get_env_sizes(env_name)[
+        "observation_space"
+    ]
     new_config["net"]["layer_dimensions"][-1] = _get_env_sizes(env_name)["action_space"]
-    
+
     return new_config

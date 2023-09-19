@@ -103,7 +103,7 @@ Models = {
 
 
 def get_model(config: dict) -> nn.Module:
-    """Returns the instatianted model fitting the config file.
+    """Returns the instantianted model fitting the config file.
 
     Args:
         config (dict): config file of the current run
