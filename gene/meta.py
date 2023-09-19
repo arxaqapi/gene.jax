@@ -21,7 +21,7 @@ from gene.utils import min_max_scaler
 from gene.tracker import MetaTracker
 
 from cgpax.jax_individual import generate_population
-from cgpax.utils import readable_cgp_program_from_genome
+from cgpax.utils import readable_cgp_program_from_genome, compute_active_size
 from cgpax.run_utils import (
     __update_config_with_data__,
     __compute_masks__,
@@ -893,7 +893,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     )
     _l2_indiv = create_l2_indiv(meta_config)
     assert _l2_indiv.shape[0] == genomes.shape[-1]
-    # Randomly changes individuals of the base population to the handcrafted infividual
+    # Randomly changes individuals of the base population to the handcrafted individual
     for idx in jrd.randint(
         rng_gen_idx,
         shape=(int(meta_config["cgp_config"]["n_individuals"] / 8),),
@@ -966,7 +966,20 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         else:
             f_policy_eval = 0.0
 
-        fitness_values = beta * f_net_prop + (1 - beta) * f_policy_eval
+        # NOTE - add penalty for small programms
+        active_node_sizes = jnp.array(
+            [
+                compute_active_size(genome, meta_config["cgp_config"])[0]
+                for genome in genomes
+            ]
+        )
+        n_total_nodes = genomes.shape[-1]
+        active_node_sizes = jnp.exp(-(active_node_sizes / n_total_nodes) / 0.1)
+        fitness_cgp_extra = -active_node_sizes
+
+        fitness_values = (
+            beta * f_net_prop + (1 - beta) * f_policy_eval + fitness_cgp_extra
+        )
         assert fitness_values is not None
         # !SECTION
 
