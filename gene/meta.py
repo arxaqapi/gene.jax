@@ -884,7 +884,9 @@ def evaluate_used_inputs(genome, rng, cgp_config: dict, d: int = 6):
     # 1 if all dt's are different from 0
     # 0 if at least one dt is 0
     fit_tem = jnp.clip(
-        jnp.count_nonzero(dt_per_entry.values()) - (d - 1), a_min=0, a_max=1
+        jnp.count_nonzero(jnp.array(list(dt_per_entry.values()))) - (d - 1),
+        a_min=0,
+        a_max=1,
     )
     return fit_tem, dt_per_entry
     # return sum(dt_per_entry.values()), dt_per_entry
