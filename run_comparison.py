@@ -20,6 +20,7 @@ if __name__ == "__main__":
     fail_if_not_device()
 
     expe_time = int(time.time())
+    extra_tags = ["full-tanh-test"]
 
     # NOTE - 1. Meta nn
     # meta_nn_config = load_config("config/nn_meta_df_corrected.json")
@@ -29,7 +30,7 @@ if __name__ == "__main__":
         project=DEVNULL,
         name="CC-Comp-meta",
         config=meta_nn_config,
-        tags=[f"{expe_time}"],
+        tags=[f"{expe_time}"] + extra_tags,
     ) as meta_nn_wdb:
         _, best_df_genome = meta_learn_nn_corrected(
             meta_nn_config,
@@ -42,4 +43,5 @@ if __name__ == "__main__":
         nn_df_genome=best_df_genome,
         project=DEVNULL,
         expe_time=expe_time,
+        extra_tags=extra_tags,
     )

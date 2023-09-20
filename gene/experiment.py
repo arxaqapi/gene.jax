@@ -155,6 +155,7 @@ def comparison_experiment(
     seeds: list[int] = [56789, 98712, 1230],
     project: str = "devnull",
     expe_time=None,
+    extra_tags: list[str] = [],
 ):
     """Task agnostic run expe"""
     if expe_time is None:
@@ -176,7 +177,7 @@ def comparison_experiment(
             project=project,
             name="CC-Comp-learned-nn",
             config=nn_df_config,
-            tags=[f"{expe_time}"],
+            tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_nn_df:
             Experiment(
                 nn_df_config,
@@ -203,7 +204,7 @@ def comparison_experiment(
             project=project,
             name="CC-Comp-pL2",
             config=conf_gene_pl2,
-            tags=[f"{expe_time}"],
+            tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_gene_pl2:
             Experiment(
                 conf_gene_pl2,
@@ -221,7 +222,7 @@ def comparison_experiment(
             project=project,
             name="CC-Comp-L2",
             config=conf_gene_l2,
-            tags=[f"{expe_time}"],
+            tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_gene_l2:
             Experiment(
                 conf_gene_l2,
@@ -239,7 +240,7 @@ def comparison_experiment(
             project=project,
             name="CC-Comp-direct",
             config=conf_direct,
-            tags=[f"{expe_time}"],
+            tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_direct:
             Experiment(
                 conf_direct,
