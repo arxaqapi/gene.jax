@@ -1030,16 +1030,14 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
             ]
         )
         n_total_nodes = genomes.shape[-1]
-        active_node_sizes = jnp.exp(-(active_node_sizes / n_total_nodes) / 0.1)
-        fitness_cgp_extra = -active_node_sizes
+        fit_active_node_sizes = jnp.exp(-(active_node_sizes / n_total_nodes) / 0.1)
         # NOTE - add fitness term for nomber of input nodes used
         fit_eval_used_nodes, _ = vec_evaluate_used_inputs(genomes, rng_used_inputs)
 
+        fitness_cgp_extra = -fit_active_node_sizes + fit_eval_used_nodes
+
         fitness_values = (
-            beta * f_net_prop
-            + (1 - beta) * f_policy_eval
-            + fitness_cgp_extra
-            + fit_eval_used_nodes
+            beta * f_net_prop + (1 - beta) * f_policy_eval + fitness_cgp_extra
         )
         assert fitness_values is not None
         # !SECTION
@@ -1085,6 +1083,12 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                         "f_expressivity": f_expr.mean(),
                         "f_weight_distribution": f_w_distr.mean(),
                         "f_input_restoration": f_inp.mean(),
+                    },
+                    "cgp_extra": {
+                        "all_nodes_used": fit_eval_used_nodes.mean(),
+                        "best_all_nodes_used": fit_eval_used_nodes[best_genome_idx],
+                        "fit_active_node_sizes": fit_active_node_sizes.mean(),
+                        "active_node_sizes": active_node_sizes.mean(),
                     },
                 },
             }
