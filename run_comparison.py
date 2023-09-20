@@ -32,7 +32,7 @@ if __name__ == "__main__":
         config=meta_nn_config,
         tags=[f"{expe_time}"] + extra_tags,
     ) as meta_nn_wdb:
-        _, best_df_genome = meta_learn_nn_corrected(
+        _, best_df_genome, nn_df_model = meta_learn_nn_corrected(
             meta_nn_config,
             meta_nn_wdb,
             beta=1,
@@ -41,6 +41,7 @@ if __name__ == "__main__":
     comparison_experiment(
         config=deepcopy(next(iter(meta_nn_config["curriculum"].values()))),
         nn_df_genome=best_df_genome,
+        nn_df_model_config={"net": meta_nn_config["net"]},
         project=DEVNULL,
         expe_time=expe_time,
         extra_tags=extra_tags,

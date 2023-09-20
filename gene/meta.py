@@ -7,7 +7,7 @@ import jax.numpy as jnp
 from jax import jit, vmap
 
 from gene.core.decoding import DirectDecoder
-from gene.core.models import ReluLinearModel
+from gene.core.models import ReluLinearModel, get_model
 from gene.core.evaluation import evaluate_rand_network_properties_n_times
 from gene.learning import (
     learn_gymnax_task_nn_df,
@@ -189,7 +189,12 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
     tell = jit(meta_strategy.tell)
 
     # Neural network distance network
-    nn_dst_model = ReluLinearModel(meta_config["net"]["layer_dimensions"][1:])
+    assert meta_config["net"]["architecture"] in [
+        "relu_linear",
+        "tanh_linear",
+        "relu_tanh_linear",
+    ]
+    nn_df_model = get_model(meta_config)
 
     if beta < 1:
         # NOTE - JIT removed
@@ -197,7 +202,7 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
             partial(
                 learn_brax_task_untracked_nn_df,
                 meta_decoder=meta_decoder,
-                df_model=nn_dst_model,
+                df_model=nn_df_model,
                 config=meta_config["curriculum"]["hc_500"],
             ),
             in_axes=(0, None),
@@ -206,7 +211,7 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
             partial(
                 learn_brax_task_untracked_nn_df_d0_50,
                 meta_decoder=meta_decoder,
-                df_model=nn_dst_model,
+                df_model=nn_df_model,
                 config=meta_config["curriculum"]["hc_500"],
             ),
             in_axes=(0, None),
@@ -294,7 +299,7 @@ def meta_learn_nn_corrected(meta_config: dict, wandb_run, beta: float = 0.5):
                 jnp.save(f, best_genome)
             wandb_run.save(str(save_path), base_path=f"{wandb_run.dir}/", policy="now")
 
-    return meta_state.mean, best_genome
+    return meta_state.mean, best_genome, nn_df_model
 
 
 # ================================================

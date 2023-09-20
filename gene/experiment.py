@@ -152,6 +152,7 @@ class Experiment:
 def comparison_experiment(
     config: dict,
     nn_df_genome,
+    nn_df_model_config: dict,
     seeds: list[int] = [56789, 98712, 1230],
     project: str = "devnull",
     expe_time=None,
@@ -168,11 +169,12 @@ def comparison_experiment(
         base_config["evo"]["population_size"] = 256
         base_config["seed"] = seed
 
-        # NOTE - 2. Use distance function to train a policy
+        # NOTE - 2. Use learned distance function to train a policy
         nn_df_config = deepcopy(base_config)
         nn_df_config["encoding"]["distance"] = ""
         nn_df_config["group"] = "learned"
         validate_json(nn_df_config)
+
         with wandb.init(
             project=project,
             name="CC-Comp-learned-nn",
@@ -184,12 +186,8 @@ def comparison_experiment(
                 wdb_nn_df,
                 distance_function=NNDistance(
                     distance_genome=nn_df_genome,
-                    config={
-                        "net": {
-                            "layer_dimensions": [6, 32, 32, 1],
-                            "architecture": "tanh_linear",
-                        }
-                    },
+                    config=nn_df_model_config,
+                    nn_layers_dims=nn_df_model_config["net"]["layer_dimensions"],
                 ),
             ).run()
 
