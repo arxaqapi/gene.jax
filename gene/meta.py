@@ -21,6 +21,7 @@ from gene.utils import min_max_scaler
 from gene.tracker import MetaTracker
 
 from cgpax.jax_individual import generate_population
+from cgpax.jax_encoding import genome_to_cgp_program
 from cgpax.utils import readable_cgp_program_from_genome, compute_active_size
 from cgpax.run_utils import (
     __update_config_with_data__,
@@ -854,6 +855,41 @@ def create_l2_indiv(meta_config: dict):
     return new_base_indiv
 
 
+def evaluate_used_inputs(genome, rng, cgp_config: dict, d: int = 6):
+    """Evaluate the genome, checking if the input nodes are all being used.
+    Different input values are generated and the output is analyzed."""
+    program = genome_to_cgp_program(
+        genome=genome,
+        config=cgp_config,
+        # output wrapper by default is tanh
+        outputs_wrapper=lambda e: e,
+    )
+
+    initial_input = jrd.normal(rng, (d,))
+
+    _, initial_output = program(initial_input, jnp.zeros(cgp_config["buffer_size"]))
+
+    dt_per_entry = {}
+    # NOTE - Pour chaque entrée
+    for in_pos in range(d):
+        # NOTE - vérifier qu'en changeant la valeur d'entrée, la sortie change aussi
+        # Flip the sign (perturbation is not uniform)
+        perturbed_input = initial_input.at[in_pos].multiply(-1.0)
+        _, in_pos_perturbation_out = program(
+            perturbed_input, jnp.zeros(cgp_config["buffer_size"])
+        )
+        dt = jnp.abs(initial_output - in_pos_perturbation_out)
+        dt_per_entry[f"in_node_{in_pos}"] = dt
+
+    # 1 if all dt's are different from 0
+    # 0 if at least one dt is 0
+    fit_tem = jnp.clip(
+        jnp.count_nonzero(dt_per_entry.values()) - (d - 1), a_min=0, a_max=1
+    )
+    return fit_tem, dt_per_entry
+    # return sum(dt_per_entry.values()), dt_per_entry
+
+
 def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.5):
     """Meta evolution of a cgp parametrized distance function,
     using a corrected fitness function forcing the policy neural networks to
@@ -919,6 +955,13 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
             in_axes=(0, 0),
         )
     )
+    # NOTE - Evaluate the nomber of input nodes used by cgp
+    vec_evaluate_used_inputs = jit(
+        vmap(
+            partial(evaluate_used_inputs, cgp_config=meta_config["cgp_config"], d=6),
+            in_axes=(0, None),
+        ),
+    )
     if beta < 1:
         # evaluation curriculum fonctions
         vec_learn_hc_500 = vmap(
@@ -944,7 +987,13 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen {_meta_generation}] - Start")
 
-        rng, rng_eval_hc500, rng_eval_net_prop, rng_survival = jrd.split(rng, 4)
+        (
+            rng,
+            rng_eval_hc500,
+            rng_eval_net_prop,
+            rng_used_inputs,
+            rng_survival,
+        ) = jrd.split(rng, 5)
         rng_eval_net_prop = jrd.split(
             key=rng_eval_net_prop, num=meta_config["evo"]["population_size"]
         )
@@ -981,9 +1030,14 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         n_total_nodes = genomes.shape[-1]
         active_node_sizes = jnp.exp(-(active_node_sizes / n_total_nodes) / 0.1)
         fitness_cgp_extra = -active_node_sizes
+        # NOTE - add fitness term for nomber of input nodes used
+        fit_eval_used_nodes, _ = vec_evaluate_used_inputs(genomes, rng_used_inputs)
 
         fitness_values = (
-            beta * f_net_prop + (1 - beta) * f_policy_eval + fitness_cgp_extra
+            beta * f_net_prop
+            + (1 - beta) * f_policy_eval
+            + fitness_cgp_extra
+            + fit_eval_used_nodes
         )
         assert fitness_values is not None
         # !SECTION
