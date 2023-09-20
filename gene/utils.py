@@ -3,7 +3,6 @@ from copy import deepcopy
 from typing import Union
 
 from jax import default_backend
-# from gene.core.evaluation import 
 
 
 class CorrectDeviceNotLoaded(Exception):

@@ -23,8 +23,8 @@ if __name__ == "__main__":
     extra_tags = ["full-tanh-test"]
 
     # NOTE - 1. Meta nn
-    # meta_nn_config = load_config("config/nn_meta_df_corrected.json")
-    meta_nn_config = load_config("config/nn_meta_df_corrected_w2d.json")
+    meta_nn_config = load_config("config/nn_meta_df_corrected.json")
+    # meta_nn_config = load_config("config/nn_meta_df_corrected_w2d.json")
     meta_nn_config["group"] = "meta"
     with wandb.init(
         project=DEVNULL,
