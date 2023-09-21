@@ -869,27 +869,27 @@ def evaluate_used_inputs(genome, rng, cgp_config: dict, d: int = 6):
 
     _, initial_output = program(initial_input, jnp.zeros(cgp_config["buffer_size"]))
 
-    dt_per_entry = {}
-    # NOTE - Pour chaque entrée
+    total_dts = []
     for in_pos in range(d):
-        # NOTE - vérifier qu'en changeant la valeur d'entrée, la sortie change aussi
-        # Flip the sign (perturbation is not uniform)
-        perturbed_input = initial_input.at[in_pos].multiply(-1.0)
-        _, in_pos_perturbation_out = program(
-            perturbed_input, jnp.zeros(cgp_config["buffer_size"])
-        )
-        dt = jnp.abs(initial_output - in_pos_perturbation_out)
-        dt_per_entry[f"in_node_{in_pos}"] = dt
+        # for pert_value in [0.5, -0.5, 1., -1., 2., -2.]:
+        for pert_value in [1.0, -1.0]:
+            # NOTE - vérifier qu'en changeant la valeur d'entrée, la sortie change aussi
+            perturbed_input = initial_input.at[in_pos].add(pert_value)
+            _, in_pos_perturbation_out = program(
+                perturbed_input, jnp.zeros(cgp_config["buffer_size"])
+            )
+            dt = jnp.abs(initial_output - in_pos_perturbation_out)
+            total_dts.append(dt)
 
     # 1 if all dt's are different from 0
     # 0 if at least one dt is 0
-    fit_tem = jnp.clip(
-        jnp.count_nonzero(jnp.array(list(dt_per_entry.values()))) - (d - 1),
+    non_z = jnp.count_nonzero(jnp.array(total_dts))
+    fit_term = jnp.clip(
+        non_z - (len(total_dts) - 1),
         a_min=0,
         a_max=1,
     )
-    return fit_tem, dt_per_entry
-    # return sum(dt_per_entry.values()), dt_per_entry
+    return fit_term
 
 
 def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.5):
@@ -1032,9 +1032,9 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         n_total_nodes = genomes.shape[-1]
         fit_active_node_sizes = jnp.exp(-(active_node_sizes / n_total_nodes) / 0.1)
         # NOTE - add fitness term for nomber of input nodes used
-        fit_eval_used_nodes, _ = vec_evaluate_used_inputs(genomes, rng_used_inputs)
+        fit_used_input_nodes, _ = vec_evaluate_used_inputs(genomes, rng_used_inputs)
 
-        fitness_cgp_extra = -fit_active_node_sizes + fit_eval_used_nodes
+        fitness_cgp_extra = -fit_active_node_sizes + fit_used_input_nodes
 
         fitness_values = (
             beta * f_net_prop + (1 - beta) * f_policy_eval + fitness_cgp_extra
@@ -1085,8 +1085,8 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                         "f_input_restoration": f_inp.mean(),
                     },
                     "cgp_extra": {
-                        "all_nodes_used": fit_eval_used_nodes.mean(),
-                        "best_all_nodes_used": fit_eval_used_nodes[best_genome_idx],
+                        "all_nodes_used": fit_used_input_nodes.mean(),
+                        "best_all_nodes_used": fit_used_input_nodes[best_genome_idx],
                         "fit_active_node_sizes": fit_active_node_sizes.mean(),
                         "active_node_sizes": active_node_sizes.mean(),
                     },
