@@ -871,14 +871,14 @@ def evaluate_used_inputs(genome, rng, cgp_config: dict, d: int = 6):
 
     total_dts = []
     for in_pos in range(d):
-        # for pert_value in [0.5, -0.5, 1., -1., 2., -2.]:
-        for pert_value in [1.0, -1.0]:
+        for pert_value in [0.5, -0.5, 1.0, -1.0, 2.0, -2.0]:
             # NOTE - vérifier qu'en changeant la valeur d'entrée, la sortie change aussi
             perturbed_input = initial_input.at[in_pos].add(pert_value)
             _, in_pos_perturbation_out = program(
                 perturbed_input, jnp.zeros(cgp_config["buffer_size"])
             )
             dt = jnp.abs(initial_output - in_pos_perturbation_out)
+            dt = jnp.round(dt, 4)
             total_dts.append(dt)
 
     # 1 if all dt's are different from 0
@@ -934,16 +934,19 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         rnd_key=rng_gen_pop,
         genome_transformation_function=_genome_transformation_function,
     )
-    _l2_indiv = create_l2_indiv(meta_config)
-    assert _l2_indiv.shape[0] == genomes.shape[-1]
-    # Randomly changes individuals of the base population to the handcrafted individual
-    for idx in jrd.randint(
-        rng_gen_idx,
-        shape=(int(meta_config["cgp_config"]["n_individuals"] / 8),),
-        minval=0,
-        maxval=meta_config["cgp_config"]["n_individuals"],
-    ):
-        genomes = genomes.at[idx].set(_l2_indiv)
+    # NOTE - Randomly changes individuals of the base population to the handcrafted individual
+    # _l2_indiv = create_l2_indiv(meta_config)
+    # assert _l2_indiv.shape[0] == genomes.shape[-1]
+    # for idx in jrd.randint(
+    #     rng_gen_idx,
+    #     shape=(int(meta_config["cgp_config"]["n_individuals"] / 8),),
+    #     minval=0,
+    #     maxval=meta_config["cgp_config"]["n_individuals"],
+    # ):
+    #     genomes = genomes.at[idx].set(_l2_indiv)
+    #     print("- L2 indiv test")
+    #     print(f"{compute_active_size(_l2_indiv, meta_config['cgp_config'])}\n")
+    #     print(readable_cgp_program_from_genome(_l2_indiv, meta_config["cgp_config"]))
 
     # NOTE - Evaluation steps: NN prop enforce & Policy evaluation
     vec_evaluate_network_properties = jit(
@@ -954,7 +957,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                 df_type="cgp",
                 n=32,
             ),
-            in_axes=(0, 0),
+            in_axes=(0, None),
         )
     )
     # NOTE - Evaluate the nomber of input nodes used by cgp
@@ -996,9 +999,6 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
             rng_used_inputs,
             rng_survival,
         ) = jrd.split(rng, 5)
-        rng_eval_net_prop = jrd.split(
-            key=rng_eval_net_prop, num=meta_config["evo"]["population_size"]
-        )
 
         # SECTION - evaluate population on nn properties and curriculum of tasks
         f_expr, f_w_distr, f_inp = vec_evaluate_network_properties(
@@ -1032,7 +1032,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         n_total_nodes = genomes.shape[-1]
         fit_active_node_sizes = jnp.exp(-(active_node_sizes / n_total_nodes) / 0.1)
         # NOTE - add fitness term for nomber of input nodes used
-        fit_used_input_nodes, _ = vec_evaluate_used_inputs(genomes, rng_used_inputs)
+        fit_used_input_nodes = vec_evaluate_used_inputs(genomes, rng_used_inputs)
 
         fitness_cgp_extra = -fit_active_node_sizes + fit_used_input_nodes
 
