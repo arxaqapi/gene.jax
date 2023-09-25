@@ -576,7 +576,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                     "total_max_fitness": fitness_values.max(),
                     "net_prop": {
                         "f_expressivity": f_expr.mean(),
-                        "f_weight_distribution": f_w_distr.median(),
+                        "f_weight_distribution": jnp.median(f_w_distr),
                         "f_input_restoration": f_inp.mean(),
                     },
                     "cgp_extra": {
