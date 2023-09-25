@@ -1007,8 +1007,15 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         f_expr = fitness_nan_replacement(f_expr)
         f_w_distr = fitness_nan_replacement(f_w_distr)
         f_inp = fitness_nan_replacement(f_inp)
+
+        # NOTE - if f_w_distr in [-1, 1], then regu/fitness is positive
+        regularizer_term = -jnp.log(jnp.abs(f_w_distr))
+
         f_net_prop = (
-            min_max_scaler(f_expr) + min_max_scaler(f_w_distr) + min_max_scaler(f_inp)
+            min_max_scaler(f_expr)
+            + min_max_scaler(f_w_distr)
+            + min_max_scaler(f_inp)
+            + regularizer_term
         )
 
         if beta < 1:
