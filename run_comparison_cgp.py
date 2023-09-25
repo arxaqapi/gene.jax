@@ -15,7 +15,7 @@ from gene.experiment import comparison_experiment_cgp
 from gene.meta import meta_learn_cgp_corrected
 from cgpax.jax_functions import available_functions
 
-DEVNULL = "devnull"
+DEVNULL = "devnull cgp"
 
 if __name__ == "__main__":
     fail_if_not_device()
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         tags=[f"{expe_time}"] + extra_tags,
     ) as meta_cgp_wdb:
         best_cgp_genome = meta_learn_cgp_corrected(
-            meta_config=meta_config, wandb_run=meta_cgp_wdb
+            meta_config=meta_config, wandb_run=meta_cgp_wdb, beta=1
         )
 
     comparison_experiment_cgp(
