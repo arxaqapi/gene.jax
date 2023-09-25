@@ -1153,3 +1153,5 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
             wandb_run.save(str(save_path), base_path=f"{wandb_run.dir}/", policy="now")
 
         print(f"[Meta gen {_meta_generation}] - End\n")
+
+    return best_genome

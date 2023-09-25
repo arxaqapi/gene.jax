@@ -10,7 +10,7 @@ from gene.learning import learn_brax_task
 from gene.visualize.visualize_brax import visualize_brax, render_brax
 from gene.visualize.la import run_fla_brax
 from gene.visualize.neurons import visualize_neurons_3d, visualize_neurons_2d
-from gene.core.distances import get_df, DistanceFunction, NNDistance
+from gene.core.distances import get_df, DistanceFunction, NNDistance, CGPDistance
 from gene.core.models import get_model
 from gene.core.decoding import get_decoder
 from gene.utils import validate_json
@@ -188,6 +188,101 @@ def comparison_experiment(
                     distance_genome=nn_df_genome,
                     config=nn_df_model_config,
                     nn_layers_dims=nn_df_model_config["net"]["layer_dimensions"],
+                ),
+            ).run()
+
+        # NOTE - 3.1. GENE w. pL2
+        conf_gene_pl2 = deepcopy(base_config)
+        conf_gene_pl2["encoding"]["distance"] = "pL2"
+        conf_gene_pl2["encoding"]["type"] = "gene"
+        conf_gene_pl2["group"] = "pL2"
+        validate_json(conf_gene_pl2)
+
+        with wandb.init(
+            project=project,
+            name="CC-Comp-pL2",
+            config=conf_gene_pl2,
+            tags=[f"{expe_time}"] + extra_tags,
+        ) as wdb_gene_pl2:
+            Experiment(
+                conf_gene_pl2,
+                wdb_gene_pl2,
+            ).run()
+
+        # NOTE - 3.1. GENE w. L2
+        conf_gene_l2 = deepcopy(base_config)
+        conf_gene_l2["encoding"]["distance"] = "L2"
+        conf_gene_l2["encoding"]["type"] = "gene"
+        conf_gene_l2["group"] = "L2"
+        validate_json(conf_gene_l2)
+
+        with wandb.init(
+            project=project,
+            name="CC-Comp-L2",
+            config=conf_gene_l2,
+            tags=[f"{expe_time}"] + extra_tags,
+        ) as wdb_gene_l2:
+            Experiment(
+                conf_gene_l2,
+                wdb_gene_l2,
+            ).run()
+
+        # NOTE - 3.1. Direct
+        conf_direct = deepcopy(base_config)
+        conf_direct["encoding"]["type"] = "direct"
+        conf_direct["encoding"]["distance"] = "pL2"
+        conf_direct["group"] = "direct"
+        validate_json(conf_direct)
+
+        with wandb.init(
+            project=project,
+            name="CC-Comp-direct",
+            config=conf_direct,
+            tags=[f"{expe_time}"] + extra_tags,
+        ) as wdb_direct:
+            Experiment(
+                conf_direct,
+                wdb_direct,
+            ).run()
+
+
+def comparison_experiment_cgp(
+    config: dict,
+    cgp_df_genome,
+    seeds: list[int] = [56789, 98712, 1230],
+    project: str = "devnull",
+    expe_time=None,
+    extra_tags: list[str] = [],
+):
+    """Task agnostic run expe"""
+    if expe_time is None:
+        expe_time = int(time.time())
+
+    for seed in seeds:
+        # NOTE - config setup
+        base_config = deepcopy(config)
+        base_config["task"]["episode_length"] = 1000
+        base_config["evo"]["population_size"] = 256
+        base_config["seed"] = seed
+
+        # NOTE - 2. Use learned distance function to train a policy
+        cgp_df_config = deepcopy(base_config)
+        cgp_df_config["encoding"]["distance"] = ""
+        cgp_df_config["group"] = "learned"
+        validate_json(cgp_df_config)
+
+        with wandb.init(
+            project=project,
+            name="CC-Comp-learned-cgp",
+            config=cgp_df_config,
+            tags=[f"{expe_time}"] + extra_tags,
+        ) as wdb_nn_df:
+            Experiment(
+                cgp_df_config,
+                wdb_nn_df,
+                distance_function=CGPDistance(
+                    cgp_genome=cgp_df_genome,
+                    cgp_config=config["cgp_config"],
                 ),
             ).run()
 
