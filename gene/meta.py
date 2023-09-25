@@ -503,7 +503,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
             min_max_scaler(f_expr)
             + min_max_scaler(f_w_distr)
             + min_max_scaler(f_inp)
-            + regularizer_term
+            + min_max_scaler(regularizer_term)
         )
 
         if beta < 1:
