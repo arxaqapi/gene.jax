@@ -60,6 +60,7 @@ if __name__ == "__main__":
 
     comparison_experiment_cgp(
         config=deepcopy(next(iter(meta_config["curriculum"].values()))),
+        cgp_config=meta_config["cgp_config"],
         cgp_df_genome=best_cgp_genome,
         project=DEVNULL,
         expe_time=expe_time,

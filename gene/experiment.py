@@ -248,6 +248,7 @@ def comparison_experiment(
 
 def comparison_experiment_cgp(
     config: dict,
+    cgp_config: dict,
     cgp_df_genome,
     seeds: list[int] = [56789, 98712, 1230],
     project: str = "devnull",
@@ -282,7 +283,7 @@ def comparison_experiment_cgp(
                 wdb_nn_df,
                 distance_function=CGPDistance(
                     cgp_genome=cgp_df_genome,
-                    cgp_config=config["cgp_config"],
+                    cgp_config=cgp_config,
                 ),
             ).run()
 
