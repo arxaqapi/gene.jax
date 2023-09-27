@@ -477,6 +477,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     if wandb_run is not None:
         wandb_run.config.update(meta_config, allow_val_change=True)
 
+    genome_archive: dict = {}
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen {_meta_generation}] - Start")
 
@@ -553,9 +554,17 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         )
 
         # get best individual
-        best_genome_idx = jnp.argmax(fitness_values)
-        best_genome = genomes[best_genome_idx]
+
+        top_3_genomes_idx = jnp.argsort(fitness_values)[::-1][:3]
+        top_3_genomes = genomes[top_3_genomes_idx]
+
+        best_genome_idx = top_3_genomes_idx[0]
+        best_genome = top_3_genomes[0]
         best_fitness = fitness_values[best_genome_idx]
+
+        # ANCHOR - Archiving
+        genome_archive[f"{_meta_generation}"] = {"top_3": top_3_genomes}
+
         best_program = readable_cgp_program_from_genome(
             best_genome, meta_config["cgp_config"]
         )
@@ -642,4 +651,4 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
 
         print(f"[Meta gen {_meta_generation}] - End\n")
 
-    return best_genome
+    return genome_archive

@@ -249,7 +249,7 @@ def comparison_experiment(
 def comparison_experiment_cgp(
     config: dict,
     cgp_config: dict,
-    cgp_df_genome,
+    cgp_df_genome_archive: dict,
     seeds: list[int] = [56789, 98712, 1230],
     project: str = "devnull",
     expe_time=None,
@@ -272,20 +272,25 @@ def comparison_experiment_cgp(
         cgp_df_config["group"] = "learned"
         validate_json(cgp_df_config)
 
-        with wandb.init(
-            project=project,
-            name="CC-Comp-learned-cgp",
-            config=cgp_df_config,
-            tags=[f"{expe_time}"] + extra_tags,
-        ) as wdb_nn_df:
-            Experiment(
-                cgp_df_config,
-                wdb_nn_df,
-                distance_function=CGPDistance(
-                    cgp_genome=cgp_df_genome,
-                    cgp_config=cgp_config,
-                ),
-            ).run()
+        # NOTE - Perform 4 runs with different best programs
+        for i, gen_archive in enumerate(
+            list(reversed(cgp_df_genome_archive.values()))[:2]
+        ):
+            for j, archived_genome in enumerate(gen_archive["top_3"][:2]):
+                with wandb.init(
+                    project=project,
+                    name=f"CC-Comp-learned-cgp-{i}-{j}",
+                    config=cgp_df_config,
+                    tags=[f"{expe_time}"] + extra_tags,
+                ) as wdb_nn_df:
+                    Experiment(
+                        cgp_df_config,
+                        wdb_nn_df,
+                        distance_function=CGPDistance(
+                            cgp_genome=archived_genome,
+                            cgp_config=cgp_config,
+                        ),
+                    ).run()
 
         # NOTE - 3.1. GENE w. pL2
         conf_gene_pl2 = deepcopy(base_config)

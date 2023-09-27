@@ -54,14 +54,14 @@ if __name__ == "__main__":
         config=meta_config,
         tags=[f"{expe_time}"] + extra_tags,
     ) as meta_cgp_wdb:
-        best_cgp_genome = meta_learn_cgp_corrected(
+        best_cgp_genome_archive = meta_learn_cgp_corrected(
             meta_config=meta_config, wandb_run=meta_cgp_wdb, beta=1
         )
 
     comparison_experiment_cgp(
         config=deepcopy(next(iter(meta_config["curriculum"].values()))),
         cgp_config=meta_config["cgp_config"],
-        cgp_df_genome=best_cgp_genome,
+        cgp_df_genome_archive=best_cgp_genome_archive,
         project=DEVNULL,
         expe_time=expe_time,
         extra_tags=extra_tags,
