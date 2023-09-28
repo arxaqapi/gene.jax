@@ -33,7 +33,12 @@ class Experiment:
             get_df(self.config)() if distance_function is None else distance_function
         )
 
-    def run(self, seed: Union[int, None] = None, save_step: int = 2000):
+    def run(
+        self,
+        seed: Union[int, None] = None,
+        save_step: int = 2000,
+        run_fla: bool = False,
+    ):
         if seed is not None:
             self.config["seed"] = seed
 
@@ -49,17 +54,18 @@ class Experiment:
         # Get best individual [0] from last generation [-1]
         best_fitness = tracker_state["training"]["top_k_fit"][-1][0]
 
-        # NOTE - Perform FLA of the run, get genomes from state
-        run_fla_brax(
-            plot_title=f"{self.config['encoding']['type']} encoding \
-                            w. {self.config['encoding']['distance']} distance \
-                            on {self.config['task']['environnment']}",
-            config=self.config,
-            initial_genome=tracker.get_initial_center_individual(tracker_state),
-            final_genome=tracker.get_final_center_individual(tracker_state),
-            decoder=get_decoder(self.config)(self.config, self.df),
-            wdb_run=self.wandb_run,
-        )
+        if run_fla:
+            # NOTE - Perform FLA of the run, get genomes from state
+            run_fla_brax(
+                plot_title=f"{self.config['encoding']['type']} encoding \
+                                w. {self.config['encoding']['distance']} distance \
+                                on {self.config['task']['environnment']}",
+                config=self.config,
+                initial_genome=tracker.get_initial_center_individual(tracker_state),
+                final_genome=tracker.get_final_center_individual(tracker_state),
+                decoder=get_decoder(self.config)(self.config, self.df),
+                wdb_run=self.wandb_run,
+            )
 
         # NOTE - visualize the learned brax genome (best and sample_mean)
         viz_save_path = Path(self.wandb_run.dir) / "viz"
