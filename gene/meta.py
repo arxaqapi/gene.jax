@@ -342,7 +342,6 @@ def create_l2_indiv(meta_config: dict):
     return new_base_indiv
 
 
-# FIXME - Does not really work as expected
 def evaluate_used_inputs(genome, rng, cgp_config: dict, d: int = 6):
     """Evaluate the genome, checking if the input nodes are all being used.
     Different input values are generated and the output is analyzed."""
