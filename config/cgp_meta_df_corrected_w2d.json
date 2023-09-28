@@ -1,7 +1,7 @@
 {
     "seed": 0,
     "evo": {
-        "n_generations": 2500,
+        "n_generations": 750,
         "population_size": 64,
         "n_evaluations": 1
     },
