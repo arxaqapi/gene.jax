@@ -17,7 +17,7 @@ from gene.learning import (
     # learn_gymnax_task_cgp_df_mean,
     learn_brax_task_cgp_d0_50,
 )
-from gene.utils import min_max_scaler
+from gene.utils import min_max_scaler, meta_save_genome, make_wdb_subfolder
 from gene.tracker import MetaTracker
 
 from cgpax.jax_individual import generate_population
@@ -477,7 +477,11 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     if wandb_run is not None:
         wandb_run.config.update(meta_config, allow_val_change=True)
 
+    # NOTE - saving stuff
+    programm_save_path = make_wdb_subfolder(wandb_run, "programs")
+    genome_save_path = make_wdb_subfolder(wandb_run, "df_genomes")
     genome_archive: dict = {}
+
     for _meta_generation in range(meta_config["evo"]["n_generations"]):
         print(f"[Meta gen {_meta_generation}] - Start")
 
@@ -607,8 +611,6 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                 }
             wandb_run.log(to_log)
             # Save best genome as graph and readable program
-            programm_save_path = Path(wandb_run.dir) / "programs"
-            programm_save_path.mkdir(parents=True, exist_ok=True)
             graph_save_path = str(
                 programm_save_path / f"gen_{_meta_generation}_best_graph.png"
             )
@@ -627,28 +629,22 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                 config=meta_config["cgp_config"],
                 target_file=readable_programm_save_path,
             )
-            # Save best
-            save_path = (
-                Path(wandb_run.dir)
-                / "df_genomes"
-                / f"mg_{_meta_generation}_best_genome.npy"
-            )
-            save_path = save_path.with_suffix(".npy")
-            save_path.parent.mkdir(parents=True, exist_ok=True)
+            # NOTE - Save best of current gen
+            save_path = genome_save_path / f"mg_{_meta_generation}_best_genome.npy"
 
-            with open(save_path, "wb") as f:
-                jnp.save(f, best_genome)
-
-            wandb_run.save(
-                str(graph_save_path), base_path=f"{wandb_run.dir}/", policy="now"
-            )
-            wandb_run.save(
-                str(readable_programm_save_path),
-                base_path=f"{wandb_run.dir}/",
-                policy="now",
-            )
-            wandb_run.save(str(save_path), base_path=f"{wandb_run.dir}/", policy="now")
+            meta_save_genome(save_path, wandb_run, to_disk=True, genome=best_genome)
+            meta_save_genome(graph_save_path, wandb_run)
+            meta_save_genome(readable_programm_save_path, wandb_run)
 
         print(f"[Meta gen {_meta_generation}] - End\n")
+
+    # NOTE - save last best genome with memorable name & graphs
+    if (wandb_run is not None) and (best_genome is not None):
+        meta_save_genome(
+            save_path=genome_save_path / "mg_final_best_genome.npy",
+            wandb_run=wandb_run,
+            to_disk=True,
+            genome=best_genome,
+        )
 
     return genome_archive

@@ -1,8 +1,10 @@
 import json
 from copy import deepcopy
 from typing import Union
+from pathlib import Path
 
 from jax import default_backend
+import jax.numpy as jnp
 
 
 class CorrectDeviceNotLoaded(Exception):
@@ -137,3 +139,28 @@ def fix_config_file(config, env_name: Union[str, None] = None):
     new_config["net"]["layer_dimensions"][-1] = _get_env_sizes(env_name)["action_space"]
 
     return new_config
+
+
+def meta_save_genome(
+    save_path: Union[str, Path],
+    wandb_run,
+    save_policy: str = "now",
+    to_disk: bool = False,
+    genome=None,
+):
+    if to_disk:
+        assert genome is not None
+        with open(save_path, "wb") as f:
+            jnp.save(f, genome)
+
+    wandb_run.save(
+        str(save_path),
+        base_path=f"{wandb_run.dir}/",
+        policy=save_policy,
+    )
+
+
+def make_wdb_subfolder(wandb_run, folder_name: str) -> Path:
+    save_path = Path(wandb_run.dir) / folder_name
+    save_path.mkdir(parents=True, exist_ok=True)
+    return save_path
