@@ -565,8 +565,12 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         best_genome = top_3_genomes[0]
         best_fitness = fitness_values[best_genome_idx]
 
-        # ANCHOR - Archiving
-        genome_archive[f"{_meta_generation}"] = {"top_3": top_3_genomes}
+        # ANCHOR - Archiving only the last 2 genomes
+        if _meta_generation in [
+            meta_config["evo"]["n_generations"] - 1,
+            meta_config["evo"]["n_generations"] - 2,
+        ]:
+            genome_archive[f"{_meta_generation}"] = {"top_3": top_3_genomes}
 
         best_program = readable_cgp_program_from_genome(
             best_genome, meta_config["cgp_config"]
