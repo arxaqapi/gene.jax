@@ -31,6 +31,7 @@ if __name__ == "__main__":
         help="Name of the w&b run",
     )
     parser.add_argument(
+        "-e",
         "--entity",
         type=str,
         default="arxaqapi",
