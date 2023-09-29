@@ -1,25 +1,3 @@
-"""
-Run all benchmarks for the paper.
-
-Naming: 
-- Continuous Control benchmarks
-- Meta df benchmarks
-
-1. Brax encoding benchmarks 
-   ~200 experiments ~ 15/16 h for 1 seed, so 15*5 = 75~80h ~ 3.3 jours
-    1. For each seed
-        1. for each env:
-            1. for each policy_arch
-                1.  for each policy_arch_dims
-                    1. Direct
-                    2. GENE
-2. RL algorithms baselines on brax v1
-    1. A2C
-    2. DDPG
-3. meta evolution w. comparable baselines (should be above)
-    1. NN based meta-evol
-    2. CGP based meta-evol
-"""
 from datetime import datetime
 from itertools import product as it_product
 

@@ -1,11 +1,3 @@
-"""
-1. Learn a neural network distance function using meta-evolution 
-2. Extract the distance function and use it to train a policy
-3. Compare the obtained policy with those obtained by training with:
-    1. GENE w. pL2 encoding
-    1. GENE w. L2 encoding
-    1. Direct encoding
-"""
 import time
 import wandb
 from copy import deepcopy
