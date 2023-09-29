@@ -20,7 +20,7 @@ if __name__ == "__main__":
         "-p",
         "--project",
         type=str,
-        default="devnull",
+        default="cgp-gene",
         help="Name of the weights and biases project",
     )
     parser.add_argument(
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         "-b",
         "--beta",
         type=float,
-        default=1.0,
+        default=0.5,
         help="Beta value used for the fitness shaping. A value of 1 means only the \
             network properties are evaluated",
     )
