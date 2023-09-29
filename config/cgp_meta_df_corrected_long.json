@@ -1,7 +1,7 @@
 {
     "seed": 0,
     "evo": {
-        "n_generations": 750,
+        "n_generations": 20000,
         "population_size": 64,
         "n_evaluations": 1
     },
@@ -18,7 +18,29 @@
         "maximize": true
     },
     "curriculum": {
-        "w2d_500": {
+        "hc_1000": {
+            "task": {
+                "environnment": "halfcheetah",
+                "maximize": true,
+                "episode_length": 1000
+            },
+            "evo": {
+                "strategy_name": "Sep_CMA_ES",
+                "n_generations": 1500,
+                "population_size": 32,
+                "n_evaluations": 1
+            },
+            "net": {
+                "layer_dimensions": [18, 128, 128, 6],
+                "architecture": "tanh_linear"
+            },
+            "encoding": {
+                "d": 3,
+                "distance": "cgp",
+                "type": "gene"
+            }
+        },
+        "w2d_1000": {
             "task": {
                 "environnment": "walker2d",
                 "maximize": true,
@@ -27,7 +49,7 @@
             "evo": {
                 "strategy_name": "Sep_CMA_ES",
                 "n_generations": 1500,
-                "population_size": 64,
+                "population_size": 32,
                 "n_evaluations": 1
             },
             "net": {
