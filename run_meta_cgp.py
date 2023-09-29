@@ -31,17 +31,10 @@ if __name__ == "__main__":
         help="Name of the w&b run",
     )
     parser.add_argument(
-        "-u",
-        "--user",
-        type=str,
-        default="arxaqapi",
-        help="User used to log on weights and biases",
-    )
-    parser.add_argument(
         "--entity",
         type=str,
-        default=None,
-        help="User used to log on weights and biases, for a specific entity",
+        default="arxaqapi",
+        help="User used to log on weights and biases.",
     )
     parser.add_argument(
         "-t",
