@@ -256,8 +256,8 @@ def comparison_experiment_cgp(
     config: dict,
     cgp_config: dict,
     cgp_df_genome_archive: dict,
+    project: str,
     seeds: list[int] = [56789, 98712, 1230],
-    project: str = "devnull",
     expe_time=None,
     extra_tags: list[str] = [],
 ):

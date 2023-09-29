@@ -6,9 +6,6 @@ VERSION:=0.1.3
 f format:
 	ruff check .; black -t py39 .
 
-r run:
-	python run.py
-
 t test:
 	python -m unittest discover -s tests -v
 
@@ -25,13 +22,6 @@ build:
 # Docker run stafe image w. fish shell
 sail:
 	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax -p 8888:8888 $(DIMAGE):$(VERSION)
-
-STAFE_VERSION:=0.0.3
-build-stafe:
-	docker build -t stafe:$(STAFE_VERSION) -f docker/stafe.Dockerfile .
-
-sail-stafe:
-	docker run --gpus all -t -i --rm -v $(shell pwd)/.:/home/gene.jax -p 8888:8888 stafe:$(STAFE_VERSION)
 
 c clean:
 	rm -rf __pycache__

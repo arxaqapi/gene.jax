@@ -9,6 +9,7 @@ from gene.visualize.visualize_brax import visualize_brax, render_brax
 from gene.core.models import get_model
 from gene.core.distances import Distance_functions
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="Brax Visualization",
