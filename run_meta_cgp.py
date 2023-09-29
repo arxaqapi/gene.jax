@@ -31,10 +31,22 @@ if __name__ == "__main__":
         help="Name of the w&b run",
     )
     parser.add_argument(
+        "-u",
+        "--user",
+        type=str,
+        default="arxaqapi",
+        help="User used to log on weights and biases",
+    )
+    parser.add_argument(
+        "--entity",
+        type=str,
+        default=None,
+        help="User used to log on weights and biases, for a specific entity",
+    )
+    parser.add_argument(
         "-t",
         "--tags",
         nargs="*",
-        type=list[str],
         default=[str(int(time.time()))],
         help="A list of tags for weights and biases",
     )
@@ -92,5 +104,6 @@ if __name__ == "__main__":
         config=meta_config,
         tags=args.tags,
         name=args.name,
+        entity=args.entity
     )
     meta_learn_cgp_corrected(meta_config, wandb_run, beta=args.beta)
