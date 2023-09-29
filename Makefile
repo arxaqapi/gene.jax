@@ -10,7 +10,7 @@ t test:
 	python -m unittest discover -s tests -v
 
 prof profile: prof_dir
-	scalene --json --outfile $(shell date +"profiles/%y%m%d_%H%M%S_profile.json") run.py 
+	scalene --json --outfile $(shell date +"profiles/%y%m%d_%H%M%S_profile.json") run_gymnax.py 
 
 prof_dir:
 	mkdir -p profiles
