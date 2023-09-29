@@ -1,7 +1,9 @@
+import time
 import wandb
+import argparse
 
 from gene.meta import meta_learn_cgp_corrected
-from gene.utils import load_config, fail_if_not_device
+from gene.utils import fail_if_not_device, load_config
 
 from cgpax.jax_functions import available_functions
 
@@ -9,10 +11,63 @@ from cgpax.jax_functions import available_functions
 if __name__ == "__main__":
     fail_if_not_device()
 
-    meta_config = load_config("config/cgp_meta_df_corrected.json")
+    parser = argparse.ArgumentParser(
+        prog="",
+        description="Runs a meta evolution loop and evaluates \
+        the best learned distance function.",
+    )
+    parser.add_argument(
+        "-p",
+        "--project",
+        type=str,
+        default="devnull",
+        help="Name of the weights and biases project",
+    )
+    parser.add_argument(
+        "-n",
+        "--name",
+        type=str,
+        default="meta-cgp-corrected-long-df",
+        help="Name of the w&b run",
+    )
+    parser.add_argument(
+        "-t",
+        "--tags",
+        nargs="*",
+        type=list[str],
+        default=[str(int(time.time()))],
+        help="A list of tags for weights and biases",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        default="config/cgp_meta_df_corrected_long.json",
+        help="Config file used for the meta-evolution and basic evolution tasks.",
+    )
+    parser.add_argument(
+        "-b",
+        "--beta",
+        type=float,
+        default=1.0,
+        help="Beta value used for the fitness shaping. A value of 1 means only the \
+            network properties are evaluated",
+    )
+    parser.add_argument(
+        "-s",
+        "--seed",
+        type=int,
+        default=0,
+        help="Seed used for the run",
+    )
+
+    args = parser.parse_args()
+    meta_config = load_config(args.config)
+
+    meta_config["seed"] = args.seed
 
     meta_config["cgp_config"] = {
-        "seed": 3663398,
+        "seed": 8643,
         "problem": "cgp_meta_df",
         "solver": "cgp",
         "mutation": "standard",
@@ -27,16 +82,15 @@ if __name__ == "__main__":
         "survival": "truncation",
         "selection": {
             "type": "tournament",
-            # NOTE - Make this a multiple of the pop size (to check)
             "elite_size": 8,
             "tour_size": 7,
         },
     }
 
     wandb_run = wandb.init(
-        project="Meta df benchmarks",
+        project=args.project,
         config=meta_config,
-        tags=["cgp", "meta_df_hc", "corrected_f"],
-        name="meta-cgp-corrected-df",
+        tags=args.tags,
+        name=args.name,
     )
-    meta_learn_cgp_corrected(meta_config, wandb_run, beta=1.0)
+    meta_learn_cgp_corrected(meta_config, wandb_run, beta=args.beta)

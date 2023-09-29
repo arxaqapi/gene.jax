@@ -14,15 +14,13 @@ from gene.learning import (
     learn_brax_task_cgp,
     learn_brax_task_untracked_nn_df,
     learn_brax_task_untracked_nn_df_d0_50,
-    # learn_gymnax_task_cgp_df_mean,
-    learn_brax_task_cgp_d0_50,
 )
 from gene.utils import min_max_scaler, meta_save_genome, make_wdb_subfolder
 from gene.tracker import MetaTracker
 
 from cgpax.jax_individual import generate_population
 from cgpax.jax_encoding import genome_to_cgp_program
-from cgpax.utils import readable_cgp_program_from_genome, compute_active_size
+from cgpax.utils import readable_cgp_program_from_genome
 from cgpax.run_utils import (
     __update_config_with_data__,
     __compute_masks__,
@@ -456,18 +454,18 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
     )
     if beta < 1:
         # evaluation curriculum fonctions
-        vec_learn_hc_500 = vmap(
+        vec_learn_hc_1000 = vmap(
             partial(
                 learn_brax_task_cgp,
-                config=meta_config["curriculum"]["hc_500"],
+                config=meta_config["curriculum"]["hc_1000"],
                 cgp_config=meta_config["cgp_config"],
             ),
             in_axes=(0, None),
         )
-        vec_learn_brax_task_cgp_d0_50 = vmap(
+        vec_learn_w2d_1000 = vmap(
             partial(
-                learn_brax_task_cgp_d0_50,
-                config=meta_config["curriculum"]["hc_500"],
+                learn_brax_task_cgp,
+                config=meta_config["curriculum"]["w2d_1000"],
                 cgp_config=meta_config["cgp_config"],
             ),
             in_axes=(0, None),
@@ -477,7 +475,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         wandb_run.config.update(meta_config, allow_val_change=True)
 
     # NOTE - saving stuff
-    programm_save_path = make_wdb_subfolder(wandb_run, "programs")
+    program_save_path = make_wdb_subfolder(wandb_run, "programs")
     genome_save_path = make_wdb_subfolder(wandb_run, "df_genomes")
     genome_archive: dict = {}
 
@@ -486,11 +484,12 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
 
         (
             rng,
-            rng_eval_hc500,
+            rng_eval_hc_1000,
+            rng_eval_w2d_1000,
             rng_eval_net_prop,
             rng_used_inputs,
             rng_survival,
-        ) = jrd.split(rng, 5)
+        ) = jrd.split(rng, 6)
 
         # SECTION - evaluate population on nn properties and curriculum of tasks
         f_expr, f_w_distr, f_inp = vec_evaluate_network_properties(
@@ -512,28 +511,18 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
 
         if beta < 1:
             # NOTE - Policy evaluation
-            f_hc_500_max = vec_learn_hc_500(genomes, rng_eval_hc500)
-            f_hc_500_d0_50 = vec_learn_brax_task_cgp_d0_50(genomes, rng_eval_hc500)
+            f_hc_1000_max = vec_learn_hc_1000(genomes, rng_eval_hc_1000)
+            f_w2d_1000_max = vec_learn_w2d_1000(genomes, rng_eval_w2d_1000)
 
-            f_policy_eval = min_max_scaler(f_hc_500_max) + min_max_scaler(
-                f_hc_500_d0_50
+            f_policy_eval = min_max_scaler(f_hc_1000_max) + min_max_scaler(
+                f_w2d_1000_max
             )
         else:
             f_policy_eval = 0.0
 
-        # NOTE - add penalty for small programms
-        active_node_sizes = jnp.array(
-            [
-                compute_active_size(genome, meta_config["cgp_config"])[0]
-                for genome in genomes
-            ]
-        )
-        n_total_nodes = genomes.shape[-1]
-        fit_active_node_sizes = jnp.exp(-(active_node_sizes / n_total_nodes) / 0.1)
-        # NOTE - add fitness term for nomber of input nodes used
+        # NOTE - nomber of input nodes used
         fit_used_input_nodes = vec_evaluate_used_inputs(genomes, rng_used_inputs)
-
-        fitness_cgp_extra = -fit_active_node_sizes + fit_used_input_nodes
+        fitness_cgp_extra = fit_used_input_nodes
 
         fitness_values = (
             beta * f_net_prop + (1 - beta) * f_policy_eval + fitness_cgp_extra
@@ -598,46 +587,46 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                     "cgp_extra": {
                         "all_nodes_used": fit_used_input_nodes.mean(),
                         "best_all_nodes_used": fit_used_input_nodes[best_genome_idx],
-                        "fit_active_node_sizes": fit_active_node_sizes.mean(),
-                        "active_node_sizes": active_node_sizes.mean(),
                     },
                 },
             }
             if beta < 1:
-                to_log["training"]["hc500"] = {
-                    "emp_mean_fit": f_hc_500_max.mean(),
-                    "max_fit": f_hc_500_max.max(),
+                to_log["training"]["hc_1000"] = {
+                    "emp_mean_fit": f_hc_1000_max.mean(),
+                    "max_fit": f_hc_1000_max.max(),
                 }
-                to_log["training"]["hc500_d0_50"] = {
-                    "emp_mean_fit": f_hc_500_d0_50.mean(),
-                    "max": f_hc_500_d0_50.max(),
+                to_log["training"]["w2d_1000"] = {
+                    "emp_mean_fit": f_w2d_1000_max.mean(),
+                    "max": f_hc_1000_max.max(),
                 }
             wandb_run.log(to_log)
-            # Save best genome as graph and readable program
-            graph_save_path = str(
-                programm_save_path / f"gen_{_meta_generation}_best_graph.png"
-            )
-            readable_programm_save_path = str(
-                programm_save_path / f"gen_{_meta_generation}_best_programm.txt"
-            )
-            __save_graph__(
-                genome=best_genome,
-                config=meta_config["cgp_config"],
-                file=graph_save_path,
-                input_color="green",
-                output_color="red",
-            )
-            __write_readable_program__(
-                genome=best_genome,
-                config=meta_config["cgp_config"],
-                target_file=readable_programm_save_path,
-            )
-            # NOTE - Save best of current gen
-            save_path = genome_save_path / f"mg_{_meta_generation}_best_genome.npy"
+            # NOTE - Save best programs
+            if (_meta_generation + 1) % 100 == 0:
+                # Save best genome as graph and readable program
+                graph_save_path = str(
+                    program_save_path / f"gen_{_meta_generation}_best_graph.png"
+                )
+                readable_program_save_path = str(
+                    program_save_path / f"gen_{_meta_generation}_best_program.txt"
+                )
+                __save_graph__(
+                    genome=best_genome,
+                    config=meta_config["cgp_config"],
+                    file=graph_save_path,
+                    input_color="green",
+                    output_color="red",
+                )
+                __write_readable_program__(
+                    genome=best_genome,
+                    config=meta_config["cgp_config"],
+                    target_file=readable_program_save_path,
+                )
+                # NOTE - Save best of current gen
+                save_path = genome_save_path / f"mg_{_meta_generation}_best_genome.npy"
 
-            meta_save_genome(save_path, wandb_run, to_disk=True, genome=best_genome)
-            meta_save_genome(graph_save_path, wandb_run)
-            meta_save_genome(readable_programm_save_path, wandb_run)
+                meta_save_genome(save_path, wandb_run, to_disk=True, genome=best_genome)
+                meta_save_genome(graph_save_path, wandb_run)
+                meta_save_genome(readable_program_save_path, wandb_run)
 
         print(f"[Meta gen {_meta_generation}] - End\n")
 
