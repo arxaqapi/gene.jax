@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "-b",
         "--beta",
         type=float,
-        default=0.5,
+        default=1/3,
         help="Beta value used for the fitness shaping. A value of 1 means only the \
             network properties are evaluated",
     )

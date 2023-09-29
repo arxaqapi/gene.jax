@@ -1,7 +1,7 @@
 {
     "seed": 0,
     "evo": {
-        "n_generations": 20000,
+        "n_generations": 5000,
         "population_size": 64,
         "n_evaluations": 1
     },
@@ -26,7 +26,7 @@
             },
             "evo": {
                 "strategy_name": "Sep_CMA_ES",
-                "n_generations": 1500,
+                "n_generations": 500,
                 "population_size": 32,
                 "n_evaluations": 1
             },

@@ -525,7 +525,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         fitness_cgp_extra = fit_used_input_nodes
 
         fitness_values = (
-            beta * f_net_prop + (1 - beta) * f_policy_eval + fitness_cgp_extra
+            beta * f_net_prop + (1 - beta) * f_policy_eval + 4 * beta * fitness_cgp_extra
         )
         assert fitness_values is not None
         # !SECTION
@@ -600,33 +600,31 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                     "max": f_hc_1000_max.max(),
                 }
             wandb_run.log(to_log)
-            # NOTE - Save best programs
-            if (_meta_generation + 1) % 100 == 0:
-                # Save best genome as graph and readable program
-                graph_save_path = str(
-                    program_save_path / f"gen_{_meta_generation}_best_graph.png"
-                )
-                readable_program_save_path = str(
-                    program_save_path / f"gen_{_meta_generation}_best_program.txt"
-                )
-                __save_graph__(
-                    genome=best_genome,
-                    config=meta_config["cgp_config"],
-                    file=graph_save_path,
-                    input_color="green",
-                    output_color="red",
-                )
-                __write_readable_program__(
-                    genome=best_genome,
-                    config=meta_config["cgp_config"],
-                    target_file=readable_program_save_path,
-                )
-                # NOTE - Save best of current gen
-                save_path = genome_save_path / f"mg_{_meta_generation}_best_genome.npy"
+            # NOTE - Save best programs as graph and readable program
+            graph_save_path = str(
+                program_save_path / f"gen_{_meta_generation}_best_graph.png"
+            )
+            readable_program_save_path = str(
+                program_save_path / f"gen_{_meta_generation}_best_program.txt"
+            )
+            __save_graph__(
+                genome=best_genome,
+                config=meta_config["cgp_config"],
+                file=graph_save_path,
+                input_color="green",
+                output_color="red",
+            )
+            __write_readable_program__(
+                genome=best_genome,
+                config=meta_config["cgp_config"],
+                target_file=readable_program_save_path,
+            )
+            # NOTE - Save best of current gen
+            save_path = genome_save_path / f"mg_{_meta_generation}_best_genome.npy"
 
-                meta_save_genome(save_path, wandb_run, to_disk=True, genome=best_genome)
-                meta_save_genome(graph_save_path, wandb_run)
-                meta_save_genome(readable_program_save_path, wandb_run)
+            meta_save_genome(save_path, wandb_run, to_disk=True, genome=best_genome)
+            meta_save_genome(graph_save_path, wandb_run)
+            meta_save_genome(readable_program_save_path, wandb_run)
 
         print(f"[Meta gen {_meta_generation}] - End\n")
 
