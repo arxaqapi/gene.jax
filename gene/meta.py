@@ -597,7 +597,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                 }
                 to_log["training"]["w2d_1000"] = {
                     "emp_mean_fit": f_w2d_1000_max.mean(),
-                    "max": f_hc_1000_max.max(),
+                    "max": f_w2d_1000_max.max(),
                 }
             wandb_run.log(to_log)
             # NOTE - Save best programs as graph and readable program
