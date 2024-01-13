@@ -525,7 +525,9 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         fitness_cgp_extra = fit_used_input_nodes
 
         fitness_values = (
-            beta * f_net_prop + (1 - beta) * f_policy_eval + 4 * beta * fitness_cgp_extra
+            beta * f_net_prop
+            + (1 - beta) * f_policy_eval
+            + 4 * beta * fitness_cgp_extra
         )
         assert fitness_values is not None
         # !SECTION

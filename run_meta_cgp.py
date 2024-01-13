@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "-b",
         "--beta",
         type=float,
-        default=1/3,
+        default=1 / 3,
         help="Beta value used for the fitness shaping. A value of 1 means only the \
             network properties are evaluated",
     )
@@ -98,6 +98,6 @@ if __name__ == "__main__":
         config=meta_config,
         tags=args.tags,
         name=args.name,
-        entity=args.entity
+        entity=args.entity,
     )
     meta_learn_cgp_corrected(meta_config, wandb_run, beta=args.beta)
