@@ -110,16 +110,15 @@ def genome_to_readable(genome, meta_config: dict, filename: str = "test.png"):
 
 if __name__ == "__main__":
     RUN_ID = "sureli/cgp-gene/c4v8hc53"
+    PROJECT = "evaluate_cgp"
+    tasks = ["halfcheetah", "walker2d", "hopper", "swimmer"]
+    extra_tags = ["k-best"]
 
     # NOTE - Load cgp genomes to evaluate
     reference_epoch_ids = get_k_best_genome_ids(RUN_ID, k=10)
     cgp_genomes_dict, meta_config = get_genomes_from_run(RUN_ID, reference_epoch_ids)
 
     # NOTE - For each cgp genome, evaluate and compare
-
-    tasks = ["halfcheetah", "walker2d", "hopper", "swimmer"]
-    project = "evaluate_cgp"
-    extra_tags = ["k-best"]
 
     for epoch_id, cgp_genome in cgp_genomes_dict.items():
         # NOTE - evaluate cgp genome on each defined task
@@ -135,7 +134,6 @@ if __name__ == "__main__":
                 # NOTE - Its a mess, we need to encapsulate the genomes correctly
                 # cgp_df_genome_archive: dict[int, dict["top_3", list[genomes]]]
                 cgp_df_genome_archive={"0": {"top_3": [cgp_genome]}},
-                project=project,
+                project=PROJECT,
                 extra_tags=extra_tags,
             )
-            exit(55)
