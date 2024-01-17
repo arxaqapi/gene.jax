@@ -129,7 +129,16 @@ def _get_env_sizes(env_name: str):
     return brax_envs[env_name]
 
 
-def fix_config_file(config, env_name: Union[str, None] = None):
+def fix_config_file(config: dict, env_name: Union[str, None] = None) -> dict:
+    """Takes a config file and only changes the policy net input and output dimensions
+
+    Args:
+        config (dict): base config file to make a modified copy of.
+        env_name (Union[str, None], optional): The target base name. Defaults to None.
+
+    Returns:
+        dict: the newly created and fixed config file
+    """
     env_name = env_name if env_name is not None else config["task"]["environnment"]
     new_config = deepcopy(config)
 

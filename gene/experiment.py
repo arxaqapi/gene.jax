@@ -261,7 +261,19 @@ def comparison_experiment_cgp(
     expe_time=None,
     extra_tags: list[str] = [],
 ):
-    """Task agnostic run expe"""
+    """Takes a cgp distance function genome, evaluates it and compares it to
+    gene encoding with pL2 and L2, direct encoding
+
+    Args:
+        config (dict): config dict, containing the task to evaluate on
+        cgp_config (dict): config dict of the CGP distance function
+        cgp_df_genome_archive (dict): genome of the learned CGP distance funtion
+            to be evaluated
+        project (str): Project name for weights and biases
+        seeds (list[int], optional): _description_. Defaults to [56789, 98712, 1230].
+        expe_time (_type_, optional): Time tag for grouping runs. Defaults to None.
+        extra_tags (list[str], optional): tags to be added to the runs. Defaults to [].
+    """
     if expe_time is None:
         expe_time = int(time.time())
 
