@@ -125,7 +125,13 @@ def _get_env_sizes(env_name: str):
             "observation_space": 11,
             "action_space": 1,
         },
+        "swimmer": {
+            "observation_space": 12,
+            "action_space": 2,
+        },
     }
+    if env_name not in brax_envs.keys():
+        raise ValueError("env_name not valid")
     return brax_envs[env_name]
 
 
