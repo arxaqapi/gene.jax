@@ -5,8 +5,8 @@ wandb*
 .netrc
 profiles
 *.npy
-cgpax
 *.zip
+# cgpax
 
 ### Python
 ### https://github.com/github/gitignore/blob/main/Python.gitignore
