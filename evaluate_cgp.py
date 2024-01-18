@@ -1,9 +1,11 @@
 """Takes a certain amount of cgp genomes and evaluates them on different tasks"""
+import argparse
+
 import wandb
 import jax.numpy as jnp
 
 from gene.experiment import comparison_experiment_cgp
-from gene.utils import fix_config_file
+from gene.utils import fail_if_not_device, fix_config_file
 
 from cgpax.analysis.genome_analysis import __save_graph__, __write_readable_program__
 
@@ -109,13 +111,40 @@ def genome_to_readable(genome, meta_config: dict, filename: str = "test.png"):
 
 
 if __name__ == "__main__":
+    fail_if_not_device()
+
+    parser = argparse.ArgumentParser(
+        prog="",
+        description="Runs the evaluation of the meta evolution best resulting genomes."
+    )
+    parser.add_argument(
+        "-p",
+        "--project",
+        type=str,
+        default="evaluate-cgp-gene",
+        help="Name of the weights and biases project",
+    )
+    parser.add_argument(
+        "-e",
+        "--entity",
+        type=str,
+        default="sureli",
+        help="User used to log on weights and biases.",
+    )
+    parser.add_argument(
+        "-k",
+        type=int,
+        default=10,
+        help="Number of best individuals to take.",
+    )
+    args = parser.parse_args()
+
     RUN_ID = "sureli/cgp-gene/c4v8hc53"
-    PROJECT = "evaluate_cgp"
     tasks = ["halfcheetah", "walker2d", "hopper", "swimmer"]
-    extra_tags = ["k-best"]
+    extra_tags = [f"k-{args.k}-best"]
 
     # NOTE - Load cgp genomes to evaluate
-    reference_epoch_ids = get_k_best_genome_ids(RUN_ID, k=10)
+    reference_epoch_ids = get_k_best_genome_ids(RUN_ID, k=args.k)
     cgp_genomes_dict, meta_config = get_genomes_from_run(RUN_ID, reference_epoch_ids)
 
     # NOTE - For each cgp genome, evaluate and compare
@@ -134,6 +163,8 @@ if __name__ == "__main__":
                 # NOTE - Its a mess, we need to encapsulate the genomes correctly
                 # cgp_df_genome_archive: dict[int, dict["top_3", list[genomes]]]
                 cgp_df_genome_archive={"0": {"top_3": [cgp_genome]}},
-                project=PROJECT,
+                project=args.project,
+                entity=args.entity,
                 extra_tags=extra_tags,
+                seeds=[285033, 99527, 7],
             )
