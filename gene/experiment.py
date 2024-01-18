@@ -257,6 +257,7 @@ def comparison_experiment_cgp(
     cgp_config: dict,
     cgp_df_genome_archive: dict,
     project: str,
+    entity: str,
     seeds: list[int] = [56789, 98712, 1230],
     expe_time=None,
     extra_tags: list[str] = [],
@@ -297,7 +298,8 @@ def comparison_experiment_cgp(
             for j, archived_genome in enumerate(gen_archive["top_3"][:2]):
                 with wandb.init(
                     project=project,
-                    name=f"CC-Comp-learned-cgp-{i}-{j}",
+                    entity=entity,
+                    name=f"CC-cgp-learned-{i}-{j}",
                     config=cgp_df_config,
                     tags=[f"{expe_time}"] + extra_tags,
                 ) as wdb_nn_df:
@@ -319,8 +321,8 @@ def comparison_experiment_cgp(
 
         with wandb.init(
             project=project,
-            name="CC-Comp-pL2",
-            config=conf_gene_pl2,
+            entity=entity,
+            name="CC-cgp-pL2           config=conf_gene_pl2,
             tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_gene_pl2:
             Experiment(
@@ -337,8 +339,8 @@ def comparison_experiment_cgp(
 
         with wandb.init(
             project=project,
-            name="CC-Comp-L2",
-            config=conf_gene_l2,
+            entity=entity,
+            name="CC-cgp-L2           config=conf_gene_l2,
             tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_gene_l2:
             Experiment(
@@ -355,8 +357,8 @@ def comparison_experiment_cgp(
 
         with wandb.init(
             project=project,
-            name="CC-Comp-direct",
-            config=conf_direct,
+            entity=entity,
+            name="CC-cgp-direct           config=conf_direct,
             tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_direct:
             Experiment(
