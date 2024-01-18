@@ -11,13 +11,19 @@ import cgpax.jax_encoding
 
 from jax import jit
 
-from cgpax.utils import readable_cgp_program_from_genome, cgp_graph_from_genome, readable_lgp_program_from_genome, \
-    lgp_graph_from_genome
+from cgpax.utils import (
+    readable_cgp_program_from_genome,
+    cgp_graph_from_genome,
+    readable_lgp_program_from_genome,
+    lgp_graph_from_genome,
+)
 from cgpax.jax_encoding import genome_to_cgp_program, genome_to_lgp_program
 from cgpax.run_utils import __update_config_with_env_data__
 
 
-def __write_readable_program__(genome: jnp.ndarray, config: dict, target_file: str = None):
+def __write_readable_program__(
+    genome: jnp.ndarray, config: dict, target_file: str = None
+):
     if config["solver"] == "cgp":
         readable_program = readable_cgp_program_from_genome(genome, config)
     else:
@@ -29,7 +35,13 @@ def __write_readable_program__(genome: jnp.ndarray, config: dict, target_file: s
             f.write(readable_program)
 
 
-def __save_graph__(genome: jnp.ndarray, config: dict, file: str, input_color: str = None, output_color: str = None):
+def __save_graph__(
+    genome: jnp.ndarray,
+    config: dict,
+    file: str,
+    input_color: str = None,
+    output_color: str = None,
+):
     if config["solver"] == "cgp":
         graph = cgp_graph_from_genome(genome, config)
     else:
@@ -44,7 +56,9 @@ def __save_graph__(genome: jnp.ndarray, config: dict, file: str, input_color: st
         graph.draw(file)
 
 
-def __save_html_visualization__(genome: jnp.ndarray, config: dict, env: EpisodeWrapper, file: str = None):
+def __save_html_visualization__(
+    genome: jnp.ndarray, config: dict, env: EpisodeWrapper, file: str = None
+):
     if file is None:
         file = f'{config["problem"]["environment"]}.html'
 
@@ -60,7 +74,11 @@ def __save_html_visualization__(genome: jnp.ndarray, config: dict, env: EpisodeW
     rollout = []
     rng = random.PRNGKey(seed=config["seed"])
     state = jit_env_reset(rng=rng)
-    buffer = jnp.zeros(config["buffer_size"]) if config["solver"] == "cgp" else jnp.zeros(config["n_registers"])
+    buffer = (
+        jnp.zeros(config["buffer_size"])
+        if config["solver"] == "cgp"
+        else jnp.zeros(config["n_registers"])
+    )
     reward = 0
     for _ in range(config["problem"]["episode_length"]):
         rollout.append(state)
@@ -70,8 +88,12 @@ def __save_html_visualization__(genome: jnp.ndarray, config: dict, env: EpisodeW
 
     with open(file, "w") as f_episode:
         html_content = html.render(env.sys, [s.qp for s in rollout])
-        f_episode.write(html_content.replace("<title>brax visualizer",
-                                             f"<title>{file.split('/')[-1].replace('.html', '')} - reward {reward}"))
+        f_episode.write(
+            html_content.replace(
+                "<title>brax visualizer",
+                f"<title>{file.split('/')[-1].replace('.html', '')} - reward {reward}",
+            )
+        )
     return reward
 
 
@@ -83,12 +105,13 @@ def __load_last_genome__(base_path: str, seed: int) -> Tuple[jnp.ndarray, int]:
         current_generation = int(gene_file.split("_")[1])
         if current_generation > generation:
             generation = current_generation
-    genes = jnp.load(f"{base_path}/{seed}_{generation}_best_genome.npy",
-                     allow_pickle=True).astype(int)
+    genes = jnp.load(
+        f"{base_path}/{seed}_{generation}_best_genome.npy", allow_pickle=True
+    ).astype(int)
     return genes, generation
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     analysis_config = cgpax.get_config("../configs/analysis.yaml")
     seed = analysis_config["seed"]
     base_path = None
@@ -105,15 +128,25 @@ if __name__ == '__main__':
             genes, generation = __load_last_genome__(base_path, seed)
 
             environment = envs.get_environment(env_name=cfg["problem"]["environment"])
-            environment = EpisodeWrapper(environment, episode_length=cfg["problem"]["episode_length"], action_repeat=1)
+            environment = EpisodeWrapper(
+                environment,
+                episode_length=cfg["problem"]["episode_length"],
+                action_repeat=1,
+            )
             __update_config_with_env_data__(cfg, environment)
 
             __write_readable_program__(genes, cfg, f"{target_dir}/{folder}.txt")
-            __save_graph__(genes, cfg, f"{target_dir}/{folder}.png", analysis_config["input_color"],
-                           analysis_config["output_color"])
+            __save_graph__(
+                genes,
+                cfg,
+                f"{target_dir}/{folder}.png",
+                analysis_config["input_color"],
+                analysis_config["output_color"],
+            )
 
             if analysis_config["save_visualization"]:
-                replay_reward = __save_html_visualization__(genes, cfg, environment,
-                                                            f"{target_dir}/{folder}.html")
+                replay_reward = __save_html_visualization__(
+                    genes, cfg, environment, f"{target_dir}/{folder}.html"
+                )
                 print(f"Total reward = {replay_reward}")
                 print()
