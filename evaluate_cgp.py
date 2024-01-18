@@ -156,6 +156,8 @@ if __name__ == "__main__":
             curriculum_config = base_to_task(
                 meta_config["curriculum"]["w2d_1000"], task
             )
+            # NOTE - add epoch_id to config file
+            curriculum_config["epoch_id"] = epoch_id
 
             comparison_experiment_cgp(
                 config=curriculum_config,
