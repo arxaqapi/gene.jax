@@ -322,7 +322,8 @@ def comparison_experiment_cgp(
         with wandb.init(
             project=project,
             entity=entity,
-            name="CC-cgp-pL2           config=conf_gene_pl2,
+            name="CC-pL2",
+            config=conf_gene_pl2,
             tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_gene_pl2:
             Experiment(
@@ -340,7 +341,8 @@ def comparison_experiment_cgp(
         with wandb.init(
             project=project,
             entity=entity,
-            name="CC-cgp-L2           config=conf_gene_l2,
+            name="CC-L2",
+            config=conf_gene_l2,
             tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_gene_l2:
             Experiment(
@@ -358,7 +360,8 @@ def comparison_experiment_cgp(
         with wandb.init(
             project=project,
             entity=entity,
-            name="CC-cgp-direct           config=conf_direct,
+            name="CC-direct",
+            config=conf_direct,
             tags=[f"{expe_time}"] + extra_tags,
         ) as wdb_direct:
             Experiment(
