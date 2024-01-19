@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         prog="",
-        description="Runs the evaluation of the meta evolution best resulting genomes."
+        description="Runs the evaluation of the meta evolution best resulting genomes.",
     )
     parser.add_argument(
         "-p",
