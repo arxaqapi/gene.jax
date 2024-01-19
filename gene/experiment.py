@@ -13,7 +13,9 @@ from gene.visualize.neurons import visualize_neurons_3d, visualize_neurons_2d
 from gene.core.distances import get_df, DistanceFunction, NNDistance, CGPDistance
 from gene.core.models import get_model
 from gene.core.decoding import get_decoder
-from gene.utils import validate_json
+from gene.utils import validate_json, make_wdb_subfolder, meta_save_genome
+
+from cgpax.analysis.genome_analysis import __save_graph__
 
 
 class Experiment:
@@ -302,15 +304,29 @@ def comparison_experiment_cgp(
                     name=f"CC-cgp-learned-{i}-{j}",
                     config=cgp_df_config,
                     tags=[f"{expe_time}"] + extra_tags,
-                ) as wdb_nn_df:
+                ) as wdb_cgp_df:
                     Experiment(
                         cgp_df_config,
-                        wdb_nn_df,
+                        wdb_cgp_df,
                         distance_function=CGPDistance(
                             cgp_genome=archived_genome,
                             cgp_config=cgp_config,
                         ),
                     ).run()
+
+                    # NOTE - Save cgp graph
+                    program_save_path = make_wdb_subfolder(wdb_cgp_df, "cgp_df")
+                    graph_save_path = str(
+                        program_save_path / f"graph_of_cgp_df_id_{config['epoch_id']}.png"
+                    )
+                    __save_graph__(
+                        genome=archived_genome,
+                        config=cgp_config,
+                        file=graph_save_path,
+                        input_color="green",
+                        output_color="red",
+                    )
+                    meta_save_genome(graph_save_path, wdb_cgp_df)
 
         # NOTE - 3.1. GENE w. pL2
         conf_gene_pl2 = deepcopy(base_config)
