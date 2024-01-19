@@ -100,39 +100,50 @@ def min_max_scaler(x):
 
 
 def _get_env_sizes(env_name: str):
-    brax_envs = {
-        "humanoid": {
-            "observation_space": 240,
-            "action_space": 8,
-        },
-        "walker2d": {
-            "observation_space": 17,
-            "action_space": 6,
-        },
-        "hopper": {
-            "observation_space": 11,
-            "action_space": 3,
-        },
-        "ant": {
-            "observation_space": 87 - 20,
-            "action_space": 8,
-        },
-        "halfcheetah": {
-            "observation_space": 18,
-            "action_space": 6,
-        },
-        "inverted_double_pendulum": {
-            "observation_space": 11,
-            "action_space": 1,
-        },
-        "swimmer": {
-            "observation_space": 12,
-            "action_space": 2,
-        },
+    from brax.v1.envs import (
+        acrobot,
+        ant,
+        fast,
+        fetch,
+        grasp,
+        half_cheetah,
+        hopper,
+        humanoid,
+        humanoid_standup,
+        inverted_double_pendulum,
+        inverted_pendulum,
+        pusher,
+        reacher,
+        reacherangle,
+        swimmer,
+        ur5e,
+        walker2d,
+    )
+
+    _envs_v1 = {
+        "acrobot": acrobot.Acrobot,
+        "ant": ant.Ant,
+        "fast": fast.Fast,
+        "fetch": fetch.Fetch,
+        "grasp": grasp.Grasp,
+        "halfcheetah": half_cheetah.Halfcheetah,
+        "hopper": hopper.Hopper,
+        "humanoid": humanoid.Humanoid,
+        "humanoidstandup": humanoid_standup.HumanoidStandup,
+        "inverted_pendulum": inverted_pendulum.InvertedPendulum,
+        "inverted_double_pendulum": inverted_double_pendulum.InvertedDoublePendulum,
+        "pusher": pusher.Pusher,
+        "reacher": reacher.Reacher,
+        "reacherangle": reacherangle.ReacherAngle,
+        "swimmer": swimmer.Swimmer,
+        "ur5e": ur5e.Ur5e,
+        "walker2d": walker2d.Walker2d,
     }
-    if env_name not in brax_envs.keys():
+    if env_name not in _envs_v1.keys():
         raise ValueError("env_name not valid")
-    return brax_envs[env_name]
+    env = _envs_v1[env_name]()
+
+    return {"observation_space": env.observation_size, "action_space": env.action_size}
 
 
 def fix_config_file(config: dict, env_name: Union[str, None] = None) -> dict:
