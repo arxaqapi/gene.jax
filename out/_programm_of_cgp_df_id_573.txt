@@ -1,0 +1,14 @@
+def program(inputs, buffer):
+  buffer[[0, 1, 2, 3, 4, 5, 6, 7]] = inputs
+  buffer[8] = |.|(buffer[2])
+  buffer[10] = *(buffer[7], buffer[5])
+  buffer[11] = cos(buffer[3])
+  buffer[15] = *(buffer[7], buffer[0])
+  buffer[16] = <(buffer[7], buffer[8])
+  buffer[19] = <(buffer[16], buffer[5])
+  buffer[20] = -(buffer[3], buffer[15])
+  buffer[22] = *(buffer[6], buffer[19])
+  buffer[25] = -(buffer[20], buffer[11])
+  buffer[33] = <(buffer[10], buffer[25])
+  buffer[41] = <(buffer[33], buffer[22])
+  outputs = buffer[[41]]

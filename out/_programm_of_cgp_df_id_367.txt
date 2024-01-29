@@ -1,0 +1,6 @@
+def program(inputs, buffer):
+  buffer[[0, 1, 2, 3, 4, 5, 6, 7]] = inputs
+  buffer[8] = >(buffer[3], buffer[2])
+  buffer[40] = sqrt(buffer[8])
+  buffer[53] = *(buffer[40], buffer[4])
+  outputs = buffer[[53]]
