@@ -8,7 +8,7 @@ out = x2
 out = sin(exp(z1) * y2)
 
 # 204
-<!-- TODO -->
+out = sin(((((z2 - x1) > z2) + (z2 - ((z2 - x1) > 0.1))) < abs(z2)) * y2)
 
 # 206
 out = sin(abs(z2 > x1) * y2)
