@@ -492,10 +492,10 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         ) = jrd.split(rng, 6)
 
         # SECTION - evaluate population on nn properties and curriculum of tasks
-        f_expr, f_w_distr, f_inp = vec_evaluate_network_properties(
+        _f_expr, f_w_distr, f_inp = vec_evaluate_network_properties(
             genomes, rng_eval_net_prop
         )
-        f_expr = fitness_nan_replacement(f_expr)
+        _f_expr = fitness_nan_replacement(_f_expr)
         f_w_distr = fitness_nan_replacement(f_w_distr)
         f_inp = fitness_nan_replacement(f_inp)
 
@@ -503,7 +503,6 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
         regularizer_term = -jnp.log(jnp.abs(f_w_distr))
 
         f_net_prop = (
-            min_max_scaler(f_expr)
             + min_max_scaler(f_w_distr)
             + min_max_scaler(f_inp)
             + min_max_scaler(regularizer_term)
@@ -582,7 +581,7 @@ def meta_learn_cgp_corrected(meta_config: dict, wandb_run=None, beta: float = 0.
                     "total_emp_mean_fitness": fitness_values.mean(),
                     "total_max_fitness": fitness_values.max(),
                     "net_prop": {
-                        "f_expressivity": f_expr.mean(),
+                        "f_expressivity": _f_expr.mean(),
                         "f_weight_distribution": jnp.median(f_w_distr),
                         "f_input_restoration": f_inp.mean(),
                     },
