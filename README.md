@@ -54,4 +54,4 @@ If you use `gene.jax` or just want to cite the article, please use the following
 ```
 
 
-[^1]: [A geometric encoding for neural network evolution]([https://](https://doi.org/10.1145/3449639.3459361))
+[^1]: [A geometric encoding for neural network evolution - GECCO 21](https://doi.org/10.1145/3449639.3459361)
