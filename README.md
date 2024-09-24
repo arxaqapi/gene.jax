@@ -2,7 +2,7 @@
 
 This codebase is the official repository to the paper: **Searching Search Spaces: Meta-evolving a Geometric Encoding for Neural Networks**.
 
-It can also work as python/JAX library to encode Neural Networks using the GENE[^1] encoding. 
+It can also work as python/JAX library to encode Neural Networks using various encodings, like the GENE[^1] encoding. 
 
 > **Abstract**
 > 
